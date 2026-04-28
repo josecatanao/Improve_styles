@@ -184,7 +184,7 @@ create table if not exists public.product_images (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
   product_id uuid not null references public.products(id) on delete cascade,
-  storage_path text not null unique,
+  storage_path text unique,
   public_url text,
   alt_text text,
   assigned_color_name text,
@@ -192,6 +192,8 @@ create table if not exists public.product_images (
   sort_order integer not null default 0,
   created_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.product_images alter column storage_path drop not null;
 
 alter table public.product_images add column if not exists assigned_color_name text;
 alter table public.product_images add column if not exists assigned_color_hex text;
@@ -222,6 +224,16 @@ for select
 to authenticated
 using (auth.uid() = owner_id);
 
+drop policy if exists "products_select_public_storefront" on public.products;
+create policy "products_select_public_storefront"
+on public.products
+for select
+to public
+using (
+  status = 'active'
+  and is_active = true
+);
+
 drop policy if exists "products_insert_own" on public.products;
 create policy "products_insert_own"
 on public.products
@@ -251,6 +263,21 @@ for select
 to authenticated
 using (auth.uid() = owner_id);
 
+drop policy if exists "product_variants_select_public_storefront" on public.product_variants;
+create policy "product_variants_select_public_storefront"
+on public.product_variants
+for select
+to public
+using (
+  exists (
+    select 1
+    from public.products p
+    where p.id = product_variants.product_id
+      and p.status = 'active'
+      and p.is_active = true
+  )
+);
+
 drop policy if exists "product_variants_insert_own" on public.product_variants;
 create policy "product_variants_insert_own"
 on public.product_variants
@@ -279,6 +306,21 @@ on public.product_images
 for select
 to authenticated
 using (auth.uid() = owner_id);
+
+drop policy if exists "product_images_select_public_storefront" on public.product_images;
+create policy "product_images_select_public_storefront"
+on public.product_images
+for select
+to public
+using (
+  exists (
+    select 1
+    from public.products p
+    where p.id = product_images.product_id
+      and p.status = 'active'
+      and p.is_active = true
+  )
+);
 
 drop policy if exists "product_images_insert_own" on public.product_images;
 create policy "product_images_insert_own"

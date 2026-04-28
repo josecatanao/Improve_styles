@@ -71,7 +71,7 @@ type ExistingImageItem = {
   id: string
   kind: 'existing'
   url: string
-  storagePath: string
+  storagePath: string | null
   assignedColorName: string | null
   assignedColorHex: string | null
 }
@@ -85,7 +85,15 @@ type NewImageItem = {
   assignedColorHex: string | null
 }
 
-type ImageItem = ExistingImageItem | NewImageItem
+type RemoteImageItem = {
+  id: string
+  kind: 'remote'
+  url: string
+  assignedColorName: string | null
+  assignedColorHex: string | null
+}
+
+type ImageItem = ExistingImageItem | NewImageItem | RemoteImageItem
 type ProductType = 'simple' | 'variant'
 type ToastState = { type: 'success' | 'error'; message: string } | null
 
@@ -294,13 +302,13 @@ function buildInitialImages(product?: ProductDetail | null): ImageItem[] {
       ?.slice()
       .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
       .flatMap((image) =>
-        image.id && image.public_url && image.storage_path
+        image.id && image.public_url
           ? [
               {
                 id: image.id,
                 kind: 'existing' as const,
                 url: image.public_url,
-                storagePath: image.storage_path,
+                storagePath: image.storage_path ?? null,
                 assignedColorName: image.assigned_color_name ?? null,
                 assignedColorHex: image.assigned_color_hex ?? null,
               },
@@ -600,6 +608,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
   const [brandDraft, setBrandDraft] = useState('')
   const [sizeDrafts, setSizeDrafts] = useState<Record<string, string>>({})
   const [images, setImages] = useState<ImageItem[]>(initialImages)
+  const [imageUrlDraft, setImageUrlDraft] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDraggingFiles, setIsDraggingFiles] = useState(false)
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null)
@@ -739,6 +748,39 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
     showToast('success', `${nextFiles.length} imagem(ns) adicionada(s) a galeria.`)
   }
 
+  function appendImageUrl() {
+    const trimmedUrl = imageUrlDraft.trim()
+
+    if (!trimmedUrl) {
+      showToast('error', 'Informe o link da imagem.')
+      return
+    }
+
+    try {
+      const parsed = new URL(trimmedUrl)
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        showToast('error', 'Use um link http ou https valido.')
+        return
+      }
+
+      const defaultColor = colors[0] ?? null
+      updateImages([
+        ...imagesRef.current,
+        {
+          id: crypto.randomUUID(),
+          kind: 'remote',
+          url: parsed.toString(),
+          assignedColorName: defaultColor?.name ?? null,
+          assignedColorHex: defaultColor?.hex ?? null,
+        },
+      ])
+      setImageUrlDraft('')
+      showToast('success', 'Link da imagem adicionado a galeria.')
+    } catch {
+      showToast('error', 'Informe uma URL valida para a imagem.')
+    }
+  }
+
   function handleFileSelection(fileList: FileList | null) {
     appendFiles(Array.from(fileList ?? []))
   }
@@ -757,9 +799,11 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
     if (image.kind === 'new') {
       URL.revokeObjectURL(image.url)
-    } else {
+    } else if (image.storagePath) {
       removedExistingImageIdsRef.current.push(image.id)
       removedExistingStoragePathsRef.current.push(image.storagePath)
+    } else if (image.kind === 'existing') {
+      removedExistingImageIdsRef.current.push(image.id)
     }
 
     updateImages(imagesRef.current.filter((item) => item.id !== imageId))
@@ -1151,11 +1195,13 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
           throw new Error(deleteImagesError.message)
         }
 
-        await Promise.all(
-          removedExistingStoragePathsRef.current.map((storagePath) =>
-            supabase.storage.from('product-images').remove([storagePath])
+        if (removedExistingStoragePathsRef.current.length > 0) {
+          await Promise.all(
+            removedExistingStoragePathsRef.current.map((storagePath) =>
+              supabase.storage.from('product-images').remove([storagePath])
+            )
           )
-        )
+        }
       }
 
       for (const [index, image] of imagesRef.current.entries()) {
@@ -1172,6 +1218,25 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
           if (sortOrderError) {
             throw new Error(sortOrderError.message)
+          }
+
+          continue
+        }
+
+        if (image.kind === 'remote') {
+          const { error: imageInsertError } = await supabase.from('product_images').insert({
+            owner_id: user.id,
+            product_id: productId,
+            storage_path: null,
+            public_url: image.url,
+            alt_text: form.name.trim(),
+            assigned_color_name: image.assignedColorName,
+            assigned_color_hex: image.assignedColorHex,
+            sort_order: index,
+          })
+
+          if (imageInsertError) {
+            throw new Error(imageInsertError.message || 'Nao foi possivel salvar o link da imagem.')
           }
 
           continue
@@ -1753,6 +1818,29 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                     </div>
                   </button>
 
+                  <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5">
+                    <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Adicionar imagem por link</p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Cole uma URL publica da imagem para usar na galeria sem fazer upload do arquivo.
+                        </p>
+                        <input
+                          type="url"
+                          value={imageUrlDraft}
+                          onChange={(event) => setImageUrlDraft(event.target.value)}
+                          placeholder="https://exemplo.com/minha-imagem.webp"
+                          className="mt-3 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button type="button" className="h-11 rounded-xl px-5" onClick={appendImageUrl}>
+                          Adicionar link
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
                   {images.length === 0 ? (
                     <Card className="border-dashed bg-slate-50/80 text-center ring-1 ring-slate-200">
                       <CardContent className="px-6 py-12">
@@ -1800,11 +1888,18 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-semibold text-slate-900">
-                                  {image.kind === 'new' ? image.file.name : `Imagem ${index + 1}`}
+                                  {image.kind === 'new'
+                                    ? image.file.name
+                                    : image.kind === 'remote'
+                                      ? `Link externo ${index + 1}`
+                                      : `Imagem ${index + 1}`}
                                 </p>
                                 <p className="mt-1 text-xs text-slate-500">
                                   {image.assignedColorName ? `Vinculada a ${image.assignedColorName}` : 'Sem cor vinculada'}
                                 </p>
+                                {image.kind === 'remote' ? (
+                                  <p className="mt-1 truncate text-[11px] text-slate-400">{image.url}</p>
+                                ) : null}
                               </div>
                               <GripVertical className="h-4 w-4 text-slate-400" />
                             </div>

@@ -45,7 +45,11 @@ export type ProductListItem = {
   description: string | null
   category: string | null
   brand: string | null
+  collection?: string | null
+  audience?: string | null
   tags: string[] | null
+  is_featured?: boolean
+  is_new?: boolean
   product_images?: ProductImageRecord[] | null
   product_variants?: ProductVariant[] | null
 }

@@ -1,5 +1,11 @@
 import { createClient } from '@/utils/supabase/server'
 import type { ProductDetail, ProductFormOptions, ProductListItem } from '@/lib/product-shared'
+import {
+  getStoreCategoryKey,
+  normalizeStoreCategoryLabel,
+  sortProducts,
+  type StoreSortOption,
+} from '@/lib/storefront'
 export { getProductStatusClasses, getProductStatusLabel } from '@/lib/product-shared'
 
 export const PRODUCTS_PAGE_SIZE = 8
@@ -28,6 +34,29 @@ export type ProductListResult = {
   total: number
   totalPages: number
   currentPage: number
+  setupRequired: boolean
+  errorMessage: string | null
+}
+
+export type StorefrontResult = {
+  allProducts: ProductListItem[]
+  featuredProducts: ProductListItem[]
+  popularProducts: ProductListItem[]
+  filteredProducts: ProductListItem[]
+  categoryHighlights: Array<{ label: string; value: number }>
+  brandHighlights: Array<{ label: string; value: number }>
+  totalActiveProducts: number
+  selectedCategory: string | null
+  selectedSort: StoreSortOption
+  setupRequired: boolean
+  errorMessage: string | null
+}
+
+export type CategoryStorefrontResult = {
+  category: string | null
+  slug: string
+  products: ProductListItem[]
+  categoryHighlights: Array<{ label: string; value: number }>
   setupRequired: boolean
   errorMessage: string | null
 }
@@ -241,7 +270,7 @@ export async function getProductOverviewData(): Promise<ProductOverviewData> {
   products.forEach((product) => {
     statusMap.set(product.status, (statusMap.get(product.status) ?? 0) + 1)
 
-    const category = product.category?.trim() || 'Sem categoria'
+    const category = normalizeStoreCategoryLabel(product.category)
     categoryMap.set(category, (categoryMap.get(category) ?? 0) + 1)
 
     const brand = product.brand?.trim() || 'Sem marca'
@@ -282,6 +311,189 @@ export async function getProductOverviewData(): Promise<ProductOverviewData> {
       .sort((a, b) => b.value - a.value)
       .slice(0, 5),
     recentProducts: products.slice(0, 5),
+    setupRequired: false,
+    errorMessage: null,
+  }
+}
+
+export async function getStorefrontData(options?: {
+  query?: string
+  category?: string
+  sort?: StoreSortOption
+}): Promise<StorefrontResult> {
+  const supabase = await createClient()
+  const query = options?.query?.trim()
+  const category = options?.category?.trim()
+  const sort = options?.sort ?? 'popular'
+
+  const { data, error } = await supabase
+    .from('products')
+    .select(
+      `
+        id,
+        name,
+        sku,
+        colors,
+        price,
+        compare_at_price,
+        stock,
+        status,
+        is_active,
+        created_at,
+        short_description,
+        description,
+        category,
+        brand,
+        collection,
+        audience,
+        tags,
+        is_featured,
+        is_new,
+        product_images(public_url, assigned_color_name, assigned_color_hex),
+        product_variants(id, color_name, color_hex, size, sku, stock, price, compare_at_price, cost_price, status, position)
+      `
+    )
+    .eq('status', 'active')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+
+  if (isMissingTable(error)) {
+    return {
+      allProducts: [],
+      featuredProducts: [],
+      popularProducts: [],
+      filteredProducts: [],
+      categoryHighlights: [],
+      brandHighlights: [],
+      totalActiveProducts: 0,
+      selectedCategory: null,
+      selectedSort: sort,
+      setupRequired: true,
+      errorMessage: null,
+    }
+  }
+
+  if (error || !data) {
+    return {
+      allProducts: [],
+      featuredProducts: [],
+      popularProducts: [],
+      filteredProducts: [],
+      categoryHighlights: [],
+      brandHighlights: [],
+      totalActiveProducts: 0,
+      selectedCategory: null,
+      selectedSort: sort,
+      setupRequired: false,
+      errorMessage: error?.message ?? 'Nao foi possivel carregar a vitrine.',
+    }
+  }
+
+  const allProducts = (data as ProductListItem[]) ?? []
+  const filteredProducts = allProducts.filter((product) => {
+    const matchesQuery = query
+      ? [product.name, product.sku, product.category, product.brand, product.short_description]
+          .filter((value): value is string => Boolean(value))
+          .some((value) => value.toLowerCase().includes(query.toLowerCase()))
+      : true
+
+    const matchesCategory = category ? getStoreCategoryKey(product.category) === getStoreCategoryKey(category) : true
+
+    return matchesQuery && matchesCategory
+  })
+
+  const categoryMap = new Map<string, number>()
+  const brandMap = new Map<string, number>()
+
+  allProducts.forEach((product) => {
+    const productCategory = normalizeStoreCategoryLabel(product.category)
+    if (productCategory) {
+      categoryMap.set(productCategory, (categoryMap.get(productCategory) ?? 0) + 1)
+    }
+
+    const productBrand = product.brand?.trim()
+    if (productBrand) {
+      brandMap.set(productBrand, (brandMap.get(productBrand) ?? 0) + 1)
+    }
+  })
+
+  const toHighlightList = (map: Map<string, number>, limit = 6) =>
+    Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([label, value]) => ({ label, value }))
+
+  const sortedFilteredProducts = sortProducts(filteredProducts, sort)
+  const featuredProducts = sortProducts(
+    allProducts.filter((product) => product.is_featured),
+    'popular'
+  ).slice(0, 8)
+  const popularProducts = sortProducts(allProducts, 'popular').slice(0, 8)
+  const selectedCategory =
+    category && allProducts.some((product) => getStoreCategoryKey(product.category) === getStoreCategoryKey(category))
+      ? normalizeStoreCategoryLabel(
+          allProducts.find((product) => getStoreCategoryKey(product.category) === getStoreCategoryKey(category))?.category ?? category
+        )
+      : null
+
+  return {
+    allProducts,
+    featuredProducts,
+    popularProducts,
+    filteredProducts: sortedFilteredProducts,
+    categoryHighlights: toHighlightList(categoryMap),
+    brandHighlights: toHighlightList(brandMap),
+    totalActiveProducts: allProducts.length,
+    selectedCategory,
+    selectedSort: sort,
+    setupRequired: false,
+    errorMessage: null,
+  }
+}
+
+export async function getStoreCategoryBySlug(slug: string, options?: {
+  query?: string
+  sort?: StoreSortOption
+}): Promise<CategoryStorefrontResult> {
+  const storefront = await getStorefrontData({
+    query: options?.query,
+    sort: options?.sort,
+  })
+
+  if (storefront.setupRequired || storefront.errorMessage) {
+    return {
+      category: null,
+      slug,
+      products: [],
+      categoryHighlights: storefront.categoryHighlights,
+      setupRequired: storefront.setupRequired,
+      errorMessage: storefront.errorMessage,
+    }
+  }
+
+  const categoryMatch = storefront.categoryHighlights.find((item) => getStoreCategoryKey(item.label) === slug)
+
+  if (!categoryMatch) {
+    return {
+      category: null,
+      slug,
+      products: [],
+      categoryHighlights: storefront.categoryHighlights,
+      setupRequired: false,
+      errorMessage: 'Categoria nao encontrada.',
+    }
+  }
+
+  const products = sortProducts(
+    storefront.allProducts.filter((product) => getStoreCategoryKey(product.category) === slug),
+    options?.sort ?? 'popular'
+  )
+
+  return {
+    category: categoryMatch.label,
+    slug,
+    products,
+    categoryHighlights: storefront.categoryHighlights,
     setupRequired: false,
     errorMessage: null,
   }
@@ -346,6 +558,58 @@ export async function getProductById(productId: string): Promise<{
 
   return {
     product: (data as ProductDetail) ?? null,
+    setupRequired: false,
+    errorMessage: null,
+  }
+}
+
+export async function getPublicProductById(productId: string): Promise<{
+  product: ProductDetail | null
+  relatedProducts: ProductListItem[]
+  setupRequired: boolean
+  errorMessage: string | null
+}> {
+  const productResult = await getProductById(productId)
+
+  if (productResult.setupRequired || productResult.errorMessage || !productResult.product) {
+    return {
+      product: productResult.product,
+      relatedProducts: [],
+      setupRequired: productResult.setupRequired,
+      errorMessage: productResult.errorMessage,
+    }
+  }
+
+  const product = productResult.product
+
+  if (product.status !== 'active' || !product.is_active) {
+    return {
+      product: null,
+      relatedProducts: [],
+      setupRequired: false,
+      errorMessage: 'Produto indisponivel na loja.',
+    }
+  }
+
+  const storefront = await getStorefrontData()
+  const relatedProducts = storefront.allProducts
+    .filter((item) => item.id !== product.id)
+    .filter((item) => {
+      if (product.category?.trim() && item.category?.trim() === product.category.trim()) {
+        return true
+      }
+
+      if (product.brand?.trim() && item.brand?.trim() === product.brand.trim()) {
+        return true
+      }
+
+      return false
+    })
+    .slice(0, 4)
+
+  return {
+    product,
+    relatedProducts,
     setupRequired: false,
     errorMessage: null,
   }

@@ -245,17 +245,21 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-        <Card className="border-0 bg-white ring-1 ring-slate-200">
-          <CardHeader>
-            <CardTitle>Cadastrar funcionario</CardTitle>
-            <CardDescription>
-              Crie a equipe interna e defina exatamente o que cada pessoa pode acessar no painel.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-5 pb-5">
-            <form className="space-y-5" onSubmit={handleCreateStaff}>
-              <div className="grid gap-4 md:grid-cols-2">
+      <Card className="border-0 bg-white ring-1 ring-slate-200">
+        <CardHeader className="border-b border-slate-100">
+          <CardTitle>Cadastrar funcionario</CardTitle>
+          <CardDescription>
+            Crie a equipe interna com uma estrutura mais clara: identidade, acesso e observacoes operacionais.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-6 py-6">
+          <form className="space-y-8" onSubmit={handleCreateStaff}>
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Identificacao</h3>
+                <p className="mt-1 text-sm text-slate-500">Dados principais do funcionario dentro da operacao.</p>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_220px]">
                 <div className="space-y-2">
                   <Label htmlFor="staff-full-name">Nome completo</Label>
                   <Input
@@ -277,9 +281,6 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
                     className="h-11"
                   />
                 </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
                 <div className="space-y-2">
                   <Label htmlFor="staff-role">Papel</Label>
                   <select
@@ -295,66 +296,78 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
                     ))}
                   </select>
                 </div>
+              </div>
+            </section>
 
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Permissoes</h3>
+                <p className="mt-1 text-sm text-slate-500">Defina o que essa pessoa pode acessar e operar no painel.</p>
+              </div>
+              <div className="grid gap-3 xl:grid-cols-2">
+                {permissionOptions.map((permission) => {
+                  const checked = form.permissions.includes(permission.key)
+                  return (
+                    <label
+                      key={permission.key}
+                      className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 transition-colors hover:border-slate-300 hover:bg-white"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => togglePermission(permission.key)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{permission.label}</p>
+                        <p className="mt-1 text-sm text-slate-500">{permission.description}</p>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Operacao</h3>
+                <p className="mt-1 text-sm text-slate-500">Contexto interno e envio de acesso ao funcionario.</p>
+              </div>
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
                 <div className="space-y-2">
                   <Label htmlFor="staff-notes">Observacoes</Label>
                   <textarea
                     id="staff-notes"
                     value={form.notes}
                     onChange={(event) => updateForm('notes', event.target.value)}
-                    placeholder="Observacoes internas sobre este colaborador."
-                    className="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                    placeholder="Ex.: responsavel por estoque, cadastro e revisao de catalogo."
+                    className="min-h-32 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-3">
-                <div>
-                  <Label>Permissoes</Label>
-                  <p className="mt-1 text-sm text-slate-500">Escolha os modulos que esse funcionario pode acessar.</p>
-                </div>
-                <div className="space-y-3">
-                  {permissionOptions.map((permission) => {
-                    const checked = form.permissions.includes(permission.key)
-                    return (
-                      <label
-                        key={permission.key}
-                        className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => togglePermission(permission.key)}
-                          className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
-                        />
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{permission.label}</p>
-                          <p className="mt-1 text-sm text-slate-500">{permission.description}</p>
-                        </div>
-                      </label>
-                    )
-                  })}
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={form.sendInvite}
+                      onChange={(event) => updateForm('sendInvite', event.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                    />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Enviar convite por e-mail</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {inviteEnabled
+                          ? 'Usa o Supabase Auth Admin para convidar o funcionario a acessar o painel.'
+                          : 'Ative SUPABASE_SERVICE_ROLE_KEY para habilitar envio automatico de convites.'}
+                      </p>
+                    </div>
+                  </label>
                 </div>
               </div>
+            </section>
 
-              <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <input
-                  type="checkbox"
-                  checked={form.sendInvite}
-                  onChange={(event) => updateForm('sendInvite', event.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
-                />
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Enviar convite por e-mail</p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {inviteEnabled
-                      ? 'Usa o Supabase Auth Admin para convidar o funcionario a acessar o painel.'
-                      : 'Ative SUPABASE_SERVICE_ROLE_KEY para habilitar envio automatico de convites.'}
-                  </p>
-                </div>
-              </label>
-
-              <Button type="submit" size="lg" className="rounded-xl" disabled={isCreating}>
+            <div className="flex justify-end">
+              <Button type="submit" size="lg" className="rounded-xl px-5" disabled={isCreating}>
                 {isCreating ? (
                   <>
                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -367,29 +380,31 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
                   </>
                 )}
               </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
-        <Card className="border-0 bg-white ring-1 ring-slate-200">
-          <CardHeader>
-            <CardTitle>Equipe cadastrada</CardTitle>
-            <CardDescription>Atualize papel, status, permissoes e convites sem sair desta tela.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 px-5 pb-5">
-            {staff.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
-                Nenhum funcionario cadastrado ainda.
-              </div>
-            ) : (
-              staff.map((member) => {
+      <Card className="border-0 bg-white ring-1 ring-slate-200">
+        <CardHeader className="border-b border-slate-100">
+          <CardTitle>Equipe cadastrada</CardTitle>
+          <CardDescription>Visualize a equipe de forma mais clara e ajuste acesso sem poluir a leitura.</CardDescription>
+        </CardHeader>
+        <CardContent className="px-6 py-6">
+          {staff.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
+              Nenhum funcionario cadastrado ainda.
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {staff.map((member) => {
                 const isBusy = busyId === member.id
                 return (
-                  <div key={member.id} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
+                  <div key={member.id} className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white">
+                    <div className="flex flex-col gap-4 border-b border-slate-100 bg-slate-50 px-5 py-5 xl:flex-row xl:items-start xl:justify-between">
+                      <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-base font-semibold text-slate-900">{member.full_name}</p>
+                          <p className="text-lg font-semibold text-slate-900">{member.full_name}</p>
                           <span
                             className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusClasses(member.status)}`}
                           >
@@ -397,111 +412,115 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
                           </span>
                         </div>
                         <p className="mt-1 text-sm text-slate-500">{member.email}</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {member.permissions.map((permission) => (
-                            <span
-                              key={`${member.id}-${permission}`}
-                              className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200"
-                            >
-                              {permission}
-                            </span>
-                          ))}
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2 xl:w-[420px]">
+                        <div className="space-y-2">
+                          <Label>Papel</Label>
+                          <select
+                            value={member.role}
+                            disabled={isBusy}
+                            onChange={(event) =>
+                              updateStaffMember(member.id, { role: event.target.value as StaffRole })
+                            }
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                          >
+                            {staffRoles.map((role) => (
+                              <option key={role} value={role}>
+                                {getRoleLabel(role)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Status</Label>
+                          <select
+                            value={member.status}
+                            disabled={isBusy}
+                            onChange={(event) =>
+                              updateStaffMember(member.id, { status: event.target.value as StaffStatus })
+                            }
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                          >
+                            {staffStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {getStatusLabel(status)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-5 px-5 py-5">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Permissoes liberadas</p>
+                          <p className="mt-1 text-sm text-slate-500">Ative ou remova os acessos conforme a funcao da pessoa.</p>
+                        </div>
+                        <div className="grid gap-3 xl:grid-cols-2">
+                          {permissionOptions.map((permission) => {
+                            const checked = member.permissions.includes(permission.key)
+                            return (
+                              <label
+                                key={`${member.id}-${permission.key}`}
+                                className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition-colors hover:border-slate-300 hover:bg-white"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  disabled={isBusy}
+                                  onChange={() =>
+                                    updateStaffMember(member.id, {
+                                      permissions: checked
+                                        ? member.permissions.filter((item) => item !== permission.key)
+                                        : [...member.permissions, permission.key],
+                                    })
+                                  }
+                                  className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                                />
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">{permission.label}</p>
+                                  <p className="mt-1 text-xs text-slate-500">{permission.description}</p>
+                                </div>
+                              </label>
+                            )
+                          })}
                         </div>
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-[180px_180px]">
-                        <select
-                          value={member.role}
-                          disabled={isBusy}
-                          onChange={(event) =>
-                            updateStaffMember(member.id, { role: event.target.value as StaffRole })
-                          }
-                          className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                        >
-                          {staffRoles.map((role) => (
-                            <option key={role} value={role}>
-                              {getRoleLabel(role)}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={member.status}
-                          disabled={isBusy}
-                          onChange={(event) =>
-                            updateStaffMember(member.id, { status: event.target.value as StaffStatus })
-                          }
-                          className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                        >
-                          {staffStatuses.map((status) => (
-                            <option key={status} value={status}>
-                              {getStatusLabel(status)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-2 md:grid-cols-2">
-                      {permissionOptions.map((permission) => {
-                        const checked = member.permissions.includes(permission.key)
-                        return (
-                          <label
-                            key={`${member.id}-${permission.key}`}
-                            className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        {inviteEnabled ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-xl bg-white"
+                            disabled={isBusy}
+                            onClick={() => handleResendInvite(member)}
                           >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              disabled={isBusy}
-                              onChange={() =>
-                                updateStaffMember(member.id, {
-                                  permissions: checked
-                                    ? member.permissions.filter((item) => item !== permission.key)
-                                    : [...member.permissions, permission.key],
-                                })
-                              }
-                              className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
-                            />
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">{permission.label}</p>
-                              <p className="mt-1 text-xs text-slate-500">{permission.description}</p>
-                            </div>
-                          </label>
-                        )
-                      })}
-                    </div>
-
-                    <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                      {inviteEnabled ? (
+                            {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                            Reenviar convite
+                          </Button>
+                        ) : null}
                         <Button
                           type="button"
-                          variant="outline"
-                          className="rounded-xl bg-white"
+                          variant="destructive"
+                          className="rounded-xl"
                           disabled={isBusy}
-                          onClick={() => handleResendInvite(member)}
+                          onClick={() => handleDelete(member.id, member.full_name)}
                         >
-                          {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                          Reenviar convite
+                          {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          Remover
                         </Button>
-                      ) : null}
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        className="rounded-xl"
-                        disabled={isBusy}
-                        onClick={() => handleDelete(member.id, member.full_name)}
-                      >
-                        {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                        Remover
-                      </Button>
+                      </div>
                     </div>
                   </div>
                 )
-              })
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

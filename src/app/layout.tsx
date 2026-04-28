@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { CartProvider } from '@/components/store/CartProvider'
 
 export const metadata: Metadata = {
-  title: 'Social Commerce Hub',
-  description: 'Painel administrativo para operacao de lojas e catalogos.',
+  title: 'Improve Style',
+  description: 'Loja online e painel administrativo para operacao de catalogos.',
 }
 
 export default function RootLayout({
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <CartProvider>{children}</CartProvider>
+      </body>
     </html>
   )
 }
