@@ -27,6 +27,7 @@ const productNavigation = [
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Clientes', href: '/dashboard/clientes', icon: UserIcon },
   { name: 'Usuários', href: '/dashboard/usuarios', icon: Users },
   { name: 'Configurações', href: '/dashboard/configuracoes', icon: Settings },
 ]
@@ -67,14 +68,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         }`}
       >
         <div className={`flex items-center ${isCollapsed ? '' : 'gap-3'}`}>
-          <div className="relative h-11 w-11 overflow-hidden rounded-2xl bg-[#202020] shadow-sm ring-1 ring-slate-200">
-            <div className="absolute bottom-0 left-0 h-6 w-6 bg-white [clip-path:polygon(0_100%,0_35%,100%_0,100%_100%)]" />
-            <div className="absolute right-0 top-0 h-6 w-6 bg-[#66e0e0] [clip-path:polygon(0_0,100%_0,100%_78%,38%_100%,38%_54%,0_54%)]" />
-          </div>
           {!isCollapsed ? (
             <div className="min-w-0">
               <span className="block truncate text-[2rem] leading-none font-bold tracking-tight text-slate-900">
-                Improve Style
+                Improve Styles
               </span>
               <span className="mt-1 block text-[11px] uppercase tracking-[0.26em] text-slate-400">Admin Store</span>
             </div>
@@ -97,19 +94,29 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         ) : null}
 
         <div className="space-y-2">
-          <Link
-            href="/dashboard"
-            onClick={onNavigate}
-            title="Dashboard"
-            className={`${getPrimaryItemClasses(pathname === '/dashboard')} ${isCollapsed ? 'justify-center' : ''}`}
-          >
-            <Home
-              className={`h-5 w-5 shrink-0 ${
-                pathname === '/dashboard' ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
-              } ${isCollapsed ? '' : 'mr-3'}`}
-            />
-            {!isCollapsed ? 'Dashboard' : null}
-          </Link>
+          {navigation.map((item) => {
+            if (item.href === '/dashboard') {
+              const isActive = pathname === item.href
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  title={item.name}
+                  className={`${getPrimaryItemClasses(isActive)} ${isCollapsed ? 'justify-center' : ''}`}
+                >
+                  <item.icon
+                    className={`h-5 w-5 shrink-0 ${
+                      isActive ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
+                    } ${isCollapsed ? '' : 'mr-3'}`}
+                  />
+                  {!isCollapsed ? item.name : null}
+                </Link>
+              )
+            }
+
+            return null
+          })}
 
           <div className="space-y-2">
             <button
@@ -163,7 +170,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             ) : null}
           </div>
 
-          {navigation.slice(1).map((item) => {
+          {navigation.filter((item) => item.href !== '/dashboard').map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
             return (
               <Link

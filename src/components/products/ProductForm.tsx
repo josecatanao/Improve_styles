@@ -103,17 +103,6 @@ type ProductFormProps = {
   options: ProductFormOptions
 }
 
-type ProductDraftSnapshot = {
-  form: ProductFormState
-  step: number
-  productType: ProductType
-  colorGroups: ColorGroup[]
-  newColorName: string
-  newColorHex: string
-  categoryDraft: string
-  brandDraft: string
-  sizeDrafts: Record<string, string>
-}
 
 const initialState: ProductFormState = {
   name: '',
@@ -158,44 +147,23 @@ const stepItems = [
   },
 ] as const
 
+const commonColors = [
+  { name: 'Branco', hex: '#FFFFFF' },
+  { name: 'Preto', hex: '#000000' },
+  { name: 'Cinza', hex: '#9E9E9E' },
+  { name: 'Azul', hex: '#2196F3' },
+  { name: 'Azul Marinho', hex: '#000080' },
+  { name: 'Vermelho', hex: '#F44336' },
+  { name: 'Vinho', hex: '#800020' },
+  { name: 'Verde', hex: '#4CAF50' },
+  { name: 'Amarelo', hex: '#FFEB3B' },
+  { name: 'Laranja', hex: '#FF9800' },
+  { name: 'Bege', hex: '#F5F5DC' },
+  { name: 'Rosa', hex: '#E91E63' },
+  { name: 'Marrom', hex: '#795548' },
+]
+
 const suggestedSizes = ['P', 'M', 'G', 'GG'] as const
-const productDraftStorageKey = 'product-form-create-draft-v1'
-
-function normalizeDraftSnapshot(draft: Partial<ProductDraftSnapshot>): ProductDraftSnapshot {
-  return {
-    form: {
-      name: draft.form?.name ?? '',
-      category: draft.form?.category ?? '',
-      brand: draft.form?.brand ?? '',
-      shortDescription: draft.form?.shortDescription ?? '',
-      description: draft.form?.description ?? '',
-      price: draft.form?.price ?? '',
-      status: draft.form?.status ?? 'draft',
-    },
-    step:
-      typeof draft.step === 'number' ? Math.min(Math.max(draft.step, 0), stepItems.length - 1) : 0,
-    productType: draft.productType === 'variant' ? 'variant' : 'simple',
-    colorGroups: Array.isArray(draft.colorGroups) ? draft.colorGroups : [],
-    newColorName: draft.newColorName ?? '',
-    newColorHex: draft.newColorHex ?? '#111111',
-    categoryDraft: draft.categoryDraft ?? '',
-    brandDraft: draft.brandDraft ?? '',
-    sizeDrafts: draft.sizeDrafts && typeof draft.sizeDrafts === 'object' ? draft.sizeDrafts : {},
-  }
-}
-
-function hasMeaningfulDraft(snapshot: ProductDraftSnapshot) {
-  return Boolean(
-    snapshot.form.name.trim() ||
-      snapshot.form.category.trim() ||
-      snapshot.form.brand.trim() ||
-      snapshot.form.shortDescription.trim() ||
-      snapshot.form.description.trim() ||
-      snapshot.form.price.trim() ||
-      snapshot.colorGroups.length > 0 ||
-      snapshot.step > 0
-  )
-}
 
 function slugify(value: string) {
   return value
@@ -601,6 +569,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
   )
   const [step, setStep] = useState(0)
   const [productType, setProductType] = useState<ProductType>(initialUseSizes ? 'variant' : 'simple')
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID())
   const [colorGroups, setColorGroups] = useState<ColorGroup[]>(initialGroups)
   const [newColorName, setNewColorName] = useState('')
   const [newColorHex, setNewColorHex] = useState('#111111')
@@ -614,12 +583,11 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastState>(null)
   const [hasSubmittedSuccessfully, setHasSubmittedSuccessfully] = useState(false)
-  const [savedDraft, setSavedDraft] = useState<ProductDraftSnapshot | null>(null)
 
   const imagesRef = useRef<ImageItem[]>(initialImages)
   const removedExistingImageIdsRef = useRef<string[]>([])
   const removedExistingStoragePathsRef = useRef<string[]>([])
-  const hasLoadedDraftRef = useRef(false)
+  const submissionLockRef = useRef(false)
   const useSizes = productType === 'variant'
 
   useEffect(() => {
@@ -637,54 +605,6 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
     return () => window.clearTimeout(timeoutId)
   }, [toast])
 
-  useEffect(() => {
-    if (mode !== 'create') {
-      hasLoadedDraftRef.current = true
-      return
-    }
-
-    const rawDraft = window.sessionStorage.getItem(productDraftStorageKey)
-    if (!rawDraft) {
-      hasLoadedDraftRef.current = true
-      return
-    }
-
-    try {
-      const draft = JSON.parse(rawDraft) as Partial<ProductDraftSnapshot>
-      queueMicrotask(() => {
-        setSavedDraft(normalizeDraftSnapshot(draft))
-      })
-      hasLoadedDraftRef.current = true
-    } catch {
-      window.sessionStorage.removeItem(productDraftStorageKey)
-      hasLoadedDraftRef.current = true
-    }
-  }, [mode])
-
-  useEffect(() => {
-    if (mode !== 'create' || !hasLoadedDraftRef.current || savedDraft) {
-      return
-    }
-
-    const snapshot: ProductDraftSnapshot = {
-      form,
-      step,
-      productType,
-      colorGroups,
-      newColorName,
-      newColorHex,
-      categoryDraft,
-      brandDraft,
-      sizeDrafts,
-    }
-
-    if (!hasMeaningfulDraft(snapshot)) {
-      window.sessionStorage.removeItem(productDraftStorageKey)
-      return
-    }
-
-    window.sessionStorage.setItem(productDraftStorageKey, JSON.stringify(snapshot))
-  }, [brandDraft, categoryDraft, colorGroups, form, mode, newColorHex, newColorName, productType, savedDraft, sizeDrafts, step])
 
   const generatedSku = mode === 'edit' && product?.sku ? product.sku : createSku(form.name, 'PREVIEW')
   const colors = colorGroups.map<ProductColor>((group) => ({ name: group.name, hex: group.hex }))
@@ -698,30 +618,6 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
   function showToast(type: NonNullable<ToastState>['type'], message: string) {
     setToast({ type, message })
-  }
-
-  function restoreSavedDraft() {
-    if (!savedDraft) {
-      return
-    }
-
-    setForm(savedDraft.form)
-    setStep(savedDraft.step)
-    setProductType(savedDraft.productType)
-    setColorGroups(savedDraft.colorGroups)
-    setNewColorName(savedDraft.newColorName)
-    setNewColorHex(savedDraft.newColorHex)
-    setCategoryDraft(savedDraft.categoryDraft)
-    setBrandDraft(savedDraft.brandDraft)
-    setSizeDrafts(savedDraft.sizeDrafts)
-    setSavedDraft(null)
-    showToast('success', 'Rascunho restaurado.')
-  }
-
-  function discardSavedDraft() {
-    window.sessionStorage.removeItem(productDraftStorageKey)
-    setSavedDraft(null)
-    showToast('success', 'Rascunho descartado.')
   }
 
   function updateImages(nextImages: ImageItem[]) {
@@ -799,7 +695,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
     if (image.kind === 'new') {
       URL.revokeObjectURL(image.url)
-    } else if (image.storagePath) {
+    } else if (image.kind === 'existing' && image.storagePath) {
       removedExistingImageIdsRef.current.push(image.id)
       removedExistingStoragePathsRef.current.push(image.storagePath)
     } else if (image.kind === 'existing') {
@@ -1021,12 +917,21 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (submissionLockRef.current || isSubmitting) {
+      return
+    }
+
+    if (step < stepItems.length - 1) {
+      return
+    }
+
     const reviewIssue = validateStep(0) ?? validateStep(2) ?? validateStep(3)
     if (reviewIssue) {
       showToast('error', reviewIssue)
       return
     }
 
+    submissionLockRef.current = true
     setIsSubmitting(true)
     const supabase = createClient()
 
@@ -1116,6 +1021,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
       const productPayload = {
         owner_id: user.id,
+        client_request_id: mode === 'create' ? requestId : product?.client_request_id ?? null,
         name: form.name.trim(),
         slug: uniqueSlug,
         sku:
@@ -1171,6 +1077,32 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       const { error: deleteVariantsError } = await supabase.from('product_variants').delete().eq('product_id', productId)
       if (deleteVariantsError) {
         throw new Error(deleteVariantsError.message)
+      }
+
+      if (mode === 'create') {
+        const { data: existingImageRows, error: existingImagesError } = await supabase
+          .from('product_images')
+          .select('id, storage_path')
+          .eq('product_id', productId)
+
+        if (existingImagesError) {
+          throw new Error(existingImagesError.message)
+        }
+
+        const existingStoragePaths =
+          existingImageRows?.map((row) => row.storage_path).filter((value): value is string => Boolean(value)) ?? []
+
+        if ((existingImageRows?.length ?? 0) > 0) {
+          const { error: deleteExistingImagesError } = await supabase.from('product_images').delete().eq('product_id', productId)
+
+          if (deleteExistingImagesError) {
+            throw new Error(deleteExistingImagesError.message)
+          }
+        }
+
+        if (existingStoragePaths.length > 0) {
+          await supabase.storage.from('product-images').remove(existingStoragePaths)
+        }
       }
 
       const { error: insertVariantsError } = await supabase.from('product_variants').insert(
@@ -1282,18 +1214,41 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       removedExistingImageIdsRef.current = []
       removedExistingStoragePathsRef.current = []
       if (mode === 'create') {
-        window.sessionStorage.removeItem(productDraftStorageKey)
+        setRequestId(crypto.randomUUID())
       }
       setHasSubmittedSuccessfully(true)
       showToast('success', mode === 'edit' ? 'Produto atualizado com sucesso.' : 'Produto cadastrado com sucesso.')
 
-      startTransition(() => {
-        router.refresh()
-      })
+      if (mode === 'create') {
+        setTimeout(() => {
+          startTransition(() => {
+            setForm(initialState)
+            setStep(0)
+            setProductType('variant')
+            setColorGroups([])
+            setImages(initialImages)
+            imagesRef.current = initialImages
+            setCategoryDraft('')
+            setBrandDraft('')
+            setSizeDrafts({})
+            setImageUrlDraft('')
+            setHasSubmittedSuccessfully(false)
+            setIsSubmitting(false)
+            submissionLockRef.current = false
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          })
+        }, 1500)
+      } else {
+        startTransition(() => {
+          router.refresh()
+        })
+        submissionLockRef.current = false
+        setIsSubmitting(false)
+      }
     } catch (submitError) {
-      showToast('error', submitError instanceof Error ? submitError.message : 'Falha ao salvar o produto.')
-    } finally {
+      submissionLockRef.current = false
       setIsSubmitting(false)
+      showToast('error', submitError instanceof Error ? submitError.message : 'Falha ao salvar o produto.')
     }
   }
 
@@ -1306,27 +1261,6 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         />
 
         <div className="relative space-y-6">
-          {mode === 'create' && savedDraft ? (
-            <Card className="border-0 bg-amber-50 ring-1 ring-amber-200">
-              <CardContent className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-amber-900">Rascunho encontrado</p>
-                  <p className="mt-1 text-sm text-amber-800">
-                    Existe um cadastro salvo automaticamente nesta tela. Voce decide se quer restaurar ou descartar.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <Button type="button" variant="outline" className="rounded-xl bg-white" onClick={discardSavedDraft}>
-                    Descartar
-                  </Button>
-                  <Button type="button" className="rounded-xl" onClick={restoreSavedDraft}>
-                    Restaurar rascunho
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
-
           <div className="grid gap-3 xl:grid-cols-5">
             {stepItems.map((item, index) => {
               const Icon = item.icon
@@ -1341,12 +1275,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   className={cn(
                     'group rounded-[1.5rem] border p-4 text-left transition-all',
                     isActive
-                      ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-300/50'
+                      ? 'border-slate-300 bg-white shadow-md ring-1 ring-slate-300'
                       : isCompleted
                         ? 'border-emerald-200 bg-emerald-50/70 text-emerald-900'
                         : 'border-slate-200 bg-white/90 text-slate-600',
                     isActive
-                      ? 'hover:border-slate-900 hover:bg-slate-900'
+                      ? 'hover:bg-slate-50'
                       : isCompleted
                         ? 'hover:border-emerald-200 hover:bg-emerald-50/70'
                         : 'hover:border-slate-300 hover:bg-slate-50'
@@ -1357,19 +1291,19 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       className={cn(
                         'flex h-10 w-10 items-center justify-center rounded-2xl ring-1',
                         isActive
-                          ? 'bg-white/10 text-white ring-white/20'
+                          ? 'bg-slate-900 text-white ring-slate-900'
                           : isCompleted
                             ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
                             : 'bg-slate-50 text-slate-500 ring-slate-200'
                       )}
                     >
-                      {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                      <Icon className="h-4 w-4" />
                     </span>
                     <span
                       className={cn(
                         'rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em]',
                         isActive
-                          ? 'bg-white/10 text-white'
+                          ? 'bg-slate-100 text-slate-900'
                           : isCompleted
                             ? 'bg-emerald-50 text-emerald-700'
                             : 'bg-slate-100 text-slate-500'
@@ -1381,7 +1315,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   <p
                     className={cn(
                       'mt-4 text-sm font-semibold',
-                      isActive ? 'text-white' : isCompleted ? 'text-emerald-900' : 'text-slate-900'
+                      isActive ? 'text-slate-950' : isCompleted ? 'text-emerald-900' : 'text-slate-900'
                     )}
                   >
                     {item.title}
@@ -1389,7 +1323,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   <p
                     className={cn(
                       'mt-1 text-sm',
-                      isActive ? 'text-slate-300' : isCompleted ? 'text-emerald-700' : 'text-slate-500'
+                      isActive ? 'text-slate-600' : isCompleted ? 'text-emerald-700' : 'text-slate-500'
                     )}
                   >
                     {item.description}
@@ -1430,7 +1364,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                     value={form.brand}
                     draft={brandDraft}
                     options={options.brands}
-                    placeholder="Ex.: Redenet"
+                    placeholder="Ex.: Pow jeans"
                     onDraftChange={setBrandDraft}
                     onSelect={(value) => setForm((current) => ({ ...current, brand: value }))}
                   />
@@ -1460,13 +1394,13 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                     </select>
                   </FieldGroup>
 
-                  <Card className="border-0 bg-slate-950 text-white ring-1 ring-slate-900/80 md:col-span-2">
+                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200 md:col-span-2">
                     <CardContent className="grid gap-2 px-5 py-5 sm:grid-cols-[1fr_auto] sm:items-center">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">SKU principal</p>
-                        <p className="mt-1 text-base font-semibold">{generatedSku}</p>
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">SKU principal</p>
+                        <p className="mt-1 text-base font-semibold text-slate-900">{generatedSku}</p>
                       </div>
-                      <p className="text-sm text-slate-300">Gerado automaticamente a partir do nome do produto.</p>
+                      <p className="text-sm text-slate-500">Gerado automaticamente a partir do nome do produto.</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -1527,12 +1461,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       className={cn(
                         'rounded-[1.5rem] border p-5 text-left transition-all',
                         productType === 'simple'
-                          ? 'border-slate-900 bg-slate-900 text-white'
+                          ? 'border-slate-400 bg-slate-50 shadow-sm ring-1 ring-slate-400'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       )}
                     >
-                      <p className="text-sm font-semibold">Produto simples</p>
-                      <p className={cn('mt-2 text-sm', productType === 'simple' ? 'text-slate-300' : 'text-slate-500')}>
+                      <p className="text-sm font-semibold text-slate-900">Produto simples</p>
+                      <p className={cn('mt-2 text-sm', productType === 'simple' ? 'text-slate-600' : 'text-slate-500')}>
                         Cadastro mais direto, com uma linha unica por cor.
                       </p>
                     </button>
@@ -1543,12 +1477,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       className={cn(
                         'rounded-[1.5rem] border p-5 text-left transition-all',
                         productType === 'variant'
-                          ? 'border-slate-900 bg-slate-900 text-white'
+                          ? 'border-slate-400 bg-slate-50 shadow-sm ring-1 ring-slate-400'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       )}
                     >
-                      <p className="text-sm font-semibold">Produto com variacoes</p>
-                      <p className={cn('mt-2 text-sm', productType === 'variant' ? 'text-slate-300' : 'text-slate-500')}>
+                      <p className="text-sm font-semibold text-slate-900">Produto com variacoes</p>
+                      <p className={cn('mt-2 text-sm', productType === 'variant' ? 'text-slate-600' : 'text-slate-500')}>
                         Organize por cor e cadastre os tamanhos P, M, G, GG ou outros necessarios.
                       </p>
                     </button>
@@ -1559,36 +1493,65 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       <CardTitle>Adicionar cor</CardTitle>
                       <CardDescription>Crie um bloco independente para cada cor do produto.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid gap-4 px-5 pb-5 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-end">
-                      <FieldGroup label="Nome da cor">
-                        <Input
-                          value={newColorName}
-                          onChange={(event) => setNewColorName(event.target.value)}
-                          placeholder="Ex.: Azul royal"
-                          className="h-11 bg-white"
-                        />
-                      </FieldGroup>
-
-                      <FieldGroup label="Cor (hexadecimal)">
-                        <div className="flex h-11 items-center gap-2 rounded-xl border border-input bg-white px-3">
-                          <input
-                            type="color"
-                            value={newColorHex}
-                            onChange={(event) => setNewColorHex(normalizeHex(event.target.value))}
-                            className="h-7 w-8 cursor-pointer border-0 bg-transparent p-0"
-                          />
+                    <CardContent className="flex flex-col gap-6 px-5 pb-5">
+                      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-end">
+                        <FieldGroup label="Nome da cor">
                           <Input
-                            value={newColorHex}
-                            onChange={(event) => setNewColorHex(normalizeHex(event.target.value))}
-                            className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
+                            value={newColorName}
+                            onChange={(event) => setNewColorName(event.target.value)}
+                            placeholder="Ex.: Azul royal"
+                            className="h-11 bg-white"
                           />
-                        </div>
-                      </FieldGroup>
+                        </FieldGroup>
 
-                      <Button type="button" size="lg" className="h-11 rounded-xl" onClick={addColorGroup}>
-                        <Plus className="h-4 w-4" />
-                        Adicionar cor
-                      </Button>
+                        <FieldGroup label="Cor (hexadecimal)">
+                          <div className="flex h-11 items-center gap-2 rounded-xl border border-input bg-white px-3">
+                            <input
+                              type="color"
+                              value={newColorHex}
+                              onChange={(event) => setNewColorHex(normalizeHex(event.target.value))}
+                              className="h-7 w-8 cursor-pointer border-0 bg-transparent p-0"
+                            />
+                            <Input
+                              value={newColorHex}
+                              onChange={(event) => setNewColorHex(normalizeHex(event.target.value))}
+                              className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
+                            />
+                          </div>
+                        </FieldGroup>
+
+                        <Button type="button" size="lg" className="h-11 rounded-xl" onClick={addColorGroup}>
+                          <Plus className="h-4 w-4" />
+                          Adicionar cor
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          Cores rapidas
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {commonColors.map((color) => (
+                            <button
+                              key={color.name}
+                              type="button"
+                              onClick={() => {
+                                setNewColorName(color.name)
+                                setNewColorHex(color.hex)
+                              }}
+                              className="group flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                            >
+                              <span
+                                className="h-3.5 w-3.5 rounded-full border border-slate-200 shadow-sm"
+                                style={{ backgroundColor: color.hex }}
+                              />
+                              <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900">
+                                {color.name}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -1829,6 +1792,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                           type="url"
                           value={imageUrlDraft}
                           onChange={(event) => setImageUrlDraft(event.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              appendImageUrl()
+                            }
+                          }}
                           placeholder="https://exemplo.com/minha-imagem.webp"
                           className="mt-3 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                         />
@@ -1940,229 +1909,112 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
             {step === 4 ? (
               <StepShell
                 title="Revisao final"
-                description="Revise as informacoes principais e veja como o produto deve aparecer na loja."
+                description="Verifique como o produto sera exibido na sua loja online."
               >
-                <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                <div className="grid gap-4">
                   <Card className="border-0 bg-white ring-1 ring-slate-200">
                     <CardHeader>
-                      <CardTitle>Resumo do produto</CardTitle>
-                      <CardDescription>Os dados abaixo serao usados no cadastro final.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-4 px-5 pb-5 md:grid-cols-2">
-                      <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Nome</p>
-                        <p className="mt-2 text-sm font-semibold text-slate-900">{form.name || 'Nao informado'}</p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Preco</p>
-                        <p className="mt-2 text-sm font-semibold text-slate-900">{form.price || 'Nao informado'}</p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Categoria</p>
-                        <p className="mt-2 text-sm font-semibold text-slate-900">{form.category || 'Nao informada'}</p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Status</p>
-                        <p className="mt-2 text-sm font-semibold text-slate-900">{form.status}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 bg-slate-950 text-white ring-1 ring-slate-900">
-                    <CardHeader>
-                      <CardTitle>Checklist final</CardTitle>
-                      <CardDescription className="text-slate-300">
-                        Uma leitura rapida para confirmar estrutura e volume da galeria.
+                      <CardTitle>Preview na loja</CardTitle>
+                      <CardDescription>
+                        Simulacao da vitrine com imagem principal, galeria, preco e variacoes.
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-3 px-5 pb-5">
-                      <div className="rounded-2xl bg-white/6 p-4 ring-1 ring-white/10">
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Variacoes</p>
-                        <p className="mt-2 text-sm font-semibold text-white">
-                          {colorGroups.length} cor(es) • {totalVariants} variacao(oes)
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-white/6 p-4 ring-1 ring-white/10">
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Imagens</p>
-                        <p className="mt-2 text-sm font-semibold text-white">{images.length} imagem(ns) na galeria</p>
-                      </div>
-                      <div className="rounded-2xl bg-white/6 p-4 ring-1 ring-white/10">
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Modelo do produto</p>
-                        <p className="mt-2 text-sm font-semibold text-white">
-                          {productType === 'variant' ? 'Produto com variacoes' : 'Produto simples'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-white/6 p-4 ring-1 ring-white/10">
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Estoque estimado</p>
-                        <p className="mt-2 text-sm font-semibold text-white">{totalStock} unidade(s)</p>
+                    <CardContent className="px-5 pb-5">
+                      <div className="grid gap-5 lg:grid-cols-[minmax(0,340px)_1fr]">
+                        <div className="overflow-hidden rounded-[1.75rem] bg-white shadow-[0_20px_45px_-32px_rgba(15,23,42,0.45)] ring-1 ring-slate-200">
+                          <div className="relative aspect-[4/5] overflow-hidden bg-slate-100">
+                            {previewImage ? (
+                              <>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={previewImage.url} alt={form.name || 'Preview do produto'} className="h-full w-full object-cover" />
+                              </>
+                            ) : (
+                              <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-400">
+                                A imagem de capa aparecera aqui.
+                              </div>
+                            )}
+                            <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700">
+                              {form.category || 'Categoria'}
+                            </div>
+                          </div>
+                          <div className="space-y-4 p-5">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                                  Improve Styles
+                                </p>
+                                <p className="text-xs text-slate-500">Preview do Card</p>
+                              </div>
+                              <div className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 ring-1 ring-cyan-100">
+                                {form.status === 'active' ? 'Ativo' : 'Rascunho'}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <h4 className="text-lg font-semibold tracking-tight text-slate-950">
+                                {form.name || 'Nome do produto'}
+                              </h4>
+                              <p className="line-clamp-3 text-sm leading-6 text-slate-500">
+                                {form.shortDescription || 'Resumo curto aparecerá aqui.'}
+                              </p>
+                            </div>
+
+                            <div className="flex items-end justify-between gap-4">
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Preco</p>
+                                <p className="mt-1 text-2xl font-semibold text-slate-950">{formatCurrency(previewPrice)}</p>
+                              </div>
+                              <p className="text-sm text-slate-500">{totalStock} em estoque</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200">
+                            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Variacoes disponiveis</p>
+                            <div className="mt-4 flex flex-wrap gap-3">
+                              {colorGroups.map((group) => (
+                                <div key={group.id} className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+                                  <span className="h-3.5 w-3.5 rounded-full border border-slate-300" style={{ backgroundColor: group.hex }} />
+                                  <span className="text-sm font-medium text-slate-700">{group.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {colorGroups.flatMap((group) => group.variants).map((variant) => (
+                                <span
+                                  key={variant.id}
+                                  className="rounded-full bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                                >
+                                  {variant.size}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200">
+                            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Galeria ({images.length})</p>
+                            {images.length > 0 ? (
+                              <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
+                                {images.map((image, index) => (
+                                  <div key={image.id} className="overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-200">
+                                    <div className="relative aspect-square overflow-hidden bg-slate-100">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={image.url} alt={`Preview ${index + 1}`} className="h-full w-full object-cover" />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-4 text-sm text-slate-500">Nenhuma imagem na galeria.</p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
-
-                <Card className="border-0 bg-white ring-1 ring-slate-200">
-                  <CardHeader>
-                    <CardTitle>Preview na loja</CardTitle>
-                    <CardDescription>
-                      Simulacao da vitrine com imagem principal, galeria da loja, preco e variacoes.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="px-5 pb-5">
-                    <div className="grid gap-5 lg:grid-cols-[minmax(0,340px)_1fr]">
-                      <div className="overflow-hidden rounded-[1.75rem] bg-white shadow-[0_20px_45px_-32px_rgba(15,23,42,0.45)] ring-1 ring-slate-200">
-                        <div className="relative aspect-[4/5] overflow-hidden bg-slate-100">
-                          {previewImage ? (
-                            <>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={previewImage.url} alt={form.name || 'Preview do produto'} className="h-full w-full object-cover" />
-                            </>
-                          ) : (
-                            <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-400">
-                              A imagem de capa aparecera aqui.
-                            </div>
-                          )}
-                          <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700">
-                            {form.category || 'Categoria'}
-                          </div>
-                        </div>
-                        <div className="space-y-4 p-5">
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                                Improve Style
-                              </p>
-                              <p className="text-xs text-slate-500">Preview da loja online</p>
-                            </div>
-                            <div className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 ring-1 ring-cyan-100">
-                              {form.status === 'active' ? 'Disponivel' : 'Em preparacao'}
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <h4 className="text-lg font-semibold tracking-tight text-slate-950">
-                              {form.name || 'Nome do produto'}
-                            </h4>
-                            <p className="line-clamp-3 text-sm leading-6 text-slate-500">
-                              {form.shortDescription || 'O resumo curto do produto aparecera aqui no card da loja.'}
-                            </p>
-                          </div>
-
-                          <div className="flex items-end justify-between gap-4">
-                            <div>
-                              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Preco</p>
-                              <p className="mt-1 text-2xl font-semibold text-slate-950">{formatCurrency(previewPrice)}</p>
-                            </div>
-                            <p className="text-sm text-slate-500">{images.length} imagem(ns) no produto</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Como sera exibido</p>
-                          <div className="mt-3 space-y-3 text-sm text-slate-600">
-                            <p>
-                              O card usa a primeira imagem da galeria como capa e destaca o nome, preco e resumo do
-                              produto.
-                            </p>
-                            <p>
-                              As cores aparecem como opcoes visuais e os tamanhos ajudam o cliente a entender a
-                              disponibilidade antes de entrar no detalhe.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Galeria do produto</p>
-                          {images.length > 0 ? (
-                            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                              {images.map((image, index) => (
-                                <div key={image.id} className="overflow-hidden rounded-2xl bg-slate-50 ring-1 ring-slate-200">
-                                  <div className="relative aspect-square overflow-hidden bg-slate-100">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={image.url} alt={`Preview ${index + 1}`} className="h-full w-full object-cover" />
-                                    {index === 0 ? (
-                                      <span className="absolute left-2 top-2 rounded-full bg-cyan-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
-                                        Capa
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                  <div className="space-y-1 p-3">
-                                    <p className="truncate text-xs font-semibold text-slate-700">
-                                      {image.kind === 'new' ? image.file.name : `Imagem ${index + 1}`}
-                                    </p>
-                                    <p className="text-[11px] text-slate-500">
-                                      {image.assignedColorName ? image.assignedColorName : 'Sem cor vinculada'}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="mt-4 text-sm text-slate-500">A galeria aparecerá aqui quando houver imagens.</p>
-                          )}
-                        </div>
-
-                        <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Cores disponiveis</p>
-                          <div className="mt-4 flex flex-wrap gap-3">
-                            {colorGroups.map((group) => (
-                              <div key={group.id} className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
-                                <span className="h-3.5 w-3.5 rounded-full border border-slate-300" style={{ backgroundColor: group.hex }} />
-                                <span className="text-sm font-medium text-slate-700">{group.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Tamanhos / variacoes</p>
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            {colorGroups.flatMap((group) => group.variants).map((variant) => (
-                              <span
-                                key={variant.id}
-                                className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-800 ring-1 ring-cyan-100"
-                              >
-                                {variant.size}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {colorGroups.length > 0 ? (
-                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200">
-                    <CardHeader>
-                      <CardTitle>Variacoes cadastradas</CardTitle>
-                      <CardDescription>Visao resumida por cor e tamanhos.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3 px-5 pb-5">
-                      {colorGroups.map((group) => (
-                        <div
-                          key={group.id}
-                          className="flex flex-col gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span
-                              className="h-4 w-4 rounded-full border border-slate-300"
-                              style={{ backgroundColor: group.hex }}
-                            />
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">{group.name}</p>
-                              <p className="text-xs text-slate-500">{group.hex}</p>
-                            </div>
-                          </div>
-                          <p className="text-sm text-slate-600">
-                            {group.variants.map((variant) => variant.size).join(', ') || 'Sem tamanhos'}
-                          </p>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                ) : null}
               </StepShell>
             ) : null}
 
@@ -2175,11 +2027,11 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                 </div>
 
                 <div className="flex flex-col-reverse gap-3 sm:flex-row">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    className="rounded-xl"
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="rounded-xl"
                     disabled={step === 0 || isSubmitting}
                     onClick={() => setStep((current) => Math.max(current - 1, 0))}
                   >
@@ -2188,12 +2040,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   </Button>
 
                   {step < stepItems.length - 1 ? (
-                    <Button type="button" size="lg" className="rounded-xl" onClick={goToNextStep}>
+                    <Button key="btn-next" type="button" size="lg" className="rounded-xl" disabled={isSubmitting} onClick={goToNextStep}>
                       Proxima etapa
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   ) : (
-                    <Button type="submit" size="lg" className="rounded-xl" disabled={isSubmitting}>
+                    <Button key="btn-submit" type="submit" size="lg" className="rounded-xl" disabled={isSubmitting}>
                       {isSubmitting ? (
                         <>
                           <LoaderCircle className="h-4 w-4 animate-spin" />

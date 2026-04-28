@@ -4,10 +4,10 @@ import { HomeHeroCarousel } from '@/components/store/HomeHeroCarousel'
 import { ProductCarouselRail } from '@/components/store/ProductCarouselRail'
 import { StoreShell } from '@/components/store/StoreShell'
 import { getStorefrontData } from '@/lib/products'
-import { getStoreCategoryKey, normalizeStoreCategoryLabel, slugifyStoreValue, type StoreSortOption } from '@/lib/storefront'
+import { getStoreCategoryKey, normalizeStoreCategoryLabel, slugifyStoreValue, type ExtendedStoreSortOption } from '@/lib/storefront'
 
-function parseSort(value: string | string[] | undefined): StoreSortOption {
-  if (value === 'price_asc' || value === 'price_desc') {
+function parseSort(value: string | string[] | undefined): ExtendedStoreSortOption {
+  if (value === 'price_asc' || value === 'price_desc' || value === 'recent') {
     return value
   }
 
@@ -67,9 +67,10 @@ export default async function Home({
     }))
     .filter((section) => section.products.length > 0)
     .sort((a, b) => b.products.length - a.products.length)
-  const offers = (storefront.featuredProducts.length > 0 ? storefront.featuredProducts : storefront.popularProducts).slice(0, 4)
-  const bestSellers = storefront.popularProducts.slice(4, 8).length > 0 ? storefront.popularProducts.slice(4, 8) : storefront.filteredProducts.slice(0, 4)
-  const heroProducts = [...storefront.featuredProducts, ...storefront.popularProducts].filter(
+  const offers = (storefront.featuredProducts.length > 0 ? storefront.featuredProducts : storefront.newestProducts).slice(0, 4)
+  const bestSellers = storefront.popularProducts.slice(0, 8)
+  const newestProducts = storefront.newestProducts.slice(0, 8)
+  const heroProducts = [...storefront.featuredProducts, ...storefront.newestProducts].filter(
     (product, index, array) => array.findIndex((item) => item.id === product.id) === index
   )
 
@@ -119,7 +120,17 @@ export default async function Home({
           <ProductCarouselRail title="Ofertas em destaque" href="#produtos" products={offers} />
         </div>
 
-        <ProductCarouselRail title="Mais vendidos" href="#produtos" products={bestSellers} />
+        {newestProducts.length > 0 ? (
+          <div id="novidades">
+            <ProductCarouselRail title="Novidades" href="/?sort=recent" products={newestProducts} />
+          </div>
+        ) : null}
+
+        {bestSellers.length > 0 ? (
+          <div id="mais-vendidos">
+            <ProductCarouselRail title="Mais vendidos" href="#mais-vendidos" products={bestSellers} />
+          </div>
+        ) : null}
 
         {storefront.errorMessage ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{storefront.errorMessage}</div>

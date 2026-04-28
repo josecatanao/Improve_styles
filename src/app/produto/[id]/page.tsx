@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { AddToCartPanel } from '@/components/store/AddToCartPanel'
+import { ProductDetailClient } from '@/components/store/ProductDetailClient'
 import { ProductCard } from '@/components/store/ProductCard'
-import { ProductGallery } from '@/components/store/ProductGallery'
 import { StoreShell } from '@/components/store/StoreShell'
 import { getPublicProductById, getStorefrontData } from '@/lib/products'
-import { getProductGallery, slugifyStoreValue } from '@/lib/storefront'
+import { getStoreCategoryKey, slugifyStoreValue } from '@/lib/storefront'
+import { createClient } from '@/utils/supabase/server'
 
 export default async function ProductDetailPage({
   params,
@@ -13,7 +13,14 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [productResult, storefront] = await Promise.all([getPublicProductById(id), getStorefrontData()])
+  const supabase = await createClient()
+  const [
+    productResult,
+    storefront,
+    {
+      data: { user },
+    },
+  ] = await Promise.all([getPublicProductById(id), getStorefrontData(), supabase.auth.getUser()])
 
   if (!productResult.setupRequired && !productResult.product) {
     notFound()
@@ -37,7 +44,6 @@ export default async function ProductDetailPage({
   }
 
   const product = productResult.product
-  const gallery = getProductGallery(product)
 
   return (
     <StoreShell categories={categories}>
@@ -49,7 +55,7 @@ export default async function ProductDetailPage({
           {product.category?.trim() ? (
             <>
               <span>/</span>
-              <Link href={`/loja/${slugifyStoreValue(product.category)}`} className="transition-colors hover:text-slate-900">
+              <Link href={`/loja/${getStoreCategoryKey(product.category)}`} className="transition-colors hover:text-slate-900">
                 {product.category}
               </Link>
             </>
@@ -58,23 +64,7 @@ export default async function ProductDetailPage({
           <span>{product.name}</span>
         </div>
 
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_420px]">
-          <ProductGallery images={gallery} productName={product.name} />
-
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5">
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  {product.brand?.trim() ? <span className="rounded-full bg-slate-100 px-2.5 py-1">{product.brand}</span> : null}
-                  {product.category?.trim() ? <span className="rounded-full bg-slate-100 px-2.5 py-1">{product.category}</span> : null}
-                </div>
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">{product.name}</h1>
-              </div>
-            </div>
-
-            <AddToCartPanel product={product} />
-          </div>
-        </section>
+        <ProductDetailClient product={product} isAuthenticated={Boolean(user)} />
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6">
           <h2 className="text-xl font-semibold text-slate-950">Descricao do produto</h2>

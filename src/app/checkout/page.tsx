@@ -2,8 +2,19 @@ import { CheckoutClient } from '@/components/store/CheckoutClient'
 import { StoreShell } from '@/components/store/StoreShell'
 import { getStorefrontData } from '@/lib/products'
 import { slugifyStoreValue } from '@/lib/storefront'
+import { createClient } from '@/utils/supabase/server'
+import { redirect } from 'next/navigation'
 
 export default async function CheckoutPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login?mode=customer&next=%2Fcheckout')
+  }
+
   const storefront = await getStorefrontData()
   const categories = storefront.categoryHighlights.map((item) => ({
     label: item.label,

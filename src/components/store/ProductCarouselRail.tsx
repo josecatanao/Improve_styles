@@ -28,9 +28,14 @@ export function ProductCarouselRail({
     }
 
     function updateScrollState() {
-      const maxScrollLeft = element.scrollWidth - element.clientWidth
-      setCanScrollLeft(element.scrollLeft > 8)
-      setCanScrollRight(element.scrollLeft < maxScrollLeft - 8)
+      const currentElement = viewportRef.current
+      if (!currentElement) {
+        return
+      }
+
+      const maxScrollLeft = currentElement.scrollWidth - currentElement.clientWidth
+      setCanScrollLeft(currentElement.scrollLeft > 8)
+      setCanScrollRight(currentElement.scrollLeft < maxScrollLeft - 8)
     }
 
     updateScrollState()

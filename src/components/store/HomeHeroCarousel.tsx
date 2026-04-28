@@ -17,9 +17,9 @@ type Slide = {
 export function HomeHeroCarousel({ products }: { products: ProductListItem[] }) {
   const slides = useMemo<Slide[]>(
     () =>
-      products.slice(0, 3).map((product, index) => ({
+      products.slice(0, 3).map((product) => ({
         id: product.id,
-        href: index === 0 ? '#produtos' : `/produto/${product.id}`,
+        href: `/produto/${product.id}`,
         image: getProductPrimaryImage(product),
         alt: product.name,
       })),

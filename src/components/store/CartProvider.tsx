@@ -1,6 +1,7 @@
 'use client'
 
-import { createContext, useContext, useSyncExternalStore } from 'react'
+import { createContext, useContext, useSyncExternalStore, useEffect, useRef } from 'react'
+import { createClient } from '@/utils/supabase/client'
 
 export type CartItem = {
   id: string
@@ -94,6 +95,70 @@ function getItemTotals(items: CartItem[]) {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const items = useSyncExternalStore(subscribe, readItemsFromStorage, () => EMPTY_CART)
   const { totalItems, totalPrice } = getItemTotals(items)
+  const supabase = createClient()
+  const userIdRef = useRef<string | null>(null)
+  const isHydratedRef = useRef(false)
+
+  useEffect(() => {
+    async function fetchDBCart(userId: string, isLoginEvent: boolean) {
+      const { data } = await supabase.from('customer_profiles').select('cart').eq('id', userId).single()
+      const dbCart = (data?.cart as CartItem[]) || []
+
+      if (isLoginEvent) {
+        // Active login: Merge local anonymous cart with DB cart
+        const currentLocal = readItemsFromStorage()
+        const merged = [...dbCart]
+        
+        for (const localItem of currentLocal) {
+          const index = merged.findIndex((i) => i.id === localItem.id)
+          if (index === -1) {
+            merged.push(localItem)
+          } else {
+            merged[index].quantity = Math.max(merged[index].quantity, localItem.quantity)
+          }
+        }
+        
+        writeItemsToStorage(merged)
+      } else {
+        // Page refresh or cross-device sync: DB is the source of truth
+        writeItemsToStorage(dbCart)
+      }
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      const user = session?.user
+      if (user && user.user_metadata?.account_type === 'customer') {
+        if (userIdRef.current !== user.id) {
+           userIdRef.current = user.id
+           fetchDBCart(user.id, event === 'SIGNED_IN')
+        }
+      } else if (event === 'SIGNED_OUT') {
+        userIdRef.current = null
+        writeItemsToStorage([]) // Clear cart when logging out
+      }
+    })
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user && data.user.user_metadata?.account_type === 'customer') {
+        if (userIdRef.current !== data.user.id) {
+          userIdRef.current = data.user.id
+          fetchDBCart(data.user.id, false)
+        }
+      }
+    })
+
+    isHydratedRef.current = true
+
+    return () => {
+      authListener.subscription.unsubscribe()
+    }
+  }, [supabase])
+
+  useEffect(() => {
+    if (isHydratedRef.current && userIdRef.current) {
+      supabase.from('customer_profiles').update({ cart: items }).eq('id', userIdRef.current).then()
+    }
+  }, [items, supabase])
 
   function addItem(item: CartItem) {
     const current = readItemsFromStorage()

@@ -13,6 +13,7 @@ $$;
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
+  client_request_id text,
   name text not null,
   slug text not null,
   sku text,
@@ -31,6 +32,7 @@ create table if not exists public.products (
   tags text[] not null default '{}',
   is_featured boolean not null default false,
   is_new boolean not null default false,
+  sales_count integer not null default 0,
   weight numeric(10,2),
   width numeric(10,2),
   height numeric(10,2),
@@ -41,6 +43,7 @@ create table if not exists public.products (
 );
 
 alter table public.products add column if not exists sku text;
+alter table public.products add column if not exists client_request_id text;
 alter table public.products add column if not exists short_description text;
 alter table public.products add column if not exists description text;
 alter table public.products add column if not exists price numeric(12,2) not null default 0;
@@ -55,6 +58,7 @@ alter table public.products add column if not exists audience text;
 alter table public.products add column if not exists tags text[] not null default '{}';
 alter table public.products add column if not exists is_featured boolean not null default false;
 alter table public.products add column if not exists is_new boolean not null default false;
+alter table public.products add column if not exists sales_count integer not null default 0;
 alter table public.products add column if not exists weight numeric(10,2);
 alter table public.products add column if not exists width numeric(10,2);
 alter table public.products add column if not exists height numeric(10,2);
@@ -132,9 +136,13 @@ alter table public.products
   check (status in ('draft', 'active', 'hidden', 'out_of_stock'));
 
 create unique index if not exists products_owner_slug_key on public.products(owner_id, slug);
+create unique index if not exists products_owner_client_request_key
+  on public.products(owner_id, client_request_id)
+  where client_request_id is not null;
 create index if not exists products_owner_created_at_idx on public.products(owner_id, created_at desc);
 create index if not exists products_owner_status_idx on public.products(owner_id, status);
 create index if not exists products_owner_category_idx on public.products(owner_id, category);
+create index if not exists products_sales_count_idx on public.products(sales_count desc, created_at desc);
 
 create table if not exists public.product_variants (
   id uuid primary key default gen_random_uuid(),
@@ -201,6 +209,45 @@ alter table public.product_images add column if not exists assigned_color_hex te
 create index if not exists product_images_product_sort_idx
   on public.product_images(product_id, sort_order asc);
 
+create table if not exists public.customer_profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  full_name text not null,
+  whatsapp text,
+  photo_url text,
+  delivery_address text,
+  status text not null default 'active',
+  last_login_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+alter table public.customer_profiles add column if not exists email text not null default '';
+alter table public.customer_profiles add column if not exists full_name text not null default 'Cliente';
+alter table public.customer_profiles add column if not exists whatsapp text;
+alter table public.customer_profiles add column if not exists photo_url text;
+alter table public.customer_profiles add column if not exists delivery_address text;
+alter table public.customer_profiles add column if not exists status text not null default 'active';
+alter table public.customer_profiles add column if not exists last_login_at timestamptz;
+alter table public.customer_profiles add column if not exists created_at timestamptz not null default timezone('utc', now());
+alter table public.customer_profiles add column if not exists updated_at timestamptz not null default timezone('utc', now());
+
+alter table public.customer_profiles
+  drop constraint if exists customer_profiles_status_check;
+
+alter table public.customer_profiles
+  add constraint customer_profiles_status_check
+  check (status in ('active', 'inactive'));
+
+create unique index if not exists customer_profiles_email_key
+  on public.customer_profiles(email);
+
+drop trigger if exists customer_profiles_set_updated_at on public.customer_profiles;
+create trigger customer_profiles_set_updated_at
+before update on public.customer_profiles
+for each row
+execute function public.set_updated_at();
+
 drop trigger if exists products_set_updated_at on public.products;
 create trigger products_set_updated_at
 before update on public.products
@@ -216,6 +263,7 @@ execute function public.set_updated_at();
 alter table public.products enable row level security;
 alter table public.product_variants enable row level security;
 alter table public.product_images enable row level security;
+alter table public.customer_profiles enable row level security;
 
 drop policy if exists "products_select_own" on public.products;
 create policy "products_select_own"
@@ -343,6 +391,28 @@ on public.product_images
 for delete
 to authenticated
 using (auth.uid() = owner_id);
+
+drop policy if exists "customer_profiles_select_own" on public.customer_profiles;
+create policy "customer_profiles_select_own"
+on public.customer_profiles
+for select
+to authenticated
+using (auth.uid() = id);
+
+drop policy if exists "customer_profiles_insert_own" on public.customer_profiles;
+create policy "customer_profiles_insert_own"
+on public.customer_profiles
+for insert
+to authenticated
+with check (auth.uid() = id);
+
+drop policy if exists "customer_profiles_update_own" on public.customer_profiles;
+create policy "customer_profiles_update_own"
+on public.customer_profiles
+for update
+to authenticated
+using (auth.uid() = id)
+with check (auth.uid() = id);
 
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)

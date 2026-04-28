@@ -4,7 +4,7 @@ import {
   getStoreCategoryKey,
   normalizeStoreCategoryLabel,
   sortProducts,
-  type StoreSortOption,
+  type ExtendedStoreSortOption,
 } from '@/lib/storefront'
 export { getProductStatusClasses, getProductStatusLabel } from '@/lib/product-shared'
 
@@ -42,12 +42,13 @@ export type StorefrontResult = {
   allProducts: ProductListItem[]
   featuredProducts: ProductListItem[]
   popularProducts: ProductListItem[]
+  newestProducts: ProductListItem[]
   filteredProducts: ProductListItem[]
   categoryHighlights: Array<{ label: string; value: number }>
   brandHighlights: Array<{ label: string; value: number }>
   totalActiveProducts: number
   selectedCategory: string | null
-  selectedSort: StoreSortOption
+  selectedSort: ExtendedStoreSortOption
   setupRequired: boolean
   errorMessage: string | null
 }
@@ -72,6 +73,47 @@ function sanitizePage(page: string | undefined) {
 
 function isMissingTable(error: { code?: string } | null, tableCode = '42P01') {
   return error?.code === tableCode
+}
+
+function uniqueBy<T>(items: T[], getKey: (item: T) => string) {
+  const map = new Map<string, T>()
+
+  items.forEach((item) => {
+    const key = getKey(item)
+    if (!map.has(key)) {
+      map.set(key, item)
+    }
+  })
+
+  return Array.from(map.values())
+}
+
+function normalizeProductRecord(product: ProductListItem): ProductListItem {
+  const images = uniqueBy(
+    (product.product_images ?? []).filter((image) => Boolean(image.id || image.public_url)),
+    (image) => image.id ?? `${image.public_url ?? 'no-url'}:${image.assigned_color_hex ?? 'no-color'}`
+  ).sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+
+  const variants = uniqueBy(
+    (product.product_variants ?? []).filter((variant) => Boolean(variant.id || variant.color_hex || variant.size)),
+    (variant) => variant.id ?? `${variant.color_hex}:${variant.size}:${variant.sku ?? 'no-sku'}`
+  ).sort((a, b) => Number(a.position ?? 0) - Number(b.position ?? 0))
+
+  const colors = uniqueBy(
+    (product.colors ?? []).filter((color) => color.name.trim() || color.hex.trim()),
+    (color) => `${color.name.trim().toLowerCase()}:${color.hex.trim().toLowerCase()}`
+  )
+
+  return {
+    ...product,
+    colors,
+    product_images: images,
+    product_variants: variants,
+  }
+}
+
+function normalizeProductRows(rows: ProductListItem[] | null | undefined) {
+  return uniqueBy(rows ?? [], (product) => product.id).map(normalizeProductRecord)
 }
 
 export async function getProductMetrics(): Promise<ProductDashboardMetrics> {
@@ -131,6 +173,7 @@ export async function getProducts(options: {
       `
         id,
         name,
+        client_request_id,
         sku,
         colors,
         price,
@@ -144,6 +187,7 @@ export async function getProducts(options: {
         category,
         brand,
         tags,
+        sales_count,
         product_images(public_url, assigned_color_name, assigned_color_hex),
         product_variants(id, color_name, color_hex, size, sku, stock, price, compare_at_price, cost_price, status, position)
       `,
@@ -187,7 +231,7 @@ export async function getProducts(options: {
   const total = count ?? 0
 
   return {
-    products: (data as ProductListItem[]) ?? [],
+    products: normalizeProductRows(data as ProductListItem[]),
     total,
     totalPages: Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE)),
     currentPage,
@@ -204,6 +248,7 @@ export async function getProductOverviewData(): Promise<ProductOverviewData> {
       `
         id,
         name,
+        client_request_id,
         sku,
         colors,
         price,
@@ -217,6 +262,7 @@ export async function getProductOverviewData(): Promise<ProductOverviewData> {
         category,
         brand,
         tags,
+        sales_count,
         product_images(public_url, assigned_color_name, assigned_color_hex),
         product_variants(id, color_name, color_hex, size, sku, stock, price, compare_at_price, cost_price, status, position)
       `
@@ -249,7 +295,7 @@ export async function getProductOverviewData(): Promise<ProductOverviewData> {
     }
   }
 
-  const products = (data as ProductListItem[]) ?? []
+  const products = normalizeProductRows(data as ProductListItem[])
   const statusLabels: Record<string, string> = {
     active: 'Ativos',
     draft: 'Rascunhos',
@@ -319,7 +365,7 @@ export async function getProductOverviewData(): Promise<ProductOverviewData> {
 export async function getStorefrontData(options?: {
   query?: string
   category?: string
-  sort?: StoreSortOption
+  sort?: ExtendedStoreSortOption
 }): Promise<StorefrontResult> {
   const supabase = await createClient()
   const query = options?.query?.trim()
@@ -332,6 +378,7 @@ export async function getStorefrontData(options?: {
       `
         id,
         name,
+        client_request_id,
         sku,
         colors,
         price,
@@ -349,6 +396,7 @@ export async function getStorefrontData(options?: {
         tags,
         is_featured,
         is_new,
+        sales_count,
         product_images(public_url, assigned_color_name, assigned_color_hex),
         product_variants(id, color_name, color_hex, size, sku, stock, price, compare_at_price, cost_price, status, position)
       `
@@ -362,6 +410,7 @@ export async function getStorefrontData(options?: {
       allProducts: [],
       featuredProducts: [],
       popularProducts: [],
+      newestProducts: [],
       filteredProducts: [],
       categoryHighlights: [],
       brandHighlights: [],
@@ -378,6 +427,7 @@ export async function getStorefrontData(options?: {
       allProducts: [],
       featuredProducts: [],
       popularProducts: [],
+      newestProducts: [],
       filteredProducts: [],
       categoryHighlights: [],
       brandHighlights: [],
@@ -389,7 +439,7 @@ export async function getStorefrontData(options?: {
     }
   }
 
-  const allProducts = (data as ProductListItem[]) ?? []
+  const allProducts = normalizeProductRows(data as ProductListItem[])
   const filteredProducts = allProducts.filter((product) => {
     const matchesQuery = query
       ? [product.name, product.sku, product.category, product.brand, product.short_description]
@@ -424,11 +474,12 @@ export async function getStorefrontData(options?: {
       .map(([label, value]) => ({ label, value }))
 
   const sortedFilteredProducts = sortProducts(filteredProducts, sort)
-  const featuredProducts = sortProducts(
-    allProducts.filter((product) => product.is_featured),
+  const featuredProducts = sortProducts(allProducts.filter((product) => product.is_featured), 'recent').slice(0, 8)
+  const newestProducts = sortProducts(allProducts, 'recent').slice(0, 8)
+  const popularProducts = sortProducts(
+    allProducts.filter((product) => Number(product.sales_count ?? 0) > 0),
     'popular'
   ).slice(0, 8)
-  const popularProducts = sortProducts(allProducts, 'popular').slice(0, 8)
   const selectedCategory =
     category && allProducts.some((product) => getStoreCategoryKey(product.category) === getStoreCategoryKey(category))
       ? normalizeStoreCategoryLabel(
@@ -440,6 +491,7 @@ export async function getStorefrontData(options?: {
     allProducts,
     featuredProducts,
     popularProducts,
+    newestProducts,
     filteredProducts: sortedFilteredProducts,
     categoryHighlights: toHighlightList(categoryMap),
     brandHighlights: toHighlightList(brandMap),
@@ -453,7 +505,7 @@ export async function getStorefrontData(options?: {
 
 export async function getStoreCategoryBySlug(slug: string, options?: {
   query?: string
-  sort?: StoreSortOption
+  sort?: ExtendedStoreSortOption
 }): Promise<CategoryStorefrontResult> {
   const storefront = await getStorefrontData({
     query: options?.query,
@@ -511,6 +563,7 @@ export async function getProductById(productId: string): Promise<{
       `
         id,
         name,
+        client_request_id,
         sku,
         colors,
         price,
@@ -529,6 +582,7 @@ export async function getProductById(productId: string): Promise<{
         tags,
         is_featured,
         is_new,
+        sales_count,
         weight,
         width,
         height,
@@ -557,7 +611,7 @@ export async function getProductById(productId: string): Promise<{
   }
 
   return {
-    product: (data as ProductDetail) ?? null,
+    product: data ? (normalizeProductRecord(data as ProductListItem) as ProductDetail) : null,
     setupRequired: false,
     errorMessage: null,
   }

@@ -1,6 +1,7 @@
 import type { ProductDetail, ProductImageRecord, ProductListItem, ProductVariant } from '@/lib/product-shared'
 
 export type StoreSortOption = 'popular' | 'price_asc' | 'price_desc'
+export type ExtendedStoreSortOption = StoreSortOption | 'recent'
 export type ProductVariantAvailability = 'in_stock' | 'low_stock' | 'out_of_stock'
 
 export type VariantColorOption = {
@@ -113,7 +114,7 @@ export function getProductDisplayBadge(product: ProductListItem) {
   return null
 }
 
-export function sortProducts(products: ProductListItem[], sort: StoreSortOption) {
+export function sortProducts(products: ProductListItem[], sort: ExtendedStoreSortOption) {
   const cloned = [...products]
 
   switch (sort) {
@@ -121,6 +122,8 @@ export function sortProducts(products: ProductListItem[], sort: StoreSortOption)
       return cloned.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0))
     case 'price_desc':
       return cloned.sort((a, b) => Number(b.price ?? 0) - Number(a.price ?? 0))
+    case 'recent':
+      return cloned.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     default:
       return cloned.sort((a, b) => {
         const scoreA = getPopularityScore(a)
@@ -131,15 +134,7 @@ export function sortProducts(products: ProductListItem[], sort: StoreSortOption)
 }
 
 function getPopularityScore(product: ProductListItem) {
-  let score = 0
-
-  if (product.is_featured) score += 100
-  if (product.is_new) score += 40
-  if (Number(product.compare_at_price ?? 0) > Number(product.price ?? 0)) score += 25
-  score += Math.min(Number(product.stock ?? 0), 20)
-  score += (product.product_variants?.length ?? 0) * 4
-
-  return score
+  return Number(product.sales_count ?? 0)
 }
 
 export function getProductColorOptions(product: ProductDetail) {
@@ -329,12 +324,12 @@ export function getVariantStockMessage(stock: number) {
   const availability = getVariantAvailability(stock)
 
   if (availability === 'out_of_stock') {
-    return 'Esgotado'
+    return 'Indisponivel'
   }
 
   if (availability === 'low_stock') {
-    return 'Ultimas unidades'
+    return `Ultimas ${stock} unidades`
   }
 
-  return `${stock} unidades em estoque`
+  return `${stock} unidade(s) em estoque`
 }

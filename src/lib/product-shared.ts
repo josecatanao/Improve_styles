@@ -34,6 +34,7 @@ export type ProductListItem = {
   id: string
   name: string
   sku: string | null
+  client_request_id?: string | null
   colors: ProductColor[] | null
   price: number
   compare_at_price: number | null
@@ -50,6 +51,7 @@ export type ProductListItem = {
   tags: string[] | null
   is_featured?: boolean
   is_new?: boolean
+  sales_count?: number | null
   product_images?: ProductImageRecord[] | null
   product_variants?: ProductVariant[] | null
 }
