@@ -1,5 +1,16 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 
+export type StoreOrderItem = {
+  id: string
+  name: string
+  sku: string | null
+  color_name: string | null
+  size: string | null
+  price: number
+  quantity: number
+  image_url: string | null
+}
+
 export type StoreOrder = {
   id: string
   customer_id: string | null
@@ -17,6 +28,8 @@ export type StoreOrder = {
   delivery_lat: number | null
   delivery_lng: number | null
   created_at: string
+  updated_at: string
+  store_order_items: StoreOrderItem[]
 }
 
 export async function getStoreOrders() {
@@ -24,7 +37,19 @@ export async function getStoreOrders() {
   
   const { data, error } = await supabase
     .from('store_orders')
-    .select('*')
+    .select(`
+      *,
+      store_order_items (
+        id,
+        name,
+        sku,
+        color_name,
+        size,
+        price,
+        quantity,
+        image_url
+      )
+    `)
     .order('created_at', { ascending: false })
 
   if (error?.code === '42P01') {
@@ -44,8 +69,30 @@ export async function getStoreOrders() {
   }
 
   return {
-    orders: data as StoreOrder[],
+    orders: ((data as StoreOrder[]) ?? []).map((order) => ({
+      ...order,
+      store_order_items: order.store_order_items ?? [],
+    })),
     setupRequired: false,
     errorMessage: null,
   }
+}
+
+export async function getRecentOrderSignals(limit = 20) {
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from('store_orders')
+    .select('id, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error || !data) {
+    return []
+  }
+
+  return data.map((order) => ({
+    id: order.id,
+    createdAt: order.created_at,
+  }))
 }

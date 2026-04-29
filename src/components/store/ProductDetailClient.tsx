@@ -18,7 +18,7 @@ export function ProductDetailClient({
   const gallery = useMemo(() => getProductGallery(product), [product])
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_420px]">
+    <section className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_420px] lg:gap-6">
       <ProductGallery images={gallery} productName={product.name} />
 
       <div className="space-y-5">

@@ -8,6 +8,7 @@ export type StoreSettings = {
   announcement_text: string
   announcement_link: string
   announcement_background_color: string
+  store_name: string
   store_logo_url: string | null
   brand_primary_color: string
   brand_secondary_color: string
@@ -23,6 +24,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   announcement_text: '',
   announcement_link: '',
   announcement_background_color: '#3483fa',
+  store_name: 'Improve Styles',
   store_logo_url: null,
   brand_primary_color: DEFAULT_PRIMARY_COLOR,
   brand_secondary_color: DEFAULT_SECONDARY_COLOR,
@@ -52,6 +54,7 @@ export function normalizeStoreSettings(input: StoreSettingsInput): StoreSettings
       input?.announcement_background_color,
       DEFAULT_STORE_SETTINGS.announcement_background_color
     ),
+    store_name: input?.store_name?.trim() || DEFAULT_STORE_SETTINGS.store_name,
     store_logo_url: input?.store_logo_url?.trim() || null,
     brand_primary_color: normalizeHexColor(input?.brand_primary_color, DEFAULT_PRIMARY_COLOR),
     brand_secondary_color: normalizeHexColor(input?.brand_secondary_color, DEFAULT_SECONDARY_COLOR),
@@ -96,6 +99,7 @@ export function isMissingStoreSettingsColumnError(error: { code?: string; messag
     error.code === 'PGRST204' ||
     error.code === 'PGRST205' ||
     error.message.includes("Could not find the table 'public.store_settings'") ||
+    error.message.includes("Could not find the 'store_name' column") ||
     error.message.includes("Could not find the 'store_logo_url' column") ||
     error.message.includes("Could not find the 'brand_primary_color' column") ||
     error.message.includes("Could not find the 'brand_secondary_color' column") ||

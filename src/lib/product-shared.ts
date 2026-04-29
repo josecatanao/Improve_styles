@@ -52,6 +52,8 @@ export type ProductListItem = {
   is_featured?: boolean
   is_new?: boolean
   sales_count?: number | null
+  review_count?: number
+  average_rating?: number | null
   product_images?: ProductImageRecord[] | null
   product_variants?: ProductVariant[] | null
 }

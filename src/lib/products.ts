@@ -116,6 +116,57 @@ function normalizeProductRows(rows: ProductListItem[] | null | undefined) {
   return uniqueBy(rows ?? [], (product) => product.id).map(normalizeProductRecord)
 }
 
+async function attachReviewStats(products: ProductListItem[], supabase: Awaited<ReturnType<typeof createClient>>) {
+  if (products.length === 0) {
+    return products
+  }
+
+  const productIds = products.map((product) => product.id)
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .select('product_id, rating')
+    .in('product_id', productIds)
+
+  if (isMissingTable(error)) {
+    return products.map((product) => ({
+      ...product,
+      review_count: 0,
+      average_rating: null,
+    }))
+  }
+
+  if (error || !data) {
+    return products
+  }
+
+  const stats = new Map<string, { count: number; total: number }>()
+
+  data.forEach((review) => {
+    const current = stats.get(review.product_id) ?? { count: 0, total: 0 }
+    current.count += 1
+    current.total += Number(review.rating ?? 0)
+    stats.set(review.product_id, current)
+  })
+
+  return products.map((product) => {
+    const productStats = stats.get(product.id)
+
+    if (!productStats || productStats.count === 0) {
+      return {
+        ...product,
+        review_count: 0,
+        average_rating: null,
+      }
+    }
+
+    return {
+      ...product,
+      review_count: productStats.count,
+      average_rating: Number((productStats.total / productStats.count).toFixed(1)),
+    }
+  })
+}
+
 export async function getProductMetrics(): Promise<ProductDashboardMetrics> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -440,7 +491,7 @@ export async function getStorefrontData(options?: {
     }
   }
 
-  const allProducts = normalizeProductRows(data as ProductListItem[])
+  const allProducts = await attachReviewStats(normalizeProductRows(data as ProductListItem[]), supabase)
   const filteredProducts = allProducts.filter((product) => {
     const matchesQuery = query
       ? [product.name, product.sku, product.category, product.brand, product.short_description]

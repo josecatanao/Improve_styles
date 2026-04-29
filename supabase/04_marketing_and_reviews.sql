@@ -81,6 +81,7 @@ create table if not exists public.store_settings (
   announcement_link text,
   announcement_active boolean not null default false,
   announcement_background_color text not null default '#3483fa',
+  store_name text not null default 'Improve Styles',
   store_logo_url text,
   brand_primary_color text not null default '#0f172a',
   brand_secondary_color text not null default '#e2e8f0',
@@ -89,6 +90,7 @@ create table if not exists public.store_settings (
 );
 
 alter table public.store_settings add column if not exists announcement_background_color text not null default '#3483fa';
+alter table public.store_settings add column if not exists store_name text not null default 'Improve Styles';
 alter table public.store_settings add column if not exists store_logo_url text;
 alter table public.store_settings add column if not exists brand_primary_color text not null default '#0f172a';
 alter table public.store_settings add column if not exists brand_secondary_color text not null default '#e2e8f0';

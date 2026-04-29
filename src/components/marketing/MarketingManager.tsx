@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import imageCompression from 'browser-image-compression'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,11 +11,23 @@ import { Trash2, GripVertical, Plus, ImagePlus, Loader2, Megaphone, LayoutList, 
 import { saveStoreSettings, removeStoreBanner, toggleStoreBanner, updateStoreBannerLink, uploadStoreBannerAction } from '@/app/dashboard/marketing/actions'
 import { useToast } from '@/components/ui/feedback-provider'
 
-const SECTION_LABELS: Record<string, string> = {
-  banners: 'Banners Principais (Carrossel)',
-  promotions: 'Ofertas Especiais (Promocoes)',
-  featured: 'Produtos em Destaque',
-  'category-nav': 'Categorias em Destaque',
+const SECTION_CONTENT: Record<string, { title: string; description: string }> = {
+  banners: {
+    title: 'Banners principais',
+    description: 'Carrossel grande no topo da home, usado para campanhas, destaques e comunicados visuais.',
+  },
+  promotions: {
+    title: 'Ofertas especiais',
+    description: 'Bloco com produtos em promocao ou com desconto para chamar atencao logo na entrada.',
+  },
+  featured: {
+    title: 'Produtos em destaque',
+    description: 'Area para mostrar os produtos mais importantes, mais vendidos ou que voce quer empurrar primeiro.',
+  },
+  'category-nav': {
+    title: 'Atalhos de categorias',
+    description: 'Lista visual de categorias para o cliente navegar rapido pelas principais areas da loja.',
+  },
 }
 
 type StoreBanner = {
@@ -36,6 +49,7 @@ type StoreSettings = {
 type AvailableSection = {
   id: string
   label: string
+  description?: string
 }
 
 function getErrorMessage(error: unknown) {
@@ -112,8 +126,18 @@ export function MarketingManager({
 
     setIsUploading(true)
     try {
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Selecione um arquivo de imagem para o banner.')
+      }
+
+      const optimized = await imageCompression(file, {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 2200,
+        useWebWorker: true,
+      })
+
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', optimized, optimized.name || file.name)
       formData.append('orderIndex', String(banners.length))
 
       const result = await uploadStoreBannerAction(formData)
@@ -335,9 +359,16 @@ export function MarketingManager({
                 {layout.map((item, index) => (
                   <div key={item} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                     <GripVertical className="h-4 w-4 text-slate-400" />
-                    <span className="flex-1 text-sm font-medium text-slate-700">
-                      {availableSections.find((section) => section.id === item)?.label || SECTION_LABELS[item] || item}
-                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-slate-800">
+                        {availableSections.find((section) => section.id === item)?.label || SECTION_CONTENT[item]?.title || item}
+                      </p>
+                      <p className="mt-1 text-[13px] leading-5 text-slate-500">
+                        {availableSections.find((section) => section.id === item)?.description ||
+                          SECTION_CONTENT[item]?.description ||
+                          'Sessao personalizada da pagina inicial.'}
+                      </p>
+                    </div>
                     <div className="flex flex-col gap-1">
                       <button
                         disabled={index === 0}

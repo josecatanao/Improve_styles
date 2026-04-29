@@ -52,7 +52,7 @@ export function HomeHeroCarousel({ banners }: { banners: { id: string; image_url
   }
 
   return (
-    <section className="relative overflow-hidden rounded-[1.5rem] bg-white shadow-[0_16px_40px_-32px_rgba(15,23,42,0.35)] sm:rounded-[2rem]">
+    <section className="relative overflow-hidden rounded-none bg-white shadow-[0_16px_40px_-32px_rgba(15,23,42,0.35)]">
       <Link href={activeSlide.href} className="block">
         <StoreImage
           src={activeSlide.image}
@@ -68,7 +68,7 @@ export function HomeHeroCarousel({ banners }: { banners: { id: string; image_url
           <button
             type="button"
             onClick={() => goBy(-1)}
-            className="absolute left-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/96 text-slate-700 shadow-sm transition-colors hover:bg-white sm:left-5 sm:h-12 sm:w-12"
+            className="absolute left-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-none bg-white/96 text-slate-700 shadow-sm transition-colors hover:bg-white sm:left-5 sm:h-12 sm:w-12"
             aria-label="Slide anterior"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -76,7 +76,7 @@ export function HomeHeroCarousel({ banners }: { banners: { id: string; image_url
           <button
             type="button"
             onClick={() => goBy(1)}
-            className="absolute right-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/96 text-slate-700 shadow-sm transition-colors hover:bg-white sm:right-5 sm:h-12 sm:w-12"
+            className="absolute right-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-none bg-white/96 text-slate-700 shadow-sm transition-colors hover:bg-white sm:right-5 sm:h-12 sm:w-12"
             aria-label="Proximo slide"
           >
             <ChevronRight className="h-5 w-5" />
@@ -90,8 +90,8 @@ export function HomeHeroCarousel({ banners }: { banners: { id: string; image_url
                 onClick={() => goTo(index)}
                 className={
                   index === activeIndex
-                    ? 'h-2 w-8 rounded-full bg-white shadow-sm sm:w-10'
-                    : 'h-2 w-2 rounded-full bg-white/70 sm:h-2.5 sm:w-2.5'
+                    ? 'h-2 w-8 rounded-none bg-white shadow-sm sm:w-10'
+                    : 'h-2 w-2 rounded-none bg-white/70 sm:h-2.5 sm:w-2.5'
                 }
                 aria-label={`Ir para slide ${index + 1}`}
               />

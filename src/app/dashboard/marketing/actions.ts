@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/utils/supabase/admin'
-import { refresh, revalidatePath } from 'next/cache'
+import { refresh, revalidatePath, revalidateTag } from 'next/cache'
 
 function isMissingRelationError(error: { code?: string; message: string } | null) {
   if (!error) return false
@@ -78,6 +78,7 @@ export async function saveStoreSettings(
 
   revalidatePath('/')
   revalidatePath('/dashboard/marketing')
+  revalidateTag('store-branding', 'max')
   refresh()
   return { success: true }
 }

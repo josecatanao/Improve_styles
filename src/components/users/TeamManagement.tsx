@@ -44,7 +44,7 @@ const initialFormState: StaffFormState = {
   role: 'viewer',
   permissions: ['dashboard:view', 'products:view'],
   notes: '',
-  sendInvite: true,
+  sendInvite: false,
 }
 
 export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamManagementProps) {
@@ -352,38 +352,17 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
             <section className="space-y-4">
               <div>
                 <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Operacao</h3>
-                <p className="mt-1 text-sm text-slate-500">Contexto interno e envio de acesso ao funcionario.</p>
+                <p className="mt-1 text-sm text-slate-500">Contexto interno para orientar a operacao da equipe.</p>
               </div>
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-                <div className="space-y-2">
-                  <Label htmlFor="staff-notes">Observacoes</Label>
-                  <textarea
-                    id="staff-notes"
-                    value={form.notes}
-                    onChange={(event) => updateForm('notes', event.target.value)}
-                    placeholder="Ex.: responsavel por estoque, cadastro e revisao de catalogo."
-                    className="min-h-32 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                  />
-                </div>
-
-                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={form.sendInvite}
-                      onChange={(event) => updateForm('sendInvite', event.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Enviar convite por e-mail</p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {inviteEnabled
-                          ? 'Usa o Supabase Auth Admin para convidar o funcionario a acessar o painel.'
-                          : 'Ative SUPABASE_SERVICE_ROLE_KEY para habilitar envio automatico de convites.'}
-                      </p>
-                    </div>
-                  </label>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="staff-notes">Observacoes</Label>
+                <textarea
+                  id="staff-notes"
+                  value={form.notes}
+                  onChange={(event) => updateForm('notes', event.target.value)}
+                  placeholder="Ex.: responsavel por estoque, cadastro e revisao de catalogo."
+                  className="min-h-32 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                />
               </div>
             </section>
 

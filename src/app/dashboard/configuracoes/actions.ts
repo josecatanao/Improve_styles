@@ -1,6 +1,6 @@
 'use server'
 
-import { refresh, revalidatePath } from 'next/cache'
+import { refresh, revalidatePath, revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/utils/supabase/admin'
 import {
   isMissingStoreSettingsColumnError,
@@ -19,12 +19,14 @@ function ensureSuccess(error: { message: string } | null, fallbackMessage: strin
 }
 
 export async function saveStoreAppearance(input: {
+  storeName: string
   storeLogoUrl: string
   brandPrimaryColor: string
   brandSecondaryColor: string
   dashboardTheme: string
 }) {
   const supabase = createAdminClient()
+  const storeName = input.storeName.trim() || 'Improve Styles'
   const storeLogoUrl = input.storeLogoUrl.trim() || null
   const brandPrimaryColor = normalizeHexColor(input.brandPrimaryColor, '#0f172a')
   const brandSecondaryColor = normalizeHexColor(input.brandSecondaryColor, '#e2e8f0')
@@ -41,6 +43,7 @@ export async function saveStoreAppearance(input: {
     const { error } = await supabase
       .from('store_settings')
       .update({
+        store_name: storeName,
         store_logo_url: storeLogoUrl,
         brand_primary_color: brandPrimaryColor,
         brand_secondary_color: brandSecondaryColor,
@@ -51,6 +54,7 @@ export async function saveStoreAppearance(input: {
     ensureSuccess(error, 'Erro ao atualizar configuracoes visuais da loja')
   } else {
     const { error } = await supabase.from('store_settings').insert({
+      store_name: storeName,
       store_logo_url: storeLogoUrl,
       brand_primary_color: brandPrimaryColor,
       brand_secondary_color: brandSecondaryColor,
@@ -62,6 +66,39 @@ export async function saveStoreAppearance(input: {
   revalidatePath('/')
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/configuracoes')
+  revalidateTag('store-branding', 'max')
   refresh()
   return { success: true }
+}
+
+export async function uploadStoreLogoAction(formData: FormData) {
+  const file = formData.get('file')
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error('Selecione uma imagem valida para a logo.')
+  }
+
+  if (!file.type.startsWith('image/')) {
+    throw new Error('A logo da loja precisa ser uma imagem.')
+  }
+
+  const supabase = createAdminClient()
+
+  await supabase.storage.createBucket('public_assets', { public: true }).catch(() => {})
+
+  const fileExt = file.name.split('.').pop() || 'png'
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+  const filePath = `store-branding/${fileName}`
+
+  const { error } = await supabase.storage.from('public_assets').upload(filePath, file, {
+    contentType: file.type,
+    upsert: true,
+  })
+
+  if (error) {
+    throw new Error(`Falha no upload da logo: ${error.message}`)
+  }
+
+  const { data } = supabase.storage.from('public_assets').getPublicUrl(filePath)
+  return { success: true, publicUrl: data.publicUrl }
 }

@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
-import { LockKeyhole, RefreshCcw, Truck } from 'lucide-react'
 import { Header } from '@/components/store/Header'
+import { getPublicStoreSettings } from '@/lib/store-branding'
 import { getStoreCustomerSession } from '@/lib/customer-session'
-import { getContrastingTextColor } from '@/lib/store-settings'
+import { buildStoreBrandStyle, getContrastingTextColor } from '@/lib/store-settings'
 
 const footerColumns = [
   {
@@ -38,6 +38,7 @@ export async function StoreShell({
   query?: string
   branding?: {
     logoUrl?: string | null
+    storeName?: string | null
   }
   brandStyle?: CSSProperties
   announcement?: {
@@ -48,75 +49,67 @@ export async function StoreShell({
   } | null
   children: React.ReactNode
 }) {
-  const customerSession = await getStoreCustomerSession()
-  const announcementBackgroundColor = announcement?.backgroundColor || '#3483fa'
+  const needsStoreSettings =
+    typeof branding === 'undefined' || typeof brandStyle === 'undefined' || typeof announcement === 'undefined'
+
+  const [customerSession, settingsResponse] = await Promise.all([
+    getStoreCustomerSession(),
+    needsStoreSettings ? getPublicStoreSettings() : Promise.resolve(null),
+  ])
+
+  const resolvedSettings = settingsResponse
+  const resolvedBranding = {
+    logoUrl: branding?.logoUrl ?? resolvedSettings?.store_logo_url ?? null,
+    storeName: branding?.storeName ?? resolvedSettings?.store_name ?? 'Improve Styles',
+  }
+  const resolvedBrandStyle = brandStyle ?? (resolvedSettings ? buildStoreBrandStyle(resolvedSettings) : undefined)
+  const resolvedAnnouncement =
+    announcement ??
+    (resolvedSettings?.announcement_active && resolvedSettings.announcement_text
+      ? {
+          active: resolvedSettings.announcement_active,
+          text: resolvedSettings.announcement_text,
+          link: resolvedSettings.announcement_link,
+          backgroundColor: resolvedSettings.announcement_background_color,
+        }
+      : null)
+
+  const announcementBackgroundColor = resolvedAnnouncement?.backgroundColor || '#3483fa'
   const announcementTextColor = getContrastingTextColor(announcementBackgroundColor)
+  const storeName = resolvedBranding.storeName?.trim() || 'Improve Styles'
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa]" style={brandStyle}>
-      {announcement?.active && announcement.text ? (
+    <div className="min-h-screen bg-[#f7f8fa]" style={resolvedBrandStyle}>
+      {resolvedAnnouncement?.active && resolvedAnnouncement.text ? (
         <div
           className="px-4 py-2 text-center text-sm font-medium"
           style={{ backgroundColor: announcementBackgroundColor, color: announcementTextColor }}
         >
-          {announcement.link ? (
-            <Link href={announcement.link} className="hover:underline">
-              {announcement.text}
+          {resolvedAnnouncement.link ? (
+            <Link href={resolvedAnnouncement.link} className="hover:underline">
+              {resolvedAnnouncement.text}
             </Link>
           ) : (
-            <span>{announcement.text}</span>
+            <span>{resolvedAnnouncement.text}</span>
           )}
         </div>
       ) : null}
-      <Header branding={branding} categories={categories} query={query} customerSession={customerSession} />
+      <Header branding={resolvedBranding} categories={categories} query={query} customerSession={customerSession} />
       {children}
 
-      <footer className="mt-12 border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <div
-            id="entrega"
-            className="grid gap-3 rounded-[1.5rem] border border-slate-200 bg-[#f8fafc] p-4 sm:gap-4 sm:rounded-[2rem] sm:p-5 md:grid-cols-2 xl:grid-cols-3"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm sm:h-11 sm:w-11">
-                <Truck className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-slate-950">Frete gratis</p>
-                <p className="text-sm text-slate-500">Acima de R$199</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm">
-                <RefreshCcw className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-slate-950">Troca facil</p>
-                <p className="text-sm text-slate-500">Ate 7 dias para trocar</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm">
-                <LockKeyhole className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-slate-950">Compra segura</p>
-                <p className="text-sm text-slate-500">Seus dados protegidos</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-8 lg:mt-10 lg:grid-cols-[1.1fr_repeat(3,minmax(0,1fr))]">
+      <footer className="mt-10 border-t border-slate-200 bg-white sm:mt-12">
+        <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
+          <div className="grid gap-7 sm:gap-8 lg:mt-2 lg:grid-cols-[1.1fr_repeat(3,minmax(0,1fr))]">
             <div id="institucional">
-              <Link href="/" className="flex items-center gap-2">
-                {branding?.logoUrl ? (
-                  <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+              <Link href="/" className="flex items-center gap-2.5">
+                {resolvedBranding.logoUrl ? (
+                  <span className="flex h-10 shrink-0 items-center justify-start overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={branding.logoUrl} alt="Logo da loja" className="h-full w-full object-cover" />
+                    <img src={resolvedBranding.logoUrl} alt="Logo da loja" className="block h-full w-auto max-w-[44px] object-contain object-left" />
                   </span>
                 ) : null}
-                <span className="text-[1.7rem] font-bold tracking-tight text-slate-950 sm:text-[2rem]">
-                  Improve Styles
+                <span className="text-base font-bold tracking-tight text-slate-950 sm:text-lg">
+                  {storeName}
                 </span>
               </Link>
               <p className="mt-4 max-w-sm text-sm leading-7 text-slate-500">
@@ -141,7 +134,7 @@ export async function StoreShell({
               <p className="text-sm font-semibold text-slate-950">Atendimento</p>
               <div className="mt-4 space-y-3 text-sm text-slate-500">
                 <p>Use sua conta para acompanhar os dados do pedido e finalize o checkout para salvar a solicitacao neste navegador.</p>
-                <Link href="/conta" className="inline-flex rounded-xl border border-slate-200 px-3 py-2 text-slate-700 transition-colors hover:bg-slate-50">
+                <Link href="/conta" className="inline-flex rounded-none border border-slate-200 px-3 py-2 text-slate-700 transition-colors hover:bg-slate-50">
                   Abrir minha conta
                 </Link>
               </div>
@@ -152,11 +145,11 @@ export async function StoreShell({
             id="pagamento"
             className="mt-8 flex flex-col gap-4 border-t border-slate-100 pt-6 text-sm text-slate-400 sm:mt-10 sm:flex-row sm:items-center sm:justify-between"
           >
-            <p>© 2024 Improve Styles. Todos os direitos reservados.</p>
+            <p>© 2024 {storeName}. Todos os direitos reservados.</p>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-500">VISA</span>
-              <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-500">Mastercard</span>
-              <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-500">PIX</span>
+              <span className="rounded-none border border-slate-200 px-3 py-1.5 text-slate-500">VISA</span>
+              <span className="rounded-none border border-slate-200 px-3 py-1.5 text-slate-500">Mastercard</span>
+              <span className="rounded-none border border-slate-200 px-3 py-1.5 text-slate-500">PIX</span>
             </div>
           </div>
         </div>

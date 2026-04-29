@@ -37,14 +37,14 @@ export function ProductGallery({
 
   return (
     <>
-      <div className="grid gap-4 lg:grid-cols-[88px_minmax(0,1fr)]">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[88px_minmax(0,1fr)]">
         <div className="hidden max-h-[760px] lg:flex lg:flex-col lg:gap-3 lg:overflow-y-auto lg:pr-1">
         {normalizedImages.map((image, index) => (
           <button
             key={`${image.public_url ?? 'placeholder'}-${index}`}
             type="button"
             onClick={() => selectImage(index)}
-            className={`overflow-hidden rounded-xl border ${activeIndex === index ? 'border-[#3483fa]' : 'border-slate-200'}`}
+            className={`overflow-hidden rounded-none border ${activeIndex === index ? 'border-[#3483fa]' : 'border-slate-200'}`}
           >
             {image.public_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -57,13 +57,13 @@ export function ProductGallery({
         </div>
 
         <div className="space-y-3">
-          <div className="group relative hidden overflow-hidden rounded-2xl border border-slate-200 bg-white lg:block">
+          <div className="group relative hidden overflow-hidden rounded-none border border-slate-200 bg-white lg:block">
             {activeImage?.public_url ? (
               <>
                 <button
                   type="button"
                   onClick={() => setIsZoomOpen(true)}
-                  className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-slate-700 shadow-sm transition-colors hover:bg-white"
+                  className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-none bg-white/92 text-slate-700 shadow-sm transition-colors hover:bg-white"
                 >
                   <Search className="h-4 w-4" />
                 </button>
@@ -82,7 +82,7 @@ export function ProductGallery({
           </div>
 
           <div className="lg:hidden">
-            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
+            <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {normalizedImages.map((image, index) => (
                 <button
                   key={`${image.public_url ?? 'mobile'}-${index}`}
@@ -91,7 +91,7 @@ export function ProductGallery({
                     selectImage(index)
                     setIsZoomOpen(true)
                   }}
-                  className="min-w-full snap-center overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                  className="min-w-full snap-center overflow-hidden rounded-none border border-slate-200 bg-white"
                 >
                   {image.public_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -107,14 +107,14 @@ export function ProductGallery({
       </div>
 
       {isZoomOpen ? (
-        <div className="fixed inset-0 z-50 bg-black/82 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
-          <div className="mx-auto flex h-full max-w-7xl flex-col gap-4">
+        <div className="fixed inset-0 z-[95] bg-black/82 p-3 sm:p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className="mx-auto flex h-full max-w-7xl flex-col gap-3 sm:gap-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-white/85">Zoom do produto</p>
               <button
                 type="button"
                 onClick={() => setIsZoomOpen(false)}
-                className="inline-flex h-10 items-center justify-center rounded-full border border-white/15 bg-white/10 px-4 text-sm font-medium text-white transition-colors hover:bg-white/15"
+                className="inline-flex h-10 items-center justify-center rounded-none border border-white/15 bg-white/10 px-4 text-sm font-medium text-white transition-colors hover:bg-white/15"
               >
                 Fechar
               </button>
@@ -127,7 +127,7 @@ export function ProductGallery({
                     key={`zoom-${image.public_url ?? 'placeholder'}-${index}`}
                     type="button"
                     onClick={() => selectImage(index)}
-                    className={`overflow-hidden rounded-xl border ${
+                    className={`overflow-hidden rounded-none border ${
                       activeIndex === index ? 'border-white' : 'border-white/15'
                     }`}
                   >
@@ -141,20 +141,20 @@ export function ProductGallery({
                 ))}
               </div>
 
-              <div className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-[2rem] bg-white/6">
+              <div className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-none bg-white/6">
                 {normalizedImages.length > 1 ? (
                   <>
                     <button
                       type="button"
                       onClick={showPreviousImage}
-                      className="absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/15"
+                      className="absolute left-2 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-none bg-white/10 text-white transition-colors hover:bg-white/15 sm:left-4 sm:h-11 sm:w-11"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
                     <button
                       type="button"
                       onClick={showNextImage}
-                      className="absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/15"
+                      className="absolute right-2 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-none bg-white/10 text-white transition-colors hover:bg-white/15 sm:right-4 sm:h-11 sm:w-11"
                     >
                       <ChevronRight className="h-5 w-5" />
                     </button>

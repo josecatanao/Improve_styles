@@ -70,17 +70,17 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
   }
 
   if (!isReady) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">Carregando checkout...</div>
+    return <div className="rounded-none border border-slate-200 bg-white p-6 text-sm text-slate-500">Carregando checkout...</div>
   }
 
   if (items.length === 0 && !submittedOrder) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+      <div className="rounded-none border border-dashed border-slate-300 bg-white p-8 text-center">
         <p className="text-lg font-semibold text-slate-900">Nao ha itens para finalizar.</p>
         <p className="mt-2 text-sm text-slate-500">Volte para a loja e adicione produtos ao carrinho.</p>
         <Link
           href="/"
-          className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#3483fa] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
+          className="mt-5 inline-flex items-center justify-center rounded-none bg-[#3483fa] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
         >
           Voltar para a loja
         </Link>
@@ -90,14 +90,14 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
 
   if (submittedOrder) {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center">
+      <div className="rounded-none border border-emerald-200 bg-emerald-50 p-8 text-center">
         <p className="text-lg font-semibold text-emerald-800">Pedido salvo com sucesso.</p>
         <p className="mt-2 text-sm text-emerald-700">
           O pedido <span className="font-semibold">{submittedOrder.id}</span> foi registrado neste navegador e o carrinho foi liberado para uma nova compra.
         </p>
         <Link
           href="/conta"
-          className="mt-5 inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+          className="mt-5 inline-flex items-center justify-center rounded-none bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
         >
           Ver minha conta
         </Link>
@@ -144,9 +144,9 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
       <form
-        className="rounded-2xl border border-slate-200 bg-white p-6"
+        className="rounded-none border border-slate-200 bg-white p-4 sm:p-6"
         onSubmit={(event) => {
           event.preventDefault()
           setReviewMode(true)
@@ -162,7 +162,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
               readOnly
               name="name"
               value={customer.name}
-              className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none cursor-not-allowed"
+              className="h-11 rounded-none border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none cursor-not-allowed"
             />
           </label>
           <label className="grid gap-2">
@@ -172,7 +172,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
               readOnly
               name="phone"
               value={customer.phone}
-              className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none cursor-not-allowed"
+              className="h-11 rounded-none border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none cursor-not-allowed"
             />
           </label>
             <label className="grid gap-2">
@@ -181,7 +181,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
                 name="payment_method"
                 value={customer.payment_method}
                 onChange={(event) => setCustomer((current) => ({ ...current, payment_method: event.target.value }))}
-                className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                className="h-11 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               >
                 <option value="pix">Pix</option>
                 <option value="credit_card">Cartao de Credito</option>
@@ -196,7 +196,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
                   name="installments"
                   value={customer.installments}
                   onChange={(event) => setCustomer((current) => ({ ...current, installments: Number(event.target.value) }))}
-                  className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  className="h-11 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
                     <option key={num} value={num}>
@@ -213,7 +213,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
                 name="delivery_method"
                 value={customer.delivery_method}
                 onChange={(event) => setCustomer((current) => ({ ...current, delivery_method: event.target.value }))}
-                className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                className="h-11 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               >
                 <option value="delivery">Entrega (Delivery)</option>
                 <option value="pickup">Retirar na Loja</option>
@@ -238,7 +238,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
                 {customer.delivery_lat && customer.delivery_lng ? (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-emerald-600">Localizacao exata capturada pelo GPS.</p>
-                    <div className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50">
+                    <div className="overflow-hidden rounded-none border border-emerald-200 bg-emerald-50">
                       <iframe
                         width="100%"
                         height="140"
@@ -258,7 +258,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
                   value={customer.delivery_address}
                   onChange={(event) => setCustomer((current) => ({ ...current, delivery_address: event.target.value }))}
                   placeholder="Rua, Numero, Bairro, Ponto de Referencia..."
-                  className="rounded-xl border border-slate-200 px-3 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  className="rounded-none border border-slate-200 px-3 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                 />
               </div>
             ) : null}
@@ -270,7 +270,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
                 rows={2}
                 value={customer.notes}
                 onChange={(event) => setCustomer((current) => ({ ...current, notes: event.target.value }))}
-                className="rounded-xl border border-slate-200 px-3 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                className="rounded-none border border-slate-200 px-3 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
             </label>
           </div>
@@ -278,7 +278,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
             type="submit"
-            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#3483fa] px-4 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
+            className="inline-flex h-12 w-full items-center justify-center rounded-none bg-[#3483fa] px-4 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
           >
             Revisar pedido
           </button>
@@ -288,7 +288,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
               type="button"
               onClick={handleConfirmOrder}
               disabled={!hasRequiredCustomerData || isSubmitting}
-              className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+              className="inline-flex h-12 w-full items-center justify-center rounded-none border border-slate-200 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
               {isSubmitting ? 'Salvando...' : 'Confirmar pedido'}
             </button>
@@ -296,10 +296,10 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
         </div>
       </form>
 
-      <aside className="rounded-2xl border border-slate-200 bg-white p-6">
+      <aside className="rounded-none border border-slate-200 bg-white p-4 sm:p-6">
         <h2 className="text-xl font-semibold text-slate-950">Resumo do pedido</h2>
         {reviewMode ? (
-          <div className="mt-4 rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-sm text-[#1d4ed8]">
+          <div className="mt-4 rounded-none border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-sm text-[#1d4ed8]">
             Revise os dados abaixo. Ao confirmar, o pedido sera salvo neste navegador e o carrinho sera esvaziado.
           </div>
         ) : null}
@@ -326,7 +326,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
           <span className="text-2xl font-semibold text-slate-950">{formatMoney(totalPrice)}</span>
         </div>
 
-        <div className="mt-5 rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-600">
+        <div className="mt-5 rounded-none bg-slate-50 px-4 py-4 text-sm text-slate-600">
           <p className="font-medium text-slate-900">
             {customer.delivery_method === 'pickup' ? 'Retirar na Loja' : 'Entrega para'}
           </p>

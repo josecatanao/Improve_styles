@@ -63,7 +63,7 @@ export function ProductCarouselRail({
 
   return (
     <section className="space-y-4 sm:space-y-5">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-[1.08rem] font-semibold tracking-tight text-slate-950 sm:text-[1.2rem] lg:text-[1.35rem]">{title}</h2>
           {useCarousel ? <p className="text-xs text-slate-500 sm:hidden">Deslize para ver mais</p> : null}
@@ -79,8 +79,6 @@ export function ProductCarouselRail({
 
       {useCarousel ? (
         <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-[#f7f8fa] to-transparent sm:w-8 lg:w-12" />
-
           <Button
             type="button"
             variant="outline"
@@ -104,12 +102,12 @@ export function ProductCarouselRail({
 
           <div
             ref={viewportRef}
-            className="flex gap-3 overflow-x-auto scroll-smooth px-1 pb-2 snap-x snap-mandatory md:px-12 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4 lg:px-14"
+            className="flex gap-2.5 overflow-x-auto scroll-smooth px-0.5 pb-2 snap-x snap-mandatory md:px-12 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4 lg:px-14"
           >
             {products.map((product) => (
               <div
                 key={product.id}
-                className="w-[64vw] max-w-[210px] shrink-0 snap-start sm:w-[250px] sm:max-w-none lg:w-[264px] xl:w-[280px]"
+                className="w-[47vw] min-w-[158px] max-w-[190px] shrink-0 snap-start sm:w-[250px] sm:min-w-0 sm:max-w-none lg:w-[264px] xl:w-[280px]"
               >
                 <ProductCard product={product} />
               </div>

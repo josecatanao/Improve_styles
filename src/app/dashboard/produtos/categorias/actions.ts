@@ -1,6 +1,7 @@
 'use server'
 
 import { refresh, revalidatePath } from 'next/cache'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
 import { getStoreCategoryKey, normalizeStoreCategoryLabel } from '@/lib/storefront'
 
@@ -241,4 +242,36 @@ export async function removeStoreCategory(categoryId: string) {
 
   revalidateCategorySurfaces()
   return { success: true }
+}
+
+export async function uploadStoreCategoryImageAction(formData: FormData) {
+  const file = formData.get('file')
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error('Selecione uma imagem valida para a categoria.')
+  }
+
+  if (!file.type.startsWith('image/')) {
+    throw new Error('A imagem da categoria precisa ser um arquivo de imagem.')
+  }
+
+  const supabase = createAdminClient()
+
+  await supabase.storage.createBucket('public_assets', { public: true }).catch(() => {})
+
+  const fileExt = file.name.split('.').pop() || 'png'
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+  const filePath = `store-categories/${fileName}`
+
+  const { error } = await supabase.storage.from('public_assets').upload(filePath, file, {
+    contentType: file.type,
+    upsert: true,
+  })
+
+  if (error) {
+    throw new Error(`Falha no upload da imagem da categoria: ${error.message}`)
+  }
+
+  const { data } = supabase.storage.from('public_assets').getPublicUrl(filePath)
+  return { success: true, publicUrl: data.publicUrl }
 }

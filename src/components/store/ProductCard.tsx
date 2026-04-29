@@ -50,17 +50,6 @@ function getInstallments(price: number) {
   return 5
 }
 
-function getShowcaseRating(product: ProductListItem) {
-  const salesCount = Number(product.sales_count ?? 0)
-  const normalizedCount = salesCount > 0 ? salesCount : product.is_featured ? 64 : product.is_new ? 32 : 18
-  const rating = 4.6 + Math.min(0.3, normalizedCount / 1000)
-
-  return {
-    rating: rating.toFixed(1).replace('.', ','),
-    count: normalizedCount,
-  }
-}
-
 export function ProductCard({ product }: { product: ProductListItem }) {
   const badge = getProductDisplayBadge(product)
   const image = getProductPrimaryImage(product)
@@ -69,95 +58,99 @@ export function ProductCard({ product }: { product: ProductListItem }) {
   const displayPrice = Number(product.price ?? 0)
   const displayComparePrice = Number(product.compare_at_price ?? 0)
   const installmentCount = getInstallments(displayPrice)
-  const rating = getShowcaseRating(product)
   const badgeLabel = getBadgeLabel(product, badge)
   const badgeStyles = getBadgeStyles(product, badge)
   const secondaryLabel = product.category?.trim()
     ? normalizeStoreCategoryLabel(product.category)
     : product.brand?.trim() || 'Colecao da loja'
+  const reviewCount = Number(product.review_count ?? 0)
+  const averageRating = typeof product.average_rating === 'number' ? product.average_rating : null
+  const hasReviews = reviewCount > 0 && averageRating !== null
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-[1.7rem] border border-slate-200/90 bg-white p-3 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_42px_-26px_rgba(15,23,42,0.26)] sm:p-4">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-none border border-slate-200/90 bg-white p-2.5 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_42px_-26px_rgba(15,23,42,0.26)] sm:p-4">
       <Link href={`/produto/${product.id}`} className="flex h-full flex-col">
-        <div className="relative overflow-hidden rounded-[1.35rem] bg-white">
+        <div className="relative overflow-hidden rounded-none bg-white">
           <StoreImage
             src={image}
             alt={product.name}
-            className="h-[15.5rem] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] sm:h-[16.75rem]"
-            fallbackClassName="flex h-[15.5rem] items-center justify-center px-6 text-center text-sm font-medium text-slate-500 sm:h-[16.75rem]"
+            className="h-[10rem] w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.03] sm:h-[14rem]"
+            fallbackClassName="flex h-[10rem] items-center justify-center px-4 text-center text-xs font-medium text-slate-500 sm:h-[14rem] sm:px-6 sm:text-sm"
             fallbackLabel={product.name}
           />
 
           {badgeLabel ? (
-            <span className={`absolute left-3 top-3 rounded-full px-3 py-1 text-[11px] font-bold shadow-sm sm:left-4 sm:top-4 ${badgeStyles}`}>
+            <span className={`absolute left-2.5 top-2.5 rounded-none px-2.5 py-1 text-[10px] font-bold shadow-sm sm:left-4 sm:top-4 sm:px-3 sm:text-[11px] ${badgeStyles}`}>
               {badgeLabel}
             </span>
           ) : null}
 
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 text-slate-500 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.6)] transition-colors group-hover:text-slate-900 sm:right-4 sm:top-4"
+            className="pointer-events-none absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-none border border-slate-200/80 bg-white/95 text-slate-500 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.6)] transition-colors group-hover:text-slate-900 sm:right-4 sm:top-4 sm:h-9 sm:w-9"
           >
-            <Heart className="h-4 w-4" />
+            <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </span>
         </div>
 
-        <div className="flex flex-1 flex-col gap-3 px-1 pb-1 pt-3">
-          <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-1 flex-col gap-1 px-0.5 pb-0.5 pt-1 sm:gap-1.5 sm:px-1 sm:pb-1 sm:pt-1.5">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex min-h-5 items-center gap-2">
               {swatches.length > 0 ? (
                 swatches.map((color, index) => (
                   <span
                     key={`${product.id}-${color.name}-${color.hex}`}
-                    className={`rounded-full border border-slate-200 ${index === 0 ? 'h-4 w-4' : 'h-3.5 w-3.5'}`}
+                    className={`rounded-none border border-slate-200 ${index === 0 ? 'h-3.5 w-3.5 sm:h-4 sm:w-4' : 'h-3 w-3 sm:h-3.5 sm:w-3.5'}`}
                     style={{ backgroundColor: color.hex }}
                   />
                 ))
               ) : (
-                <span className="text-xs font-medium text-slate-400">{secondaryLabel}</span>
+                <span className="line-clamp-1 text-[11px] font-medium text-slate-400 sm:text-xs">{secondaryLabel}</span>
               )}
             </div>
 
-            <div className="flex items-center gap-1 text-sm font-semibold text-slate-400">
-              <Star className="h-4 w-4 fill-[#ffb400] text-[#ffb400]" />
-              <span className="text-slate-600">{rating.rating}</span>
-              <span className="text-slate-400">({rating.count})</span>
-            </div>
+            {hasReviews ? (
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 sm:text-sm">
+                <Star className="h-3.5 w-3.5 fill-[#ffb400] text-[#ffb400] sm:h-4 sm:w-4" />
+                <span className="text-slate-600">{averageRating.toFixed(1).replace('.', ',')}</span>
+                <span className="text-slate-400">({reviewCount})</span>
+              </div>
+            ) : null}
           </div>
 
-          <div className="space-y-1">
-            <p className="line-clamp-2 min-h-10 text-[1.02rem] font-medium leading-6 text-slate-900 sm:text-[1.06rem]">
+          <div className="space-y-0">
+            <p className="line-clamp-2 text-[0.9rem] font-medium leading-5 text-slate-900 sm:text-[1.06rem] sm:leading-6">
               {product.name}
             </p>
           </div>
 
-          <div className="mt-auto flex items-end justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-end gap-2">
-                <p className="text-[1.5rem] font-bold leading-none tracking-tight text-slate-950 sm:text-[1.7rem]">
+          <div className="flex items-end justify-between gap-2 pt-0.5">
+            <div className="space-y-0">
+              <div className="flex flex-wrap items-end gap-1.5 sm:gap-2">
+                <p className="text-[1.15rem] font-bold leading-none tracking-tight text-slate-950 sm:text-[1.7rem]">
                   {formatMoney(displayPrice)}
                 </p>
                 {hasDiscount ? (
-                  <p className="text-sm font-medium text-slate-400 line-through">{formatMoney(displayComparePrice)}</p>
+                  <p className="text-[11px] font-medium text-slate-400 line-through sm:text-sm">{formatMoney(displayComparePrice)}</p>
                 ) : null}
               </div>
 
-              <p className="text-sm font-medium text-slate-500">
+              <p className="text-[11px] font-medium text-slate-500 sm:text-sm">
                 {installmentCount}x {formatMoney(displayPrice / installmentCount)}
               </p>
             </div>
 
             <span
               aria-hidden="true"
-              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#0b2f6f] text-white shadow-[0_18px_28px_-18px_rgba(11,47,111,0.75)] transition-transform duration-300 group-hover:scale-[1.04]"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-[#0b2f6f] text-white shadow-[0_18px_28px_-18px_rgba(11,47,111,0.75)] transition-transform duration-300 group-hover:scale-[1.04] sm:h-12 sm:w-12"
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-3 text-xs">
-            <span className="font-medium text-slate-400">{secondaryLabel}</span>
-            <span className={Number(product.stock ?? 0) > 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-amber-600'}>
+          <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs">
+            <span className="line-clamp-1 font-medium text-slate-400">{secondaryLabel}</span>
+            <span className={Number(product.stock ?? 0) > 0 ? 'shrink-0 font-semibold text-emerald-600' : 'shrink-0 font-semibold text-amber-600'}>
               {Number(product.stock ?? 0) > 0 ? 'Em estoque' : 'Indisponivel'}
             </span>
           </div>

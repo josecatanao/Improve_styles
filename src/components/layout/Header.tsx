@@ -6,10 +6,16 @@ import { Sidebar } from './Sidebar'
 
 export function Header({
   branding,
+  recentOrders,
 }: {
   branding?: {
     logoUrl?: string | null
+    storeName?: string | null
   }
+  recentOrders?: Array<{
+    id: string
+    createdAt: string
+  }>
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -56,7 +62,7 @@ export function Header({
               </button>
             </div>
             <div className="h-[calc(100%-4rem)] overflow-y-auto">
-              <Sidebar branding={branding} onNavigate={() => setIsMobileMenuOpen(false)} />
+              <Sidebar branding={branding} recentOrders={recentOrders} onNavigate={() => setIsMobileMenuOpen(false)} />
             </div>
           </div>
         </div>

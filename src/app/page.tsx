@@ -2,11 +2,12 @@ import Link from 'next/link'
 import { Grid2X2 } from 'lucide-react'
 import { HomeHeroCarousel } from '@/components/store/HomeHeroCarousel'
 import { ProductCarouselRail } from '@/components/store/ProductCarouselRail'
+import { getPublicStoreSettings } from '@/lib/store-branding'
 import { StoreShell } from '@/components/store/StoreShell'
 import { resolveCategoryIcon } from '@/lib/category-visuals'
 import { getStorefrontData } from '@/lib/products'
 import { getStorefrontCategories } from '@/lib/store-categories'
-import { buildStoreBrandStyle, normalizeStoreSettings } from '@/lib/store-settings'
+import { buildStoreBrandStyle } from '@/lib/store-settings'
 import {
   getCategorySectionId,
   getCategorySectionSlug,
@@ -34,19 +35,16 @@ export default async function Home({
   const query = typeof params.q === 'string' ? params.q : ''
   const category = typeof params.category === 'string' ? params.category : ''
   const sort = parseSort(params.sort)
-  
   const supabase = await createClient()
 
-  const [storefront, settingsResponse, bannersResponse, storefrontCategoryResult] = await Promise.all([
+  const [storefront, settings, bannersResponse, storefrontCategoryResult] = await Promise.all([
     getStorefrontData({ query, category, sort }),
-    supabase.from('store_settings').select('*').single(),
+    getPublicStoreSettings(),
     supabase.from('store_banners').select('*').eq('is_active', true).order('order_index', { ascending: true }),
     getStorefrontCategories(),
   ])
 
   const storefrontCategories = storefrontCategoryResult.categories
-  const settings = normalizeStoreSettings(settingsResponse.data)
-  
   const banners = bannersResponse.data || []
 
   const categorySectionMap = new Map<
@@ -127,7 +125,7 @@ export default async function Home({
     <StoreShell 
       categories={categories} 
       query={query} 
-      branding={{ logoUrl: settings.store_logo_url }}
+      branding={{ logoUrl: settings.store_logo_url, storeName: settings.store_name }}
       brandStyle={buildStoreBrandStyle(settings)}
       announcement={settings.announcement_active ? {
         active: settings.announcement_active,
@@ -180,25 +178,25 @@ export default async function Home({
                           const Icon = resolveCategoryIcon(item.iconName)
                           return (
                             <Link key={item.href} href={item.href} className="shrink-0 text-center">
-                              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 transition-transform hover:-translate-y-0.5 sm:h-20 sm:w-20">
+                              <span className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-slate-200 transition-transform hover:-translate-y-0.5 sm:h-16 sm:w-16">
                                 {item.imageUrl ? (
                                   // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={item.imageUrl} alt={item.label} className="h-full w-full object-cover" />
+                                  <img src={item.imageUrl} alt={item.label} className="h-full w-full rounded-full object-cover" />
                                 ) : (
-                                  <Icon className="h-5 w-5 text-slate-700 sm:h-7 sm:w-7" />
+                                  <Icon className="h-4.5 w-4.5 text-slate-700 sm:h-5 sm:w-5" />
                                 )}
                               </span>
-                              <span className="mt-2 block max-w-20 text-[11px] font-medium text-slate-700 sm:mt-2.5 sm:max-w-none sm:text-[13px]">
+                              <span className="mt-2 block max-w-20 text-[11px] font-medium leading-4 text-slate-700 sm:mt-2 sm:max-w-[84px] sm:text-[12px]">
                                 {item.label}
                               </span>
                             </Link>
                           )
                         })}
                         <a href="#produtos" className="shrink-0 text-center">
-                          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 sm:h-20 sm:w-20">
-                            <Grid2X2 className="h-5 w-5 text-slate-700 sm:h-7 sm:w-7" />
+                          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 sm:h-16 sm:w-16">
+                            <Grid2X2 className="h-4.5 w-4.5 text-slate-700 sm:h-5 sm:w-5" />
                           </span>
-                          <span className="mt-2 block text-[11px] font-medium text-slate-700 sm:mt-2.5 sm:text-[13px]">Ver todas</span>
+                          <span className="mt-2 block text-[11px] font-medium leading-4 text-slate-700 sm:mt-2 sm:text-[12px]">Ver todas</span>
                         </a>
                       </>
                     ) : (

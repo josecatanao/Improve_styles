@@ -53,7 +53,7 @@ export default async function ProductDetailPage({
     return (
       <StoreShell categories={categories}>
         <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+          <div className="rounded-none border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
             Produto indisponivel.
           </div>
         </main>
@@ -84,7 +84,7 @@ export default async function ProductDetailPage({
 
         <ProductDetailClient product={product} isAuthenticated={Boolean(user)} />
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6">
+        <section className="rounded-none border border-slate-200 bg-white p-6">
           <h2 className="text-xl font-semibold text-slate-950">Descricao do produto</h2>
           {product.short_description?.trim() ? (
             <p className="mt-3 text-base font-medium text-slate-900">{product.short_description.trim()}</p>
@@ -109,7 +109,7 @@ export default async function ProductDetailPage({
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
+            <div className="rounded-none border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
               Ainda nao ha produtos relacionados publicados.
             </div>
           )}

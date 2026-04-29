@@ -25,7 +25,7 @@ export function Filters({
   return (
     <form
       action={action}
-      className={`grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 ${
+      className={`grid gap-3 rounded-none border border-slate-200 bg-white p-4 ${
         showCategory ? 'md:grid-cols-[minmax(0,1fr)_220px_200px_auto]' : 'md:grid-cols-[minmax(0,1fr)_200px_auto]'
       }`}
     >
@@ -36,7 +36,7 @@ export function Filters({
           name="q"
           defaultValue={query}
           placeholder="Buscar produtos"
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+          className="h-11 w-full rounded-none border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
         />
       </label>
 
@@ -44,7 +44,7 @@ export function Filters({
         <select
           name="category"
           defaultValue={category}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+          className="h-11 rounded-none border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
         >
           <option value="">Todas as categorias</option>
           {categories.map((item) => (
@@ -58,7 +58,7 @@ export function Filters({
       <select
         name="sort"
         defaultValue={sort}
-        className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+        className="h-11 rounded-none border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
       >
         {SORT_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
@@ -69,7 +69,7 @@ export function Filters({
 
       <button
         type="submit"
-        className="inline-flex h-11 items-center justify-center rounded-xl bg-[#3483fa] px-4 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
+        className="inline-flex h-11 items-center justify-center rounded-none bg-[#3483fa] px-4 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
       >
         Aplicar
       </button>

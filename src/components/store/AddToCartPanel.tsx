@@ -171,16 +171,16 @@ export function AddToCartPanel({
   }
 
   return (
-    <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.35)] sm:p-6">
+    <div className="rounded-none border border-slate-200 bg-white p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.35)] sm:p-6">
       <div className="space-y-6">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            {product.brand?.trim() ? <span className="rounded-full bg-slate-100 px-2.5 py-1">{product.brand}</span> : null}
-            {product.category?.trim() ? <span className="rounded-full bg-slate-100 px-2.5 py-1">{product.category}</span> : null}
+            {product.brand?.trim() ? <span className="rounded-none bg-slate-100 px-2.5 py-1">{product.brand}</span> : null}
+            {product.category?.trim() ? <span className="rounded-none bg-slate-100 px-2.5 py-1">{product.category}</span> : null}
           </div>
 
           <div className="space-y-1">
-            <h1 className="text-[2rem] font-semibold leading-tight tracking-tight text-slate-950 sm:text-[2.2rem]">
+            <h1 className="text-[1.55rem] font-semibold leading-tight tracking-tight text-slate-950 sm:text-[2.2rem]">
               {product.name}
             </h1>
             {product.short_description?.trim() ? (
@@ -198,9 +198,9 @@ export function AddToCartPanel({
                 </p>
               ) : null}
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-4xl font-semibold tracking-tight text-slate-950">{formatMoney(displayPrice)}</p>
+                <p className="text-[1.9rem] font-semibold tracking-tight text-slate-950 sm:text-4xl">{formatMoney(displayPrice)}</p>
                 {discountPercentage ? (
-                  <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                  <span className="rounded-none bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
                     -{discountPercentage}%
                   </span>
                 ) : null}
@@ -208,7 +208,7 @@ export function AddToCartPanel({
             </div>
 
             <span
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${
+              className={`rounded-none px-3 py-1.5 text-xs font-semibold ring-1 ${
                 availableStock <= 0
                   ? 'bg-red-50 text-red-700 ring-red-100'
                   : availableStock <= 3
@@ -225,7 +225,7 @@ export function AddToCartPanel({
         </div>
 
         {!isAuthenticated ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="rounded-none border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Entre para adicionar ao carrinho e finalizar a compra.
           </div>
         ) : null}
@@ -237,7 +237,7 @@ export function AddToCartPanel({
               <span className="text-slate-600">{effectiveColorName || 'Padrao'}</span>
             </div>
 
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-2">
               {colorOptions.map((color) => {
                 const isSelected = selectedColor === color.name
                 const preview = getColorPreview(color.name, color.hex)
@@ -248,7 +248,7 @@ export function AddToCartPanel({
                     type="button"
                     onClick={() => handleColorSelection(color.name)}
                     disabled={!color.hasStock}
-                    className={`relative flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-2xl border bg-white transition-all ${
+                    className={`relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-none border bg-white transition-all sm:h-[68px] sm:w-[68px] ${
                       isSelected
                         ? 'border-[#3483fa] ring-2 ring-[#3483fa]/15'
                         : 'border-slate-200 hover:border-slate-300'
@@ -260,7 +260,7 @@ export function AddToCartPanel({
                       <img src={preview} alt={color.name} className="h-full w-full object-cover" />
                     ) : (
                       <span
-                        className="h-9 w-9 rounded-full border border-slate-200"
+                        className="h-8 w-8 rounded-none border border-slate-200 sm:h-9 sm:w-9"
                         style={{ backgroundColor: color.hex }}
                       />
                     )}
@@ -278,7 +278,7 @@ export function AddToCartPanel({
               <span className="text-slate-600">{effectiveSize || 'Padrao'}</span>
             </div>
 
-            <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5">
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
               {sizeOptions.map((option) => {
                 const isSelected = selectedSize === option.size
                 const matchesResolved = resolvedSelectedSize === option.size
@@ -289,7 +289,7 @@ export function AddToCartPanel({
                     type="button"
                     onClick={() => handleSizeSelection(option.size)}
                     disabled={!option.hasStock}
-                    className={`inline-flex min-h-11 items-center justify-center rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`inline-flex min-h-10 items-center justify-center rounded-none border px-2.5 py-2 text-[13px] font-medium transition-colors sm:min-h-11 sm:px-3 sm:text-sm ${
                       isSelected || matchesResolved
                         ? 'border-[#3483fa] bg-[#3483fa]/5 text-[#2968c8]'
                         : 'border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -305,20 +305,20 @@ export function AddToCartPanel({
 
         <div className="space-y-3">
           <p className="text-sm font-semibold text-slate-950">Quantidade</p>
-          <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50">
+          <div className="inline-flex items-center rounded-none border border-slate-200 bg-slate-50">
             <button
               type="button"
               onClick={decreaseQuantity}
-              className="h-11 w-11 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300"
+              className="h-10 w-10 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300 sm:h-11 sm:w-11"
               disabled={!canPurchase}
             >
               -
             </button>
-            <span className="min-w-12 text-center text-sm font-medium text-slate-900">{quantity}</span>
+            <span className="min-w-11 text-center text-sm font-medium text-slate-900 sm:min-w-12">{quantity}</span>
             <button
               type="button"
               onClick={increaseQuantity}
-              className="h-11 w-11 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300"
+              className="h-10 w-10 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300 sm:h-11 sm:w-11"
               disabled={!canPurchase}
             >
               +
@@ -339,14 +339,14 @@ export function AddToCartPanel({
                 router.push('/carrinho')
               }}
               disabled={!canPurchase}
-              className="inline-flex h-12 items-center justify-center rounded-xl bg-[#3483fa] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#2968c8] disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="inline-flex h-12 items-center justify-center rounded-none bg-[#3483fa] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#2968c8] disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Comprar agora
             </button>
           ) : (
             <Link
               href={`/login?mode=customer&next=${encodeURIComponent(`/produto/${product.id}`)}`}
-              className="inline-flex h-12 items-center justify-center rounded-xl bg-[#3483fa] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#2968c8]"
+              className="inline-flex h-12 items-center justify-center rounded-none bg-[#3483fa] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#2968c8]"
             >
               Entrar para comprar
             </Link>
@@ -356,7 +356,7 @@ export function AddToCartPanel({
             type="button"
             onClick={handleAddToCart}
             disabled={!isAuthenticated ? false : !canPurchase}
-            className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+            className="inline-flex h-12 items-center justify-center rounded-none border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
           >
             {isAuthenticated ? 'Adicionar ao carrinho' : 'Fazer login'}
           </button>

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { Filters } from '@/components/store/Filters'
 import { ProductCard } from '@/components/store/ProductCard'
 import { StoreShell } from '@/components/store/StoreShell'
+import { getPublicStoreSettings } from '@/lib/store-branding'
 import { getStoreCategoryBySlug } from '@/lib/products'
 import { slugifyStoreValue, type StoreSortOption } from '@/lib/storefront'
 
@@ -25,7 +26,10 @@ export default async function StoreCategoryPage({
   const queryParams = await searchParams
   const query = typeof queryParams.q === 'string' ? queryParams.q : ''
   const sort = parseSort(queryParams.sort)
-  const categoryPage = await getStoreCategoryBySlug(slug, { query, sort })
+  const [categoryPage, settings] = await Promise.all([
+    getStoreCategoryBySlug(slug, { query, sort }),
+    getPublicStoreSettings(),
+  ])
 
   if (!categoryPage.setupRequired && categoryPage.errorMessage === 'Categoria nao encontrada.') {
     notFound()
@@ -37,8 +41,12 @@ export default async function StoreCategoryPage({
   }))
 
   return (
-    <StoreShell categories={categories} query={query}>
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+    <StoreShell
+      categories={categories}
+      query={query}
+      branding={{ logoUrl: settings.store_logo_url, storeName: settings.store_name }}
+    >
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Link href="/" className="transition-colors hover:text-slate-900">
@@ -47,7 +55,7 @@ export default async function StoreCategoryPage({
             <span>/</span>
             <span>{categoryPage.category ?? 'Categoria'}</span>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-950">{categoryPage.category ?? 'Categoria'}</h1>
+          <h1 className="text-[1.85rem] font-semibold tracking-tight text-slate-950 sm:text-3xl">{categoryPage.category ?? 'Categoria'}</h1>
           <p className="text-sm text-slate-500">Lista filtrada por categoria com busca e ordenacao.</p>
         </div>
 
@@ -61,17 +69,17 @@ export default async function StoreCategoryPage({
         />
 
         {categoryPage.setupRequired ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+          <div className="rounded-none border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
             Configure o catalogo para publicar esta categoria na loja.
           </div>
         ) : categoryPage.products.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
             {categoryPage.products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+          <div className="rounded-none border border-dashed border-slate-300 bg-white p-8 text-center">
             <p className="text-lg font-semibold text-slate-900">Nenhum produto nesta categoria.</p>
             <p className="mt-2 text-sm text-slate-500">Tente outra busca ou volte para a home da loja.</p>
           </div>

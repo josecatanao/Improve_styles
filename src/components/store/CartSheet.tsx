@@ -13,12 +13,12 @@ export function CartSheet() {
     <Sheet>
       <SheetTrigger
         render={
-          <button className="relative inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50" />
+          <button className="relative inline-flex h-11 items-center justify-center rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50" />
         }
       >
         <ShoppingCart className="mr-2 h-4 w-4" />
         Carrinho
-        <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-[#3483fa] px-1.5 py-0.5 text-xs text-white">
+        <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-none bg-[#3483fa] px-1.5 py-0.5 text-xs text-white">
           {totalItems}
         </span>
       </SheetTrigger>
@@ -34,7 +34,7 @@ export function CartSheet() {
 
           <Link
             href="/carrinho"
-            className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#3483fa] px-4 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
+            className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-none bg-[#3483fa] px-4 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
           >
             Abrir carrinho completo
           </Link>

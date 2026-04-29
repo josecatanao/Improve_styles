@@ -33,35 +33,41 @@ export function Header({
   customerSession: StoreCustomerSession
   branding?: {
     logoUrl?: string | null
+    storeName?: string | null
   }
 }) {
   const customerName = customerSession?.profile?.full_name?.trim() || customerSession?.email || 'Minha conta'
   const customerPhotoUrl = customerSession?.profile?.photo_url?.trim() || null
   const isAuthenticated = Boolean(customerSession)
+  const storeName = branding?.storeName?.trim() || 'Improve Styles'
 
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:gap-4 lg:px-8 lg:py-4">
-        <div className="flex items-center gap-2.5 sm:gap-3">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2.5 px-4 py-3 sm:px-6 lg:gap-4 lg:px-8 lg:py-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Sheet>
             <SheetTrigger
               render={
-                <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 lg:hidden" />
+                <button
+                  type="button"
+                  aria-label="Abrir menu da loja"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-slate-200 bg-white text-slate-600 shadow-sm lg:hidden"
+                />
               }
             >
               <Menu className="h-5 w-5" />
             </SheetTrigger>
-            <SheetContent side="left" className="w-[88%] max-w-sm overflow-y-auto bg-white p-0">
+            <SheetContent side="left" className="overflow-y-auto bg-white p-0">
               <div className="border-b border-slate-200 px-5 py-4">
-                <Link href="/" className="flex items-center gap-2">
+                <Link href="/" className="flex items-center gap-2.5">
                   {branding?.logoUrl ? (
-                    <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+                    <span className="flex h-9 shrink-0 items-center justify-start overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={branding.logoUrl} alt="Logo da loja" className="h-full w-full object-cover" />
+                      <img src={branding.logoUrl} alt="Logo da loja" className="block h-full w-auto max-w-[40px] object-contain object-left" />
                     </span>
                   ) : null}
-                  <span className="text-xl font-bold tracking-tight text-slate-950">
-                    Improve Styles
+                  <span className="text-base font-bold tracking-tight text-slate-950 sm:text-lg">
+                    {storeName}
                   </span>
                 </Link>
               </div>
@@ -70,21 +76,21 @@ export function Header({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                    className="rounded-none px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                   >
                     {item.label}
                   </Link>
                 ))}
                 <Link
                   href={supportHref}
-                  className="rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  className="rounded-none px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                 >
                   Atendimento
                 </Link>
                 {isAuthenticated ? (
-                  <div className="rounded-xl px-3 py-3">
-                    <Link href={customerAccountHref} className="flex items-center gap-3 rounded-2xl transition-colors hover:bg-slate-50">
-                      <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+                  <div className="rounded-none px-3 py-3">
+                    <Link href={customerAccountHref} className="flex items-center gap-3 rounded-none transition-colors hover:bg-slate-50">
+                      <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-none bg-slate-100">
                         {customerPhotoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={customerPhotoUrl} alt={customerName} className="h-full w-full object-cover" />
@@ -102,7 +108,7 @@ export function Header({
                       <input type="hidden" name="next" value="/" />
                       <button
                         type="submit"
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                        className="w-full rounded-none border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                       >
                         Sair
                       </button>
@@ -111,7 +117,7 @@ export function Header({
                 ) : (
                   <Link
                     href={customerAccountHref}
-                    className="rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                    className="rounded-none px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                   >
                     Minha conta
                   </Link>
@@ -124,7 +130,7 @@ export function Header({
                     <Link
                       key={category.href}
                       href={category.href}
-                      className="rounded-xl px-3 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                      className="rounded-none px-3 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-50"
                     >
                       {category.label}
                     </Link>
@@ -134,20 +140,20 @@ export function Header({
             </SheetContent>
           </Sheet>
 
-          <Link href="/" className="flex shrink-0 items-center gap-2">
+          <Link href="/" className="flex min-w-0 flex-1 shrink items-center gap-2.5 lg:flex-none">
             {branding?.logoUrl ? (
-              <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 sm:h-11 sm:w-11">
+              <span className="flex h-9 shrink-0 items-center justify-start overflow-hidden sm:h-10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={branding.logoUrl} alt="Logo da loja" className="h-full w-full object-cover" />
+                <img src={branding.logoUrl} alt="Logo da loja" className="block h-full w-auto max-w-[40px] object-contain object-left sm:max-w-[44px]" />
               </span>
             ) : null}
-            <span className="text-[1.45rem] font-bold tracking-tight text-slate-950 sm:text-[1.8rem]">
-              Improve Styles
+            <span className="truncate text-[0.95rem] font-bold tracking-tight text-slate-950 sm:text-lg">
+              {storeName}
             </span>
           </Link>
 
           <form action="/" className="hidden flex-1 lg:block">
-            <div className="flex h-13 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex h-13 overflow-hidden rounded-none border border-slate-200 bg-white shadow-sm">
               <input
                 type="search"
                 name="q"
@@ -165,10 +171,10 @@ export function Header({
             </div>
           </form>
 
-          <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-3">
             <button
               type="button"
-              className="hidden h-11 items-center gap-2 rounded-xl border border-transparent px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 md:inline-flex"
+              className="hidden h-11 items-center gap-2 rounded-none border border-transparent px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 md:inline-flex"
             >
               <Heart className="h-4 w-4" />
               Favoritos
@@ -179,7 +185,7 @@ export function Header({
         </div>
 
         <form action="/" className="lg:hidden">
-          <div className="flex h-11 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex h-11 overflow-hidden rounded-none border border-slate-200 bg-white shadow-sm">
             <input
               type="search"
               name="q"
@@ -199,8 +205,8 @@ export function Header({
       </div>
 
       <div className="border-t border-slate-100 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-4 py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-6 lg:gap-4 lg:px-8">
-          <div className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-4 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-6 lg:gap-4 lg:px-8 lg:py-3">
+          <div className="inline-flex shrink-0 items-center gap-2 rounded-none border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 sm:text-sm lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
             <Menu className="h-4 w-4" />
             Todas as categorias
           </div>
@@ -211,7 +217,7 @@ export function Header({
             <Link
               key={category.href}
               href={category.href}
-              className="shrink-0 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-950 lg:border-0 lg:px-3 lg:py-0"
+              className="shrink-0 rounded-none border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:text-slate-950 sm:text-sm lg:border-0 lg:px-3 lg:py-0"
             >
               {category.label}
             </Link>
@@ -221,7 +227,7 @@ export function Header({
             <Link
               key={item.href}
               href={item.href}
-              className="shrink-0 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-950 lg:border-0 lg:px-3 lg:py-0"
+              className="shrink-0 rounded-none border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:text-slate-950 sm:text-sm lg:border-0 lg:px-3 lg:py-0"
             >
               {item.label}
             </Link>
@@ -230,7 +236,7 @@ export function Header({
           <div className="ml-auto hidden items-center gap-2 lg:flex">
             <Link
               href={supportHref}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-950"
+              className="inline-flex shrink-0 items-center gap-2 rounded-none border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-950"
             >
               <Headphones className="h-4 w-4" />
               Atendimento
@@ -240,9 +246,9 @@ export function Header({
               <>
                 <Link
                   href={customerAccountHref}
-                  className="inline-flex max-w-[220px] shrink-0 items-center gap-2 rounded-full border border-slate-200 px-2 py-1.5 text-sm text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                  className="inline-flex max-w-[220px] shrink-0 items-center gap-2 rounded-none border border-slate-200 px-2 py-1.5 text-sm text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-slate-100">
+                  <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-none bg-slate-100">
                     {customerPhotoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={customerPhotoUrl} alt={customerName} className="h-full w-full object-cover" />
@@ -257,7 +263,7 @@ export function Header({
                   <input type="hidden" name="next" value="/" />
                   <button
                     type="submit"
-                    className="inline-flex shrink-0 items-center rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-950"
+                    className="inline-flex shrink-0 items-center rounded-none border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-950"
                   >
                     Sair
                   </button>
@@ -266,7 +272,7 @@ export function Header({
             ) : (
               <Link
                 href={customerAccountHref}
-                className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-950"
+                className="inline-flex shrink-0 items-center gap-2 rounded-none border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-950"
               >
                 <UserRound className="h-4 w-4" />
                 Minha conta

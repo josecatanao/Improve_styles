@@ -25,13 +25,30 @@ export default async function MarketingPage() {
 
   const banners = bannersResponse.data || []
   const availableSections = [
-    { id: 'banners', label: 'Banners Principais (Carrossel)' },
-    { id: 'promotions', label: 'Ofertas Especiais (Promocoes)' },
-    { id: 'featured', label: 'Produtos em Destaque' },
-    { id: 'category-nav', label: 'Categorias em Destaque' },
+    {
+      id: 'banners',
+      label: 'Banners principais',
+      description: 'Carrossel do topo da pagina inicial para campanhas, lancamentos e avisos visuais.',
+    },
+    {
+      id: 'promotions',
+      label: 'Ofertas especiais',
+      description: 'Faixa de produtos em promocao para destacar descontos e oportunidades de compra.',
+    },
+    {
+      id: 'featured',
+      label: 'Produtos em destaque',
+      description: 'Secao com os produtos mais importantes da loja ou itens que merecem maior visibilidade.',
+    },
+    {
+      id: 'category-nav',
+      label: 'Atalhos de categorias',
+      description: 'Bloco com categorias em evidência para facilitar a navegacao logo no inicio da home.',
+    },
     ...managedCategories.map((category) => ({
       id: getCategorySectionId(category.slug),
-      label: `Secao da categoria: ${category.name}`,
+      label: `Categoria: ${category.name}`,
+      description: `Mostra uma vitrine com produtos da categoria ${category.name} dentro da pagina inicial.`,
     })),
   ]
   const normalizedSettings = {

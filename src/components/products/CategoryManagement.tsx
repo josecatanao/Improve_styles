@@ -1,13 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, CheckCircle2, Loader2, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { ArrowDown, ArrowUp, CheckCircle2, ImagePlus, Loader2, Plus, Trash2 } from 'lucide-react'
 import {
   createStoreCategory,
   moveStoreCategory,
   removeStoreCategory,
   toggleStoreCategory,
   updateStoreCategory,
+  uploadStoreCategoryImageAction,
 } from '@/app/dashboard/produtos/categorias/actions'
 import { CATEGORY_ICON_OPTIONS } from '@/lib/category-visuals'
 import type { StoreCategory } from '@/lib/store-categories'
@@ -30,6 +31,10 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
   const [newCategoryImageUrl, setNewCategoryImageUrl] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [isUploadingNewImage, setIsUploadingNewImage] = useState(false)
+  const [uploadingCategoryId, setUploadingCategoryId] = useState<string | null>(null)
+  const newImageInputRef = useRef<HTMLInputElement>(null)
+  const editImageInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   const sortedCategories = useMemo(
     () =>
@@ -64,6 +69,70 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
       })
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  async function handleUploadNewCategoryImage(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      return
+    }
+
+    setIsUploadingNewImage(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const result = await uploadStoreCategoryImageAction(formData)
+      setNewCategoryImageUrl(result.publicUrl)
+      showToast({
+        variant: 'success',
+        title: 'Imagem enviada',
+        description: 'A imagem da nova categoria foi carregada.',
+      })
+    } catch (actionError) {
+      showToast({
+        variant: 'error',
+        title: 'Falha no upload da imagem',
+        description: getErrorMessage(actionError),
+      })
+    } finally {
+      setIsUploadingNewImage(false)
+      event.target.value = ''
+    }
+  }
+
+  async function handleUploadExistingCategoryImage(categoryId: string, event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      return
+    }
+
+    setUploadingCategoryId(categoryId)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const result = await uploadStoreCategoryImageAction(formData)
+      setCategories((current) =>
+        current.map((item) => (item.id === categoryId ? { ...item, image_url: result.publicUrl } : item))
+      )
+      showToast({
+        variant: 'success',
+        title: 'Imagem enviada',
+        description: 'A imagem da categoria foi carregada. Salve para aplicar.',
+      })
+    } catch (actionError) {
+      showToast({
+        variant: 'error',
+        title: 'Falha no upload da imagem',
+        description: getErrorMessage(actionError),
+      })
+    } finally {
+      setUploadingCategoryId(null)
+      event.target.value = ''
     }
   }
 
@@ -201,11 +270,31 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Imagem da categoria (opcional)</label>
-              <Input
-                value={newCategoryImageUrl}
-                onChange={(event) => setNewCategoryImageUrl(event.target.value)}
-                placeholder="https://..."
-              />
+              <div className="space-y-2">
+                <Input
+                  value={newCategoryImageUrl}
+                  onChange={(event) => setNewCategoryImageUrl(event.target.value)}
+                  placeholder="https://..."
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={newImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleUploadNewCategoryImage}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => newImageInputRef.current?.click()}
+                    disabled={isUploadingNewImage}
+                  >
+                    {isUploadingNewImage ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImagePlus className="mr-2 h-4 w-4" />}
+                    Enviar da galeria
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -290,18 +379,44 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Imagem da categoria (opcional)</label>
-                        <Input
-                          value={category.image_url || ''}
-                          onChange={(event) =>
-                            setCategories((current) =>
-                              current.map((item) =>
-                                item.id === category.id ? { ...item, image_url: event.target.value } : item
+                        <div className="space-y-2">
+                          <Input
+                            value={category.image_url || ''}
+                            onChange={(event) =>
+                              setCategories((current) =>
+                                current.map((item) =>
+                                  item.id === category.id ? { ...item, image_url: event.target.value } : item
+                                )
                               )
-                            )
-                          }
-                          disabled={isBusy}
-                          placeholder="https://..."
-                        />
+                            }
+                            disabled={isBusy}
+                            placeholder="https://..."
+                          />
+                          <div className="flex items-center gap-2">
+                            <input
+                              ref={(node) => {
+                                editImageInputRefs.current[category.id] = node
+                              }}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(event) => handleUploadExistingCategoryImage(category.id, event)}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={isBusy || uploadingCategoryId === category.id}
+                              onClick={() => editImageInputRefs.current[category.id]?.click()}
+                            >
+                              {uploadingCategoryId === category.id ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <ImagePlus className="mr-2 h-4 w-4" />
+                              )}
+                              Enviar da galeria
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
 

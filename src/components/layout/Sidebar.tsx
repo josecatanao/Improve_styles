@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ChevronRight,
   FolderKanban,
@@ -41,14 +41,42 @@ type SidebarProps = {
   onNavigate?: () => void
   branding?: {
     logoUrl?: string | null
+    storeName?: string | null
   }
+  recentOrders?: Array<{
+    id: string
+    createdAt: string
+  }>
 }
 
-export function Sidebar({ onNavigate, branding }: SidebarProps) {
+const ORDER_NOTIFICATIONS_VIEWED_KEY = 'dashboard-orders-viewed-at'
+
+export function Sidebar({ onNavigate, branding, recentOrders = [] }: SidebarProps) {
   const pathname = usePathname()
   const isProductsSectionActive = pathname === '/dashboard/produtos' || pathname.startsWith('/dashboard/produtos/')
   const [isProductsOpen, setIsProductsOpen] = useState(isProductsSectionActive)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [recentOrderCount, setRecentOrderCount] = useState(0)
+
+  const latestRecentOrderAt = useMemo(() => recentOrders[0]?.createdAt ?? null, [recentOrders])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (pathname === '/dashboard/pedidos' || pathname.startsWith('/dashboard/pedidos/')) {
+      if (latestRecentOrderAt) {
+        window.localStorage.setItem(ORDER_NOTIFICATIONS_VIEWED_KEY, latestRecentOrderAt)
+      }
+      setRecentOrderCount(0)
+      return
+    }
+
+    const lastViewedAt = window.localStorage.getItem(ORDER_NOTIFICATIONS_VIEWED_KEY)
+    const count = recentOrders.filter((order) => !lastViewedAt || order.createdAt > lastViewedAt).length
+    setRecentOrderCount(count)
+  }, [latestRecentOrderAt, pathname, recentOrders])
 
   function handleProductsToggle() {
     if (isCollapsed) {
@@ -61,7 +89,7 @@ export function Sidebar({ onNavigate, branding }: SidebarProps) {
   }
 
   function getPrimaryItemClasses(isActive: boolean) {
-    return `group flex items-center rounded-2xl px-3 py-3 text-sm font-medium transition-all ${
+    return `group relative flex items-center rounded-2xl px-3 py-3 text-sm font-medium transition-all ${
       isActive
         ? 'bg-slate-100 text-slate-950 ring-1 ring-slate-200 shadow-sm'
         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
@@ -79,17 +107,17 @@ export function Sidebar({ onNavigate, branding }: SidebarProps) {
           isCollapsed ? 'justify-center px-3' : 'justify-between px-6'
         }`}
       >
-        <div className={`flex items-center ${isCollapsed ? '' : 'gap-3'}`}>
+        <div className={`flex items-center ${isCollapsed ? '' : 'gap-2.5'}`}>
           {branding?.logoUrl ? (
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+            <div className="flex h-10 shrink-0 items-center justify-start overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={branding.logoUrl} alt="Logo da loja" className="h-full w-full object-cover" />
+              <img src={branding.logoUrl} alt="Logo da loja" className="block h-full w-auto max-w-[44px] object-contain object-left" />
             </div>
           ) : null}
           {!isCollapsed ? (
             <div className="min-w-0">
-              <span className="block truncate text-[2rem] leading-none font-bold tracking-tight text-slate-900">
-                Improve Styles
+              <span className="block truncate text-base leading-tight font-bold text-slate-900">
+                {branding?.storeName?.trim() || 'Improve Styles'}
               </span>
               <span className="mt-1 block text-[11px] uppercase tracking-[0.26em] text-slate-400">Admin Store</span>
             </div>
@@ -203,7 +231,18 @@ export function Sidebar({ onNavigate, branding }: SidebarProps) {
                     isActive ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
                   } ${isCollapsed ? '' : 'mr-3'}`}
                 />
-                {!isCollapsed ? item.name : null}
+                {!isCollapsed ? (
+                  <>
+                    <span className="truncate">{item.name}</span>
+                    {item.href === '/dashboard/pedidos' && recentOrderCount > 0 ? (
+                      <span className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-1 text-[11px] font-semibold text-white">
+                        {recentOrderCount}
+                      </span>
+                    ) : null}
+                  </>
+                ) : item.href === '/dashboard/pedidos' && recentOrderCount > 0 ? (
+                  <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500" />
+                ) : null}
               </Link>
             )
           })}
