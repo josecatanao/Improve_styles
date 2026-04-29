@@ -21,9 +21,13 @@ export type AccountProfile = {
 
 export type AccountOrderItem = {
   id: string
+  product_id: string
   name: string
   quantity: number
   price: number
+  image_url: string | null
+  color_name: string | null
+  size: string | null
 }
 
 export type AccountOrder = {
@@ -73,16 +77,20 @@ export async function getCustomerOrders(userId: string) {
         delivery_lng,
         store_order_items (
           id,
+          product_id,
           name,
           quantity,
-          price
+          price,
+          image_url,
+          color_name,
+          size
         )
       `
     )
     .eq('customer_id', userId)
     .order('created_at', { ascending: false })
 
-  return ((data ?? []) as AccountOrder[]).map((order) => ({
+  const orders = ((data ?? []) as AccountOrder[]).map((order) => ({
     ...order,
     total_price: Number(order.total_price),
     total_items: Number(order.total_items),
@@ -93,6 +101,54 @@ export async function getCustomerOrders(userId: string) {
       ...item,
       quantity: Number(item.quantity),
       price: Number(item.price),
+      image_url: item.image_url ?? null,
+      color_name: item.color_name ?? null,
+      size: item.size ?? null,
+    })),
+  }))
+
+  const missingImageProductIds = Array.from(
+    new Set(
+      orders
+        .flatMap((order) => order.store_order_items)
+        .filter((item) => !item.image_url && item.product_id)
+        .map((item) => item.product_id)
+    )
+  )
+
+  if (missingImageProductIds.length === 0) {
+    return orders
+  }
+
+  const { data: productRows } = await supabase
+    .from('products')
+    .select(
+      `
+        id,
+        product_images (
+          public_url,
+          sort_order
+        )
+      `
+    )
+    .in('id', missingImageProductIds)
+
+  const productImageMap = new Map<string, string | null>(
+    ((productRows as Array<{ id: string; product_images?: Array<{ public_url: string | null; sort_order?: number | null }> }> | null) ?? []).map(
+      (product) => [
+        product.id,
+        (product.product_images ?? [])
+          .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+          .find((image) => image.public_url)?.public_url ?? null,
+      ]
+    )
+  )
+
+  return orders.map((order) => ({
+    ...order,
+    store_order_items: order.store_order_items.map((item) => ({
+      ...item,
+      image_url: item.image_url ?? productImageMap.get(item.product_id) ?? null,
     })),
   }))
 }

@@ -56,7 +56,7 @@ export function ProductReviews({
   }
 
   return (
-    <section className="mt-16 rounded-none border border-slate-200 bg-white p-6 sm:p-10 shadow-sm">
+    <section className="mt-16 rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-6 sm:p-10 shadow-sm">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-8">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-950 flex items-center gap-2">
@@ -69,7 +69,7 @@ export function ProductReviews({
         <div className="flex items-center gap-4 bg-slate-50 px-6 py-4 rounded-none border border-slate-100">
           <div className="text-4xl font-black text-slate-900">{averageRating}</div>
           <div>
-            <div className="flex items-center gap-1 text-[#3483fa]">
+            <div className="flex items-center gap-1 text-[var(--store-button-bg)]">
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
                   key={star}
@@ -93,7 +93,7 @@ export function ProductReviews({
             </div>
           ) : (
             reviews.map((review) => (
-              <div key={review.id} className="rounded-none border border-slate-100 bg-white p-5 shadow-sm">
+              <div key={review.id} className="rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-none bg-slate-100 text-slate-600 font-bold uppercase">
@@ -106,7 +106,7 @@ export function ProductReviews({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-0.5 text-[#3483fa]">
+                  <div className="flex items-center gap-0.5 text-[var(--store-button-bg)]">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
                         key={star}
@@ -138,12 +138,12 @@ export function ProductReviews({
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
                       onClick={() => setRating(star)}
-                      className="p-1 focus:outline-none focus-visible:ring-2 rounded-none focus-visible:ring-[#3483fa]"
+                      className="p-1 focus:outline-none focus-visible:ring-2 rounded-none focus-visible:ring-[var(--store-button-bg)]"
                     >
                       <Star
                         className={`h-8 w-8 transition-colors ${
                           star <= (hoverRating || rating)
-                            ? 'fill-[#3483fa] text-[#3483fa]'
+                            ? 'fill-[var(--store-button-bg)] text-[var(--store-button-bg)]'
                             : 'text-slate-300 hover:text-slate-400'
                         }`}
                       />
@@ -172,7 +172,7 @@ export function ProductReviews({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex mt-2 h-12 w-full items-center justify-center gap-2 rounded-none bg-slate-900 px-4 text-sm font-bold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                className="inline-flex mt-2 h-12 w-full items-center justify-center gap-2 rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-bold text-[var(--store-button-fg)] transition-colors hover:opacity-90 disabled:opacity-50"
               >
                 {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-4 w-4" />}
                 Enviar Avaliacao

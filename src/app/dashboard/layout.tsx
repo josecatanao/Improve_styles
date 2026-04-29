@@ -35,7 +35,7 @@ export default async function DashboardLayout({
 
   return (
     <div
-      className={`flex h-screen w-full ${normalizedSettings.dashboard_theme === 'dark' ? 'dashboard-theme-dark bg-slate-950' : 'bg-slate-50/50'}`}
+      className={`flex h-screen w-full ${normalizedSettings.dashboard_theme === 'dark' ? 'dark dashboard-theme-dark bg-slate-950' : 'bg-slate-50/50'}`}
       style={brandStyle}
     >
       <div className="hidden lg:flex lg:flex-col">

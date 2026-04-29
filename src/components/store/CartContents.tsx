@@ -24,7 +24,7 @@ export function CartContents({
         {showActions ? (
           <Link
             href="/"
-            className="mt-5 inline-flex items-center justify-center rounded-none bg-[#3483fa] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
+            className="mt-5 inline-flex items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 py-2.5 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90"
           >
             Continuar comprando
           </Link>
@@ -36,7 +36,7 @@ export function CartContents({
   return (
     <div className="space-y-4">
       {items.map((item) => (
-        <div key={item.id} className="grid gap-3 rounded-none border border-slate-200 bg-white p-3 sm:grid-cols-[88px_minmax(0,1fr)_auto] sm:gap-4 sm:p-4 sm:items-center">
+        <div key={item.id} className="grid gap-3 rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-3 sm:grid-cols-[88px_minmax(0,1fr)_auto] sm:gap-4 sm:p-4 sm:items-center">
           <div className="max-w-[92px] overflow-hidden rounded-none border border-slate-200 bg-slate-100 sm:max-w-none">
             {item.image ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -87,7 +87,7 @@ export function CartContents({
       ))}
 
       {showActions ? (
-        <div className="rounded-none border border-slate-200 bg-white p-5">
+        <div className="rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-5">
           <div className="flex items-center justify-between text-sm text-slate-500">
             <span>Total geral</span>
             <span className="text-2xl font-semibold text-slate-950">{formatMoney(totalPrice)}</span>
@@ -102,7 +102,7 @@ export function CartContents({
             </Link>
             <Link
               href="/checkout"
-              className="inline-flex h-11 items-center justify-center rounded-none bg-[#3483fa] px-4 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
+              className="inline-flex h-11 items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90"
             >
               Ir para checkout
             </Link>

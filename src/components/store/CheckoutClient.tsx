@@ -80,7 +80,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
         <p className="mt-2 text-sm text-slate-500">Volte para a loja e adicione produtos ao carrinho.</p>
         <Link
           href="/"
-          className="mt-5 inline-flex items-center justify-center rounded-none bg-[#3483fa] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
+          className="mt-5 inline-flex items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 py-2.5 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90"
         >
           Voltar para a loja
         </Link>
@@ -97,7 +97,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
         </p>
         <Link
           href="/conta"
-          className="mt-5 inline-flex items-center justify-center rounded-none bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+          className="mt-5 inline-flex items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 py-2.5 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90"
         >
           Ver minha conta
         </Link>
@@ -146,7 +146,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
       <form
-        className="rounded-none border border-slate-200 bg-white p-4 sm:p-6"
+        className="rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-4 sm:p-6"
         onSubmit={(event) => {
           event.preventDefault()
           setReviewMode(true)
@@ -228,7 +228,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
                     type="button"
                     onClick={handleGetLocation}
                     disabled={isLocating}
-                    className="flex items-center gap-1.5 text-xs font-medium text-[#3483fa] transition-colors hover:text-[#2968c8] disabled:opacity-50"
+                    className="flex items-center gap-1.5 text-xs font-medium text-[var(--store-button-bg)] transition-colors hover:opacity-80 disabled:opacity-50"
                   >
                     <Navigation2 className="h-3 w-3" />
                     {isLocating ? 'Buscando...' : 'Usar minha localizacao'}
@@ -278,7 +278,7 @@ export function CheckoutClient({ initialProfile }: { initialProfile?: CheckoutIn
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
             type="submit"
-            className="inline-flex h-12 w-full items-center justify-center rounded-none bg-[#3483fa] px-4 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
+            className="inline-flex h-12 w-full items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90"
           >
             Revisar pedido
           </button>

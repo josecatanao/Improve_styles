@@ -68,7 +68,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
   const hasReviews = reviewCount > 0 && averageRating !== null
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-none border border-slate-200/90 bg-white p-2.5 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_42px_-26px_rgba(15,23,42,0.26)] sm:p-4">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-2.5 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_42px_-26px_rgba(15,23,42,0.26)] sm:p-4">
       <Link href={`/produto/${product.id}`} className="flex h-full flex-col">
         <div className="relative overflow-hidden rounded-none bg-white">
           <StoreImage
@@ -142,7 +142,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
 
             <span
               aria-hidden="true"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-[#0b2f6f] text-white shadow-[0_18px_28px_-18px_rgba(11,47,111,0.75)] transition-transform duration-300 group-hover:scale-[1.04] sm:h-12 sm:w-12"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-[var(--store-cart-bg)] text-[var(--store-cart-fg)] shadow-[0_18px_28px_-18px_rgba(11,47,111,0.75)] transition-transform duration-300 group-hover:scale-[1.04] sm:h-12 sm:w-12"
             >
               <ShoppingCart className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
             </span>

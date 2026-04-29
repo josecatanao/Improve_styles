@@ -44,7 +44,7 @@ export function ProductGallery({
             key={`${image.public_url ?? 'placeholder'}-${index}`}
             type="button"
             onClick={() => selectImage(index)}
-            className={`overflow-hidden rounded-none border ${activeIndex === index ? 'border-[#3483fa]' : 'border-slate-200'}`}
+            className={`overflow-hidden rounded-none border ${activeIndex === index ? 'border-[color:var(--store-button-bg)]' : 'border-slate-200'}`}
           >
             {image.public_url ? (
               // eslint-disable-next-line @next/next/no-img-element

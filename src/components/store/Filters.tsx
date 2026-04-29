@@ -69,7 +69,7 @@ export function Filters({
 
       <button
         type="submit"
-        className="inline-flex h-11 items-center justify-center rounded-none bg-[#3483fa] px-4 text-sm font-medium text-white transition-colors hover:bg-[#2968c8]"
+        className="inline-flex h-11 items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90"
       >
         Aplicar
       </button>

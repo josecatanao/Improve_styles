@@ -85,6 +85,11 @@ create table if not exists public.store_settings (
   store_logo_url text,
   brand_primary_color text not null default '#0f172a',
   brand_secondary_color text not null default '#e2e8f0',
+  store_header_background_color text not null default '#ffffff',
+  store_button_background_color text not null default '#ffffff',
+  store_card_background_color text not null default '#ffffff',
+  store_card_border_color text not null default '#e2e8f0',
+  store_cart_button_color text not null default '#ffffff',
   dashboard_theme text not null default 'light' check (dashboard_theme in ('light', 'dark')),
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -94,6 +99,11 @@ alter table public.store_settings add column if not exists store_name text not n
 alter table public.store_settings add column if not exists store_logo_url text;
 alter table public.store_settings add column if not exists brand_primary_color text not null default '#0f172a';
 alter table public.store_settings add column if not exists brand_secondary_color text not null default '#e2e8f0';
+alter table public.store_settings add column if not exists store_header_background_color text not null default '#ffffff';
+alter table public.store_settings add column if not exists store_button_background_color text not null default '#ffffff';
+alter table public.store_settings add column if not exists store_card_background_color text not null default '#ffffff';
+alter table public.store_settings add column if not exists store_card_border_color text not null default '#e2e8f0';
+alter table public.store_settings add column if not exists store_cart_button_color text not null default '#ffffff';
 alter table public.store_settings add column if not exists dashboard_theme text not null default 'light';
 
 -- Enable RLS for store_settings

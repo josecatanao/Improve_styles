@@ -12,6 +12,11 @@ export type StoreSettings = {
   store_logo_url: string | null
   brand_primary_color: string
   brand_secondary_color: string
+  store_header_background_color: string
+  store_button_background_color: string
+  store_card_background_color: string
+  store_card_border_color: string
+  store_cart_button_color: string
   dashboard_theme: DashboardTheme
 }
 
@@ -28,6 +33,11 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   store_logo_url: null,
   brand_primary_color: DEFAULT_PRIMARY_COLOR,
   brand_secondary_color: DEFAULT_SECONDARY_COLOR,
+  store_header_background_color: '#ffffff',
+  store_button_background_color: '#ffffff',
+  store_card_background_color: '#ffffff',
+  store_card_border_color: '#e2e8f0',
+  store_cart_button_color: '#ffffff',
   dashboard_theme: 'light',
 }
 
@@ -58,12 +68,32 @@ export function normalizeStoreSettings(input: StoreSettingsInput): StoreSettings
     store_logo_url: input?.store_logo_url?.trim() || null,
     brand_primary_color: normalizeHexColor(input?.brand_primary_color, DEFAULT_PRIMARY_COLOR),
     brand_secondary_color: normalizeHexColor(input?.brand_secondary_color, DEFAULT_SECONDARY_COLOR),
+    store_header_background_color: normalizeHexColor(
+      input?.store_header_background_color,
+      DEFAULT_STORE_SETTINGS.store_header_background_color
+    ),
+    store_button_background_color: normalizeHexColor(
+      input?.store_button_background_color,
+      DEFAULT_STORE_SETTINGS.store_button_background_color
+    ),
+    store_card_background_color: normalizeHexColor(
+      input?.store_card_background_color,
+      DEFAULT_STORE_SETTINGS.store_card_background_color
+    ),
+    store_card_border_color: normalizeHexColor(
+      input?.store_card_border_color,
+      DEFAULT_STORE_SETTINGS.store_card_border_color
+    ),
+    store_cart_button_color: normalizeHexColor(
+      input?.store_cart_button_color,
+      DEFAULT_STORE_SETTINGS.store_cart_button_color
+    ),
     dashboard_theme: normalizeDashboardTheme(input?.dashboard_theme),
   }
 }
 
-export function getContrastingTextColor(backgroundColor: string) {
-  const normalized = backgroundColor.replace('#', '').trim()
+export function getContrastingTextColor(backgroundColor: string | null | undefined) {
+  const normalized = (backgroundColor ?? '').replace('#', '').trim()
 
   if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
     return '#ffffff'
@@ -90,6 +120,48 @@ export function buildStoreBrandStyle(settings: Pick<StoreSettings, 'brand_primar
   } as CSSProperties
 }
 
+function toAlphaHex(color: string | null | undefined, alphaHex: string) {
+  const normalized = (color ?? '').trim()
+  return /^#[0-9a-fA-F]{6}$/.test(normalized) ? `${normalized}${alphaHex}` : color
+}
+
+export function buildStorefrontThemeStyle(
+  settings: Pick<
+    StoreSettings,
+    | 'brand_primary_color'
+    | 'brand_secondary_color'
+    | 'store_header_background_color'
+    | 'store_button_background_color'
+    | 'store_card_background_color'
+    | 'store_card_border_color'
+    | 'store_cart_button_color'
+  >
+) {
+  const primaryForeground = getContrastingTextColor(settings.brand_primary_color)
+  const secondaryForeground = getContrastingTextColor(settings.brand_secondary_color)
+  const headerForeground = getContrastingTextColor(settings.store_header_background_color)
+  const buttonForeground = getContrastingTextColor(settings.store_button_background_color)
+  const cartForeground = getContrastingTextColor(settings.store_cart_button_color)
+
+  return {
+    '--primary': settings.brand_primary_color,
+    '--primary-foreground': primaryForeground,
+    '--secondary': settings.brand_secondary_color,
+    '--secondary-foreground': secondaryForeground,
+    '--ring': settings.brand_primary_color,
+    '--store-header-bg': settings.store_header_background_color,
+    '--store-header-fg': headerForeground,
+    '--store-header-border': toAlphaHex(headerForeground, '26'),
+    '--store-header-muted': toAlphaHex(headerForeground, 'B3'),
+    '--store-button-bg': settings.store_button_background_color,
+    '--store-button-fg': buttonForeground,
+    '--store-card-bg': settings.store_card_background_color,
+    '--store-card-border': settings.store_card_border_color,
+    '--store-cart-bg': settings.store_cart_button_color,
+    '--store-cart-fg': cartForeground,
+  } as CSSProperties
+}
+
 export function isMissingStoreSettingsColumnError(error: { code?: string; message: string } | null) {
   if (!error) {
     return false
@@ -103,6 +175,11 @@ export function isMissingStoreSettingsColumnError(error: { code?: string; messag
     error.message.includes("Could not find the 'store_logo_url' column") ||
     error.message.includes("Could not find the 'brand_primary_color' column") ||
     error.message.includes("Could not find the 'brand_secondary_color' column") ||
+    error.message.includes("Could not find the 'store_header_background_color' column") ||
+    error.message.includes("Could not find the 'store_button_background_color' column") ||
+    error.message.includes("Could not find the 'store_card_background_color' column") ||
+    error.message.includes("Could not find the 'store_card_border_color' column") ||
+    error.message.includes("Could not find the 'store_cart_button_color' column") ||
     error.message.includes("Could not find the 'dashboard_theme' column")
   )
 }

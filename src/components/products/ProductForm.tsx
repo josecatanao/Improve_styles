@@ -406,7 +406,7 @@ function Textarea(props: React.ComponentProps<'textarea'>) {
     <textarea
       {...props}
       className={cn(
-        'flex min-h-28 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50',
+        'flex min-h-28 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus-visible:border-slate-600 dark:focus-visible:ring-slate-800',
         props.className
       )}
     />
@@ -423,10 +423,10 @@ function StepShell({
   children: React.ReactNode
 }) {
   return (
-    <Card className="overflow-visible border-0 bg-white/90 shadow-[0_20px_70px_-40px_rgba(15,23,42,0.45)] ring-1 ring-slate-200/80">
-      <CardHeader className="gap-2 border-b border-slate-100 bg-[linear-gradient(135deg,rgba(248,250,252,0.96),rgba(255,255,255,0.9))]">
-        <CardTitle className="text-lg text-slate-950">{title}</CardTitle>
-        <CardDescription className="text-sm text-slate-500">{description}</CardDescription>
+    <Card className="overflow-visible border-0 bg-white/90 shadow-[0_20px_70px_-40px_rgba(15,23,42,0.45)] ring-1 ring-slate-200/80 dark:bg-slate-900/95 dark:ring-slate-800">
+      <CardHeader className="gap-2 border-b border-slate-100 bg-[linear-gradient(135deg,rgba(248,250,252,0.96),rgba(255,255,255,0.9))] dark:border-slate-800 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(15,23,42,0.88))]">
+        <CardTitle className="text-lg text-slate-950 dark:text-slate-50">{title}</CardTitle>
+        <CardDescription className="text-sm text-slate-500 dark:text-slate-400">{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 px-5 py-5 sm:px-6 sm:py-6">{children}</CardContent>
     </Card>
@@ -445,8 +445,8 @@ function FieldGroup({
   return (
     <div className="space-y-2">
       <div className="space-y-1">
-        <Label className="text-sm font-medium text-slate-800">{label}</Label>
-        {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+        <Label className="text-sm font-medium text-slate-800 dark:text-slate-100">{label}</Label>
+        {hint ? <p className="text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
       </div>
       {children}
     </div>
@@ -491,15 +491,15 @@ function CreatableField({
 
   return (
     <FieldGroup label={label} hint={hint}>
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-2.5">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-2.5 dark:border-slate-700 dark:bg-slate-950/70">
         {value && !isEditing ? (
-          <div className="flex min-h-10 items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200">
-            <span className="truncate text-sm font-medium text-slate-700">{value}</span>
+          <div className="flex min-h-10 items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+            <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-100">{value}</span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
-                className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-900"
+                className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
               >
                 Alterar
               </button>
@@ -510,7 +510,7 @@ function CreatableField({
                   onDraftChange('')
                   setIsEditing(true)
                 }}
-                className="text-xs font-medium text-slate-400 transition-colors hover:text-slate-700"
+                className="text-xs font-medium text-slate-400 transition-colors hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
               >
                 Limpar
               </button>
@@ -522,7 +522,7 @@ function CreatableField({
               value={draft}
               onChange={(event) => onDraftChange(event.target.value)}
               placeholder={placeholder}
-              className="h-10 bg-white"
+              className="h-10 bg-white dark:bg-slate-900"
             />
             <div className="mt-3 flex flex-wrap gap-2">
               {filtered.map((option) => (
@@ -533,8 +533,8 @@ function CreatableField({
                   className={cn(
                     'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
                     value === option
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'
+                      ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950'
+                      : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-800'
                   )}
                 >
                   {option}
@@ -544,7 +544,7 @@ function CreatableField({
                 <button
                   type="button"
                   onClick={() => commit(draft)}
-                  className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-100 transition-colors hover:bg-emerald-100"
+                  className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-100 transition-colors hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/20 dark:hover:bg-emerald-500/20"
                 >
                   Criar &quot;{draft.trim()}&quot;
                 </button>
@@ -1265,10 +1265,10 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
   return (
     <>
-      <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.55)] sm:p-6">
+      <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.55)] sm:p-6 dark:border-slate-800 dark:bg-[linear-gradient(180deg,#0f172a_0%,#020617_100%)]">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.18),transparent_48%),radial-gradient(circle_at_top_right,rgba(15,23,42,0.09),transparent_28%)]"
+          className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.18),transparent_48%),radial-gradient(circle_at_top_right,rgba(15,23,42,0.09),transparent_28%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_42%),radial-gradient(circle_at_top_right,rgba(148,163,184,0.12),transparent_26%)]"
         />
 
         <div className="relative space-y-6">
@@ -1286,15 +1286,15 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   className={cn(
                     'group rounded-[1.5rem] border p-4 text-left transition-all',
                     isActive
-                      ? 'border-slate-300 bg-white shadow-md ring-1 ring-slate-300'
+                      ? 'border-slate-300 bg-white shadow-md ring-1 ring-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:ring-slate-600'
                       : isCompleted
-                        ? 'border-emerald-200 bg-emerald-50/70 text-emerald-900'
-                        : 'border-slate-200 bg-white/90 text-slate-600',
+                        ? 'border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200'
+                        : 'border-slate-200 bg-white/90 text-slate-600 dark:border-slate-800 dark:bg-slate-900/85 dark:text-slate-300',
                     isActive
-                      ? 'hover:bg-slate-50'
+                      ? 'hover:bg-slate-50 dark:hover:bg-slate-900'
                       : isCompleted
-                        ? 'hover:border-emerald-200 hover:bg-emerald-50/70'
-                        : 'hover:border-slate-300 hover:bg-slate-50'
+                        ? 'hover:border-emerald-200 hover:bg-emerald-50/70 dark:hover:border-emerald-500/35 dark:hover:bg-emerald-500/15'
+                        : 'hover:border-slate-300 hover:bg-slate-50 dark:hover:border-slate-700 dark:hover:bg-slate-900'
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -1302,10 +1302,10 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       className={cn(
                         'flex h-10 w-10 items-center justify-center rounded-2xl ring-1',
                         isActive
-                          ? 'bg-slate-900 text-white ring-slate-900'
+                          ? 'bg-slate-900 text-white ring-slate-900 dark:bg-blue-500 dark:ring-blue-500'
                           : isCompleted
-                            ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
-                            : 'bg-slate-50 text-slate-500 ring-slate-200'
+                            ? 'bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/20'
+                            : 'bg-slate-50 text-slate-500 ring-slate-200 dark:bg-slate-950 dark:text-slate-400 dark:ring-slate-700'
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -1314,10 +1314,10 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       className={cn(
                         'rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em]',
                         isActive
-                          ? 'bg-slate-100 text-slate-900'
+                          ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100'
                           : isCompleted
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-slate-100 text-slate-500'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                            : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
                       )}
                     >
                       {isCompleted ? <Check className="h-3 w-3" /> : index + 1}
@@ -1326,7 +1326,11 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   <p
                     className={cn(
                       'mt-4 text-sm font-semibold',
-                      isActive ? 'text-slate-950' : isCompleted ? 'text-emerald-900' : 'text-slate-900'
+                      isActive
+                        ? 'text-slate-950 dark:text-slate-50'
+                        : isCompleted
+                          ? 'text-emerald-900 dark:text-emerald-200'
+                          : 'text-slate-900 dark:text-slate-100'
                     )}
                   >
                     {item.title}
@@ -1334,7 +1338,11 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   <p
                     className={cn(
                       'mt-1 text-sm',
-                      isActive ? 'text-slate-600' : isCompleted ? 'text-emerald-700' : 'text-slate-500'
+                      isActive
+                        ? 'text-slate-600 dark:text-slate-300'
+                        : isCompleted
+                          ? 'text-emerald-700 dark:text-emerald-300'
+                          : 'text-slate-500 dark:text-slate-400'
                     )}
                   >
                     {item.description}
@@ -1403,14 +1411,14 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   </div>
 
                   <FieldGroup label="Destaque na Loja" hint="Exibe este produto na secao principal de destaques da Home.">
-                    <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900/80">
                       <input 
                         type="checkbox"
                         checked={form.is_featured}
                         onChange={(e) => setForm(current => ({...current, is_featured: e.target.checked}))}
-                        className="h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                        className="h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:border-slate-600 dark:bg-slate-950"
                       />
-                      <span className="text-sm font-medium text-slate-700">Sim, destacar este produto</span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-100">Sim, destacar este produto</span>
                     </label>
                   </FieldGroup>
 
@@ -1420,7 +1428,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       onChange={(event) =>
                         setForm((current) => ({ ...current, status: event.target.value as ProductStatus }))
                       }
-                      className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:border-slate-600 dark:focus-visible:ring-slate-800"
                     >
                       <option value="draft">Rascunho</option>
                       <option value="active">Ativo</option>
@@ -1429,13 +1437,13 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                     </select>
                   </FieldGroup>
 
-                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200 md:col-span-2">
+                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200 md:col-span-2 dark:bg-slate-950/70 dark:ring-slate-800">
                     <CardContent className="grid gap-2 px-5 py-5 sm:grid-cols-[1fr_auto] sm:items-center">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">SKU principal</p>
-                        <p className="mt-1 text-base font-semibold text-slate-900">{generatedSku}</p>
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">SKU principal</p>
+                        <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-50">{generatedSku}</p>
                       </div>
-                      <p className="text-sm text-slate-500">Gerado automaticamente a partir do nome do produto.</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Gerado automaticamente a partir do nome do produto.</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -1448,7 +1456,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                 description="Separe um resumo curto para cards e um texto completo para pagina de detalhes."
               >
                 <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200">
+                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200 dark:bg-slate-950/70 dark:ring-slate-800">
                     <CardHeader>
                       <CardTitle>Resumo</CardTitle>
                       <CardDescription>Texto curto usado em cards, listas e destaques rapidos.</CardDescription>
@@ -1460,12 +1468,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                           setForm((current) => ({ ...current, shortDescription: event.target.value }))
                         }
                         placeholder="Resumo curto para lista e card."
-                        className="min-h-40 bg-white"
+                        className="min-h-40 bg-white dark:bg-slate-950"
                       />
                     </CardContent>
                   </Card>
 
-                  <Card className="border-0 bg-white ring-1 ring-slate-200">
+                  <Card className="border-0 bg-white ring-1 ring-slate-200 dark:bg-slate-950/70 dark:ring-slate-800">
                     <CardHeader>
                       <CardTitle>Descricao completa</CardTitle>
                       <CardDescription>Detalhes, materiais, modelagem, cuidados e informacoes importantes.</CardDescription>
@@ -1496,12 +1504,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       className={cn(
                         'rounded-[1.5rem] border p-5 text-left transition-all',
                         productType === 'simple'
-                          ? 'border-slate-400 bg-slate-50 shadow-sm ring-1 ring-slate-400'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
+                          ? 'border-slate-400 bg-slate-50 shadow-sm ring-1 ring-slate-400 dark:border-slate-600 dark:bg-slate-950 dark:ring-slate-600'
+                          : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700'
                       )}
                     >
-                      <p className="text-sm font-semibold text-slate-900">Produto simples</p>
-                      <p className={cn('mt-2 text-sm', productType === 'simple' ? 'text-slate-600' : 'text-slate-500')}>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Produto simples</p>
+                      <p className={cn('mt-2 text-sm', productType === 'simple' ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400')}>
                         Cadastro mais direto, com uma linha unica por cor.
                       </p>
                     </button>
@@ -1512,18 +1520,18 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       className={cn(
                         'rounded-[1.5rem] border p-5 text-left transition-all',
                         productType === 'variant'
-                          ? 'border-slate-400 bg-slate-50 shadow-sm ring-1 ring-slate-400'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
+                          ? 'border-slate-400 bg-slate-50 shadow-sm ring-1 ring-slate-400 dark:border-slate-600 dark:bg-slate-950 dark:ring-slate-600'
+                          : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700'
                       )}
                     >
-                      <p className="text-sm font-semibold text-slate-900">Produto com variacoes</p>
-                      <p className={cn('mt-2 text-sm', productType === 'variant' ? 'text-slate-600' : 'text-slate-500')}>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Produto com variacoes</p>
+                      <p className={cn('mt-2 text-sm', productType === 'variant' ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400')}>
                         Organize por cor e cadastre os tamanhos P, M, G, GG ou outros necessarios.
                       </p>
                     </button>
                   </div>
 
-                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200">
+                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200 dark:bg-slate-950/70 dark:ring-slate-800">
                     <CardHeader>
                       <CardTitle>Adicionar cor</CardTitle>
                       <CardDescription>Crie um bloco independente para cada cor do produto.</CardDescription>
@@ -1535,12 +1543,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                             value={newColorName}
                             onChange={(event) => setNewColorName(event.target.value)}
                             placeholder="Ex.: Azul royal"
-                            className="h-11 bg-white"
+                            className="h-11 bg-white dark:bg-slate-900"
                           />
                         </FieldGroup>
 
                         <FieldGroup label="Cor (hexadecimal)">
-                          <div className="flex h-11 items-center gap-2 rounded-xl border border-input bg-white px-3">
+                          <div className="flex h-11 items-center gap-2 rounded-xl border border-input bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
                             <input
                               type="color"
                               value={newColorHex}
@@ -1574,13 +1582,13 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                                 setNewColorName(color.name)
                                 setNewColorHex(color.hex)
                               }}
-                              className="group flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                              className="group flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600 dark:hover:bg-slate-800"
                             >
                               <span
-                                className="h-3.5 w-3.5 rounded-full border border-slate-200 shadow-sm"
+                                className="h-3.5 w-3.5 rounded-full border border-slate-200 shadow-sm dark:border-slate-600"
                                 style={{ backgroundColor: color.hex }}
                               />
-                              <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900">
+                              <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100">
                                 {color.name}
                               </span>
                             </button>
@@ -1591,10 +1599,10 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   </Card>
 
                   {colorGroups.length === 0 ? (
-                    <Card className="border-dashed bg-slate-50/80 text-center ring-1 ring-slate-200">
+                    <Card className="border-dashed bg-slate-50/80 text-center ring-1 ring-slate-200 dark:bg-slate-950/60 dark:ring-slate-800">
                       <CardContent className="px-6 py-12">
-                        <p className="text-sm font-medium text-slate-700">Adicione uma cor para comecar</p>
-                        <p className="mt-2 text-sm text-slate-500">
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-100">Adicione uma cor para comecar</p>
+                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                           Cada cor vira um bloco proprio para facilitar manutencao e leitura.
                         </p>
                       </CardContent>
@@ -1604,12 +1612,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       {colorGroups.map((group) => (
                         <Card
                           key={group.id}
-                          className="overflow-visible border-0 bg-white ring-1 ring-slate-200 shadow-[0_16px_50px_-38px_rgba(15,23,42,0.4)]"
+                          className="overflow-visible border-0 bg-white ring-1 ring-slate-200 shadow-[0_16px_50px_-38px_rgba(15,23,42,0.4)] dark:bg-slate-900 dark:ring-slate-800"
                         >
                           <CardHeader className="gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
                             <div className="flex items-start gap-3">
                               <span
-                                className="mt-0.5 h-5 w-5 rounded-full border border-slate-300"
+                                className="mt-0.5 h-5 w-5 rounded-full border border-slate-300 dark:border-slate-600"
                                 style={{ backgroundColor: group.hex }}
                               />
                               <div>
@@ -1628,13 +1636,13 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                           </CardHeader>
 
                           <CardContent className="space-y-4 px-5 pb-5">
-                            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200 dark:bg-slate-950/80 dark:ring-slate-800">
                               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                 <div>
-                                  <p className="text-sm font-semibold text-slate-900">
+                                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
                                     {useSizes ? 'Tamanhos dessa cor' : 'Configuracao dessa cor'}
                                   </p>
-                                  <p className="mt-1 text-sm text-slate-500">
+                                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                     {useSizes
                                       ? 'Adicione tamanhos predefinidos ou crie um tamanho personalizado.'
                                       : 'Cada cor fica com uma unica linha de estoque, preco e SKU.'}
@@ -1649,7 +1657,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                                           key={size}
                                           type="button"
                                           onClick={() => addVariantToGroup(group.id, size)}
-                                          className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100"
+                                          className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-800"
                                         >
                                           {size}
                                         </button>
@@ -1662,7 +1670,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                                           setSizeDrafts((current) => ({ ...current, [group.id]: event.target.value }))
                                         }
                                         placeholder="Outro tamanho"
-                                        className="h-10 w-full bg-white sm:w-40"
+                                        className="h-10 w-full bg-white dark:bg-slate-900 sm:w-40"
                                       />
                                       <Button type="button" variant="outline" className="h-10 rounded-xl" onClick={() => addVariantToGroup(group.id)}>
                                         <Plus className="h-4 w-4" />
@@ -1675,14 +1683,14 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
                               <div className="mt-4 space-y-3">
                                 {group.variants.length === 0 ? (
-                                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
+                                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
                                     Adicione um tamanho para esta cor.
                                   </div>
                                 ) : (
                                   group.variants.map((variant, index) => (
                                     <div
                                       key={variant.id}
-                                      className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-[100px_100px_120px_120px_120px_minmax(0,1fr)_auto]"
+                                      className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-2 xl:grid-cols-[100px_100px_120px_120px_120px_minmax(0,1fr)_auto]"
                                     >
                                       <FieldGroup label={useSizes ? 'Tamanho' : 'Variacao'}>
                                         {useSizes ? (
@@ -1693,7 +1701,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                                             className="h-10"
                                           />
                                         ) : (
-                                          <div className="flex h-10 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+                                          <div className="flex h-10 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
                                             Unico
                                           </div>
                                         )}
@@ -1735,7 +1743,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                                           onChange={(event) =>
                                             updateVariant(group.id, variant.id, 'status', event.target.value as ProductVariantStatus)
                                           }
-                                          className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                                          className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:border-slate-600 dark:focus-visible:ring-slate-800"
                                         >
                                           <option value="active">Ativa</option>
                                           <option value="inactive">Inativa</option>
@@ -1804,33 +1812,33 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                     className={cn(
                       'w-full rounded-[1.75rem] border-2 border-dashed px-5 py-8 text-left transition-colors',
                       isDraggingFiles
-                        ? 'border-slate-900 bg-slate-100'
-                        : 'border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100/70'
+                        ? 'border-slate-900 bg-slate-100 dark:border-blue-400 dark:bg-blue-500/10'
+                        : 'border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100/70 dark:border-slate-700 dark:bg-slate-950/70 dark:hover:border-slate-600 dark:hover:bg-slate-900'
                     )}
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex items-start gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-100">
                           <ImagePlus className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">Upload multiplo com drag and drop</p>
-                          <p className="mt-1 text-sm text-slate-500">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Upload multiplo com drag and drop</p>
+                          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                             Arraste imagens para ca ou clique para selecionar os arquivos.
                           </p>
                         </div>
                       </div>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm dark:bg-slate-900 dark:text-slate-200">
                         {images.length} arquivo(s)
                       </span>
                     </div>
                   </button>
 
-                  <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5">
+                  <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">Adicionar imagem por link</p>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Adicionar imagem por link</p>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                           Cole uma URL publica da imagem para usar na galeria sem fazer upload do arquivo.
                         </p>
                         <input
@@ -1844,7 +1852,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                             }
                           }}
                           placeholder="https://exemplo.com/minha-imagem.webp"
-                          className="mt-3 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                          className="mt-3 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:border-slate-600 dark:focus-visible:ring-slate-800"
                         />
                       </div>
                       <div className="flex items-end">
@@ -1856,10 +1864,10 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   </div>
 
                   {images.length === 0 ? (
-                    <Card className="border-dashed bg-slate-50/80 text-center ring-1 ring-slate-200">
+                    <Card className="border-dashed bg-slate-50/80 text-center ring-1 ring-slate-200 dark:bg-slate-950/60 dark:ring-slate-800">
                       <CardContent className="px-6 py-12">
-                        <p className="text-sm font-medium text-slate-700">Nenhuma imagem adicionada ainda</p>
-                        <p className="mt-2 text-sm text-slate-500">
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-100">Nenhuma imagem adicionada ainda</p>
+                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                           Envie a galeria do produto para continuar com a revisao final.
                         </p>
                       </CardContent>
@@ -1881,18 +1889,18 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                           }}
                           onDragEnd={() => setDraggedImageId(null)}
                           className={cn(
-                            'overflow-hidden border-0 bg-white ring-1 ring-slate-200 transition-shadow',
+                            'overflow-hidden border-0 bg-white ring-1 ring-slate-200 transition-shadow dark:bg-slate-900 dark:ring-slate-800',
                             draggedImageId === image.id && 'shadow-lg shadow-slate-300/60'
                           )}
                         >
-                          <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                          <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-950">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={image.url} alt={`Imagem ${index + 1}`} className="h-full w-full object-cover" />
                             <div className="absolute left-3 top-3 flex items-center gap-2">
                               <span className="rounded-full bg-slate-950/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
                                 {index === 0 ? 'Capa' : `#${index + 1}`}
                               </span>
-                              <span className="rounded-full bg-white/90 px-2 py-1 text-[10px] font-medium text-slate-600">
+                              <span className="rounded-full bg-white/90 px-2 py-1 text-[10px] font-medium text-slate-600 dark:bg-slate-900/90 dark:text-slate-300">
                                 Arraste para ordenar
                               </span>
                             </div>
@@ -1901,28 +1909,28 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                           <CardContent className="space-y-4 px-4 py-4">
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-slate-900">
+                                <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">
                                   {image.kind === 'new'
                                     ? image.file.name
                                     : image.kind === 'remote'
                                       ? `Link externo ${index + 1}`
                                       : `Imagem ${index + 1}`}
                                 </p>
-                                <p className="mt-1 text-xs text-slate-500">
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                   {image.assignedColorName ? `Vinculada a ${image.assignedColorName}` : 'Sem cor vinculada'}
                                 </p>
                                 {image.kind === 'remote' ? (
-                                  <p className="mt-1 truncate text-[11px] text-slate-400">{image.url}</p>
+                                  <p className="mt-1 truncate text-[11px] text-slate-400 dark:text-slate-500">{image.url}</p>
                                 ) : null}
                               </div>
-                              <GripVertical className="h-4 w-4 text-slate-400" />
+                              <GripVertical className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                             </div>
 
                             <FieldGroup label="Cor da imagem">
                               <select
                                 value={image.assignedColorHex ?? ''}
                                 onChange={(event) => assignImageColor(image.id, event.target.value)}
-                                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:border-slate-600 dark:focus-visible:ring-slate-800"
                               >
                                 <option value="">Sem cor vinculada</option>
                                 {colors.map((color) => (
@@ -1934,7 +1942,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                             </FieldGroup>
                           </CardContent>
 
-                          <CardFooter className="justify-between gap-3 border-t border-slate-100 bg-slate-50/80">
+                          <CardFooter className="justify-between gap-3 border-t border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/80">
                             <Button type="button" variant="outline" size="sm" onClick={() => setCoverImage(image.id)}>
                               Definir capa
                             </Button>
@@ -1957,7 +1965,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                 description="Verifique como o produto sera exibido na sua loja online."
               >
                 <div className="grid gap-4">
-                  <Card className="border-0 bg-white ring-1 ring-slate-200">
+                  <Card className="border-0 bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
                     <CardHeader>
                       <CardTitle>Preview na loja</CardTitle>
                       <CardDescription>
@@ -1966,29 +1974,29 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                     </CardHeader>
                     <CardContent className="px-5 pb-5">
                       <div className="grid gap-5 lg:grid-cols-[minmax(0,340px)_1fr]">
-                        <div className="overflow-hidden rounded-[1.75rem] bg-white shadow-[0_20px_45px_-32px_rgba(15,23,42,0.45)] ring-1 ring-slate-200">
-                          <div className="relative aspect-[4/5] overflow-hidden bg-slate-100">
+                        <div className="overflow-hidden rounded-[1.75rem] bg-white shadow-[0_20px_45px_-32px_rgba(15,23,42,0.45)] ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
+                          <div className="relative aspect-[4/5] overflow-hidden bg-slate-100 dark:bg-slate-950">
                             {previewImage ? (
                               <>
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={previewImage.url} alt={form.name || 'Preview do produto'} className="h-full w-full object-cover" />
                               </>
                             ) : (
-                              <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-400">
+                              <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-400 dark:text-slate-500">
                                 A imagem de capa aparecera aqui.
                               </div>
                             )}
-                            <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700">
+                            <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700 dark:bg-slate-900/90 dark:text-slate-200">
                               {form.category || 'Categoria'}
                             </div>
                           </div>
                           <div className="space-y-4 p-5">
                             <div className="flex items-center justify-between gap-3">
                               <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
                                   Improve Styles
                                 </p>
-                                <p className="text-xs text-slate-500">Preview do Card</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Preview do Card</p>
                               </div>
                               <div className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 ring-1 ring-cyan-100">
                                 {form.status === 'active' ? 'Ativo' : 'Rascunho'}
@@ -1996,32 +2004,32 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                             </div>
 
                             <div className="space-y-2">
-                              <h4 className="text-lg font-semibold tracking-tight text-slate-950">
+                              <h4 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-slate-50">
                                 {form.name || 'Nome do produto'}
                               </h4>
-                              <p className="line-clamp-3 text-sm leading-6 text-slate-500">
+                              <p className="line-clamp-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
                                 {form.shortDescription || 'Resumo curto aparecerá aqui.'}
                               </p>
                             </div>
 
                             <div className="flex items-end justify-between gap-4">
                               <div>
-                                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Preco</p>
-                                <p className="mt-1 text-2xl font-semibold text-slate-950">{formatCurrency(previewPrice)}</p>
+                                <p className="text-xs uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Preco</p>
+                                <p className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-50">{formatCurrency(previewPrice)}</p>
                               </div>
-                              <p className="text-sm text-slate-500">{totalStock} em estoque</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">{totalStock} em estoque</p>
                             </div>
                           </div>
                         </div>
 
                         <div className="space-y-4">
-                          <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200">
-                            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Variacoes disponiveis</p>
+                          <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
+                            <p className="text-xs uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Variacoes disponiveis</p>
                             <div className="mt-4 flex flex-wrap gap-3">
                               {colorGroups.map((group) => (
-                                <div key={group.id} className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
-                                  <span className="h-3.5 w-3.5 rounded-full border border-slate-300" style={{ backgroundColor: group.hex }} />
-                                  <span className="text-sm font-medium text-slate-700">{group.name}</span>
+                                <div key={group.id} className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+                                  <span className="h-3.5 w-3.5 rounded-full border border-slate-300 dark:border-slate-600" style={{ backgroundColor: group.hex }} />
+                                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{group.name}</span>
                                 </div>
                               ))}
                             </div>
@@ -2030,7 +2038,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                               {colorGroups.flatMap((group) => group.variants).map((variant) => (
                                 <span
                                   key={variant.id}
-                                  className="rounded-full bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                                  className="rounded-full bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700"
                                 >
                                   {variant.size}
                                 </span>
@@ -2038,13 +2046,13 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                             </div>
                           </div>
 
-                          <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200">
-                            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Galeria ({images.length})</p>
+                          <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
+                            <p className="text-xs uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Galeria ({images.length})</p>
                             {images.length > 0 ? (
                               <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
                                 {images.map((image, index) => (
-                                  <div key={image.id} className="overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-200">
-                                    <div className="relative aspect-square overflow-hidden bg-slate-100">
+                                  <div key={image.id} className="overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+                                    <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-950">
                                       {/* eslint-disable-next-line @next/next/no-img-element */}
                                       <img src={image.url} alt={`Preview ${index + 1}`} className="h-full w-full object-cover" />
                                     </div>
@@ -2052,7 +2060,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                                 ))}
                               </div>
                             ) : (
-                              <p className="mt-4 text-sm text-slate-500">Nenhuma imagem na galeria.</p>
+                              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Nenhuma imagem na galeria.</p>
                             )}
                           </div>
                         </div>
@@ -2063,9 +2071,9 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
               </StepShell>
             ) : null}
 
-            <Card className="border-0 bg-white ring-1 ring-slate-200">
+            <Card className="border-0 bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
               <CardContent className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-slate-500">
+                <div className="text-sm text-slate-500 dark:text-slate-400">
                   {step < stepItems.length - 1
                     ? 'Avance etapa por etapa para reduzir erros no cadastro.'
                     : 'Revise os dados e finalize o cadastro do produto.'}
@@ -2117,8 +2125,8 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
             className={cn(
               'rounded-2xl border px-4 py-3 shadow-2xl backdrop-blur',
               toast.type === 'success'
-                ? 'border-emerald-200 bg-emerald-50/95 text-emerald-900'
-                : 'border-red-200 bg-red-50/95 text-red-900'
+                ? 'border-emerald-200 bg-emerald-50/95 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-200'
+                : 'border-red-200 bg-red-50/95 text-red-900 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-200'
             )}
           >
             <p className="text-sm font-medium">{toast.message}</p>

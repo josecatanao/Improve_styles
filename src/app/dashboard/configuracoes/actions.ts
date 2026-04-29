@@ -23,6 +23,11 @@ export async function saveStoreAppearance(input: {
   storeLogoUrl: string
   brandPrimaryColor: string
   brandSecondaryColor: string
+  storeHeaderBackgroundColor: string
+  storeButtonBackgroundColor: string
+  storeCardBackgroundColor: string
+  storeCardBorderColor: string
+  storeCartButtonColor: string
   dashboardTheme: string
 }) {
   const supabase = createAdminClient()
@@ -30,6 +35,11 @@ export async function saveStoreAppearance(input: {
   const storeLogoUrl = input.storeLogoUrl.trim() || null
   const brandPrimaryColor = normalizeHexColor(input.brandPrimaryColor, '#0f172a')
   const brandSecondaryColor = normalizeHexColor(input.brandSecondaryColor, '#e2e8f0')
+  const storeHeaderBackgroundColor = normalizeHexColor(input.storeHeaderBackgroundColor, '#ffffff')
+  const storeButtonBackgroundColor = normalizeHexColor(input.storeButtonBackgroundColor, '#ffffff')
+  const storeCardBackgroundColor = normalizeHexColor(input.storeCardBackgroundColor, '#ffffff')
+  const storeCardBorderColor = normalizeHexColor(input.storeCardBorderColor, '#e2e8f0')
+  const storeCartButtonColor = normalizeHexColor(input.storeCartButtonColor, '#ffffff')
   const dashboardTheme = normalizeDashboardTheme(input.dashboardTheme)
 
   const { data: existing, error: existingError } = await supabase
@@ -47,6 +57,11 @@ export async function saveStoreAppearance(input: {
         store_logo_url: storeLogoUrl,
         brand_primary_color: brandPrimaryColor,
         brand_secondary_color: brandSecondaryColor,
+        store_header_background_color: storeHeaderBackgroundColor,
+        store_button_background_color: storeButtonBackgroundColor,
+        store_card_background_color: storeCardBackgroundColor,
+        store_card_border_color: storeCardBorderColor,
+        store_cart_button_color: storeCartButtonColor,
         dashboard_theme: dashboardTheme,
         updated_at: new Date().toISOString(),
       })
@@ -58,6 +73,11 @@ export async function saveStoreAppearance(input: {
       store_logo_url: storeLogoUrl,
       brand_primary_color: brandPrimaryColor,
       brand_secondary_color: brandSecondaryColor,
+      store_header_background_color: storeHeaderBackgroundColor,
+      store_button_background_color: storeButtonBackgroundColor,
+      store_card_background_color: storeCardBackgroundColor,
+      store_card_border_color: storeCardBorderColor,
+      store_cart_button_color: storeCartButtonColor,
       dashboard_theme: dashboardTheme,
     })
     ensureSuccess(error, 'Erro ao criar configuracoes visuais da loja')
@@ -66,6 +86,51 @@ export async function saveStoreAppearance(input: {
   revalidatePath('/')
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/configuracoes')
+  revalidateTag('store-branding', 'max')
+  refresh()
+  return { success: true }
+}
+
+export async function saveDashboardAppearance(input: {
+  dashboardTheme: string
+  brandPrimaryColor: string
+  brandSecondaryColor: string
+}) {
+  const supabase = createAdminClient()
+  const dashboardTheme = normalizeDashboardTheme(input.dashboardTheme)
+  const brandPrimaryColor = normalizeHexColor(input.brandPrimaryColor, '#0f172a')
+  const brandSecondaryColor = normalizeHexColor(input.brandSecondaryColor, '#e2e8f0')
+
+  const { data: existing, error: existingError } = await supabase
+    .from('store_settings')
+    .select('id')
+    .limit(1)
+    .maybeSingle()
+  ensureSuccess(existingError, 'Erro ao buscar configuracoes do dashboard')
+
+  if (existing) {
+    const { error } = await supabase
+      .from('store_settings')
+      .update({
+        dashboard_theme: dashboardTheme,
+        brand_primary_color: brandPrimaryColor,
+        brand_secondary_color: brandSecondaryColor,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+    ensureSuccess(error, 'Erro ao atualizar configuracoes do dashboard')
+  } else {
+    const { error } = await supabase.from('store_settings').insert({
+      dashboard_theme: dashboardTheme,
+      brand_primary_color: brandPrimaryColor,
+      brand_secondary_color: brandSecondaryColor,
+    })
+    ensureSuccess(error, 'Erro ao criar configuracoes do dashboard')
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/configuracoes')
+  revalidatePath('/dashboard/configuracoes/dashboard')
   revalidateTag('store-branding', 'max')
   refresh()
   return { success: true }

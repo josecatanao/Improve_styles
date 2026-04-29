@@ -3,7 +3,8 @@ import type { CSSProperties } from 'react'
 import { Header } from '@/components/store/Header'
 import { getPublicStoreSettings } from '@/lib/store-branding'
 import { getStoreCustomerSession } from '@/lib/customer-session'
-import { buildStoreBrandStyle, getContrastingTextColor } from '@/lib/store-settings'
+import { getStoreSearchIndex } from '@/lib/products'
+import { buildStorefrontThemeStyle, getContrastingTextColor } from '@/lib/store-settings'
 
 const footerColumns = [
   {
@@ -52,9 +53,10 @@ export async function StoreShell({
   const needsStoreSettings =
     typeof branding === 'undefined' || typeof brandStyle === 'undefined' || typeof announcement === 'undefined'
 
-  const [customerSession, settingsResponse] = await Promise.all([
+  const [customerSession, settingsResponse, searchSuggestions] = await Promise.all([
     getStoreCustomerSession(),
     needsStoreSettings ? getPublicStoreSettings() : Promise.resolve(null),
+    getStoreSearchIndex(),
   ])
 
   const resolvedSettings = settingsResponse
@@ -62,7 +64,7 @@ export async function StoreShell({
     logoUrl: branding?.logoUrl ?? resolvedSettings?.store_logo_url ?? null,
     storeName: branding?.storeName ?? resolvedSettings?.store_name ?? 'Improve Styles',
   }
-  const resolvedBrandStyle = brandStyle ?? (resolvedSettings ? buildStoreBrandStyle(resolvedSettings) : undefined)
+  const resolvedBrandStyle = brandStyle ?? (resolvedSettings ? buildStorefrontThemeStyle(resolvedSettings) : undefined)
   const resolvedAnnouncement =
     announcement ??
     (resolvedSettings?.announcement_active && resolvedSettings.announcement_text
@@ -94,7 +96,13 @@ export async function StoreShell({
           )}
         </div>
       ) : null}
-      <Header branding={resolvedBranding} categories={categories} query={query} customerSession={customerSession} />
+      <Header
+        branding={resolvedBranding}
+        categories={categories}
+        query={query}
+        customerSession={customerSession}
+        searchSuggestions={searchSuggestions}
+      />
       {children}
 
       <footer className="mt-10 border-t border-slate-200 bg-white sm:mt-12">

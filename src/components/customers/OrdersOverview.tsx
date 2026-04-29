@@ -211,7 +211,10 @@ export function OrdersOverview({
                       Este pedido foi cancelado e saiu do fluxo normal de acompanhamento.
                     </div>
                   ) : (
-                    <div className="grid gap-4 sm:grid-cols-4 sm:gap-5">
+                    <div className="grid gap-4 sm:grid-cols-4 sm:gap-0">
+                      <div className="relative hidden sm:block sm:col-span-4">
+                        <span className="absolute left-5 right-5 top-5 z-0 h-px bg-slate-200" />
+                      </div>
                       {steps.map((step, index) => {
                         const Icon = step.icon
                         const isDone = step.state === 'done'
@@ -224,15 +227,15 @@ export function OrdersOverview({
                         const lineClass = isDone ? 'bg-emerald-400' : isCurrent ? 'bg-blue-500' : 'bg-slate-200'
 
                         return (
-                          <div key={step.key} className="relative">
+                          <div key={step.key} className="relative sm:-mt-0 sm:px-3">
                             {index < steps.length - 1 ? (
-                              <span className="absolute left-[calc(50%+1.55rem)] right-[-0.7rem] top-5 hidden h-px sm:block">
+                              <span className="absolute left-10 right-0 top-5 z-0 hidden h-px sm:block">
                                 <span className={`block h-full w-full ${lineClass}`} />
                               </span>
                             ) : null}
 
-                            <div className="space-y-3">
-                              <div className={`flex h-10 w-10 items-center justify-center rounded-full ring-8 ${circleClass}`}>
+                            <div className="relative z-10 space-y-3">
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-full ring-8 ring-white ${circleClass}`}>
                                 <Icon className="h-4 w-4" />
                               </div>
                               <div className="space-y-1">

@@ -171,7 +171,7 @@ export function AddToCartPanel({
   }
 
   return (
-    <div className="rounded-none border border-slate-200 bg-white p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.35)] sm:p-6">
+    <div className="rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.35)] sm:p-6">
       <div className="space-y-6">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
@@ -250,7 +250,7 @@ export function AddToCartPanel({
                     disabled={!color.hasStock}
                     className={`relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-none border bg-white transition-all sm:h-[68px] sm:w-[68px] ${
                       isSelected
-                        ? 'border-[#3483fa] ring-2 ring-[#3483fa]/15'
+                        ? 'border-[color:var(--store-button-bg)] ring-2 ring-black/5'
                         : 'border-slate-200 hover:border-slate-300'
                     } ${!color.hasStock ? 'cursor-not-allowed opacity-45' : ''}`}
                     title={color.name}
@@ -291,7 +291,7 @@ export function AddToCartPanel({
                     disabled={!option.hasStock}
                     className={`inline-flex min-h-10 items-center justify-center rounded-none border px-2.5 py-2 text-[13px] font-medium transition-colors sm:min-h-11 sm:px-3 sm:text-sm ${
                       isSelected || matchesResolved
-                        ? 'border-[#3483fa] bg-[#3483fa]/5 text-[#2968c8]'
+                        ? 'border-[color:var(--store-button-bg)] bg-black/5 text-[var(--store-button-bg)]'
                         : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                     } ${!option.hasStock ? 'cursor-not-allowed bg-slate-100 text-slate-400 line-through opacity-70' : ''}`}
                   >
@@ -339,14 +339,14 @@ export function AddToCartPanel({
                 router.push('/carrinho')
               }}
               disabled={!canPurchase}
-              className="inline-flex h-12 items-center justify-center rounded-none bg-[#3483fa] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#2968c8] disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="inline-flex h-12 items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Comprar agora
             </button>
           ) : (
             <Link
               href={`/login?mode=customer&next=${encodeURIComponent(`/produto/${product.id}`)}`}
-              className="inline-flex h-12 items-center justify-center rounded-none bg-[#3483fa] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#2968c8]"
+              className="inline-flex h-12 items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90"
             >
               Entrar para comprar
             </Link>

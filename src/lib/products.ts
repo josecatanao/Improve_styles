@@ -62,6 +62,15 @@ export type CategoryStorefrontResult = {
   errorMessage: string | null
 }
 
+export type StoreSearchSuggestion = {
+  id: string
+  label: string
+  href: string
+  type: 'product' | 'category' | 'brand'
+  meta?: string | null
+  imageUrl?: string | null
+}
+
 function sanitizePage(page: string | undefined) {
   const parsed = Number(page ?? '1')
   if (!Number.isFinite(parsed) || parsed < 1) {
@@ -86,6 +95,32 @@ function uniqueBy<T>(items: T[], getKey: (item: T) => string) {
   })
 
   return Array.from(map.values())
+}
+
+function normalizeSearchText(value: string | null | undefined) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function tokenizeSearchText(value: string | null | undefined) {
+  return normalizeSearchText(value)
+    .split(/[^a-z0-9]+/i)
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .map((token) => {
+      const variants = new Set<string>([token])
+
+      if (token.endsWith('s') && token.length > 3) {
+        variants.add(token.slice(0, -1))
+      } else if (token.length > 2) {
+        variants.add(`${token}s`)
+      }
+
+      return Array.from(variants)
+    })
 }
 
 function normalizeProductRecord(product: ProductListItem): ProductListItem {
@@ -204,6 +239,81 @@ export async function getProductMetrics(): Promise<ProductDashboardMetrics> {
     lowStockCount: data.filter((product) => Number(product.stock ?? 0) <= 3).length,
     setupRequired: false,
   }
+}
+
+export async function getStoreSearchIndex(): Promise<StoreSearchSuggestion[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('products')
+    .select(
+      `
+        id,
+        name,
+        brand,
+        category,
+        status,
+        is_active,
+        short_description,
+        tags,
+        product_images(public_url, sort_order)
+      `
+    )
+    .eq('status', 'active')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(120)
+
+  if (isMissingTable(error) || error || !data) {
+    return []
+  }
+
+  const products = normalizeProductRows(data as ProductListItem[])
+  const suggestions: StoreSearchSuggestion[] = []
+  const categorySet = new Set<string>()
+  const brandSet = new Set<string>()
+
+  products.forEach((product) => {
+    suggestions.push({
+      id: `product:${product.id}`,
+      label: product.name,
+      href: `/produto/${product.id}`,
+      type: 'product',
+      meta: [product.brand?.trim(), normalizeStoreCategoryLabel(product.category)].filter(Boolean).join(' • ') || null,
+      imageUrl: product.product_images?.[0]?.public_url ?? null,
+    })
+
+    const categoryLabel = normalizeStoreCategoryLabel(product.category)
+    const categoryKey = getStoreCategoryKey(product.category)
+
+    if (!categorySet.has(categoryKey)) {
+      categorySet.add(categoryKey)
+      suggestions.push({
+        id: `category:${categoryKey}`,
+        label: categoryLabel,
+        href: `/loja/${categoryKey}`,
+        type: 'category',
+        meta: 'Categoria',
+        imageUrl: product.product_images?.[0]?.public_url ?? null,
+      })
+    }
+
+    const brandLabel = product.brand?.trim()
+    const brandKey = brandLabel?.toLowerCase()
+
+    if (brandLabel && brandKey && !brandSet.has(brandKey)) {
+      brandSet.add(brandKey)
+      suggestions.push({
+        id: `brand:${brandKey}`,
+        label: brandLabel,
+        href: `/?q=${encodeURIComponent(brandLabel)}`,
+        type: 'brand',
+        meta: 'Marca',
+        imageUrl: product.product_images?.[0]?.public_url ?? null,
+      })
+    }
+  })
+
+  return suggestions
 }
 
 export async function getProducts(options: {
@@ -492,12 +602,28 @@ export async function getStorefrontData(options?: {
   }
 
   const allProducts = await attachReviewStats(normalizeProductRows(data as ProductListItem[]), supabase)
+  const queryTokenGroups = tokenizeSearchText(query)
   const filteredProducts = allProducts.filter((product) => {
-    const matchesQuery = query
-      ? [product.name, product.sku, product.category, product.brand, product.short_description]
-          .filter((value): value is string => Boolean(value))
-          .some((value) => value.toLowerCase().includes(query.toLowerCase()))
-      : true
+    const searchableParts = [
+      product.name,
+      product.sku,
+      product.category,
+      product.brand,
+      product.short_description,
+      product.description,
+      product.collection,
+      product.audience,
+      ...(product.tags ?? []),
+      ...(product.colors ?? []).map((color) => color.name),
+      ...(product.product_variants ?? []).flatMap((variant) => [variant.color_name, variant.size]),
+    ].filter((value): value is string => Boolean(value))
+
+    const searchableText = normalizeSearchText(searchableParts.join(' '))
+
+    const matchesQuery =
+      queryTokenGroups.length > 0
+        ? queryTokenGroups.every((group) => group.some((token) => searchableText.includes(token)))
+        : true
 
     const matchesCategory = category ? getStoreCategoryKey(product.category) === getStoreCategoryKey(category) : true
 

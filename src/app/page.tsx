@@ -2,12 +2,13 @@ import Link from 'next/link'
 import { Grid2X2 } from 'lucide-react'
 import { HomeHeroCarousel } from '@/components/store/HomeHeroCarousel'
 import { ProductCarouselRail } from '@/components/store/ProductCarouselRail'
+import { ProductCard } from '@/components/store/ProductCard'
 import { getPublicStoreSettings } from '@/lib/store-branding'
 import { StoreShell } from '@/components/store/StoreShell'
 import { resolveCategoryIcon } from '@/lib/category-visuals'
 import { getStorefrontData } from '@/lib/products'
 import { getStorefrontCategories } from '@/lib/store-categories'
-import { buildStoreBrandStyle } from '@/lib/store-settings'
+import { buildStorefrontThemeStyle } from '@/lib/store-settings'
 import {
   getCategorySectionId,
   getCategorySectionSlug,
@@ -115,6 +116,19 @@ export default async function Home({
   // Filter products for the dynamic sections
   const promotionalProducts = storefront.allProducts.filter(p => p.compare_at_price && p.compare_at_price > (p.price || 0)).slice(0, 8)
   const featuredProducts = storefront.allProducts.filter(p => p.is_featured).slice(0, 8)
+  const isSearchMode = query.trim().length > 0
+  const matchedCategories = storefront.filteredProducts
+    .map((product) => product.category)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => normalizeStoreCategoryLabel(value))
+    .filter(Boolean)
+    .filter((value, index, array) => array.indexOf(value) === index)
+    .slice(0, 5)
+  const matchedBrands = storefront.filteredProducts
+    .map((product) => product.brand?.trim())
+    .filter((value): value is string => Boolean(value))
+    .filter((value, index, array) => array.indexOf(value) === index)
+    .slice(0, 5)
   
   // se nao houver nenhum "destacado" manualmente, a gente cai para o mais vendido ou mais recente
   const finalFeatured = featuredProducts.length > 0 
@@ -126,7 +140,7 @@ export default async function Home({
       categories={categories} 
       query={query} 
       branding={{ logoUrl: settings.store_logo_url, storeName: settings.store_name }}
-      brandStyle={buildStoreBrandStyle(settings)}
+      brandStyle={buildStorefrontThemeStyle(settings)}
       announcement={settings.announcement_active ? {
         active: settings.announcement_active,
         text: settings.announcement_text,
@@ -135,8 +149,54 @@ export default async function Home({
       } : null}
     >
       <main className="mx-auto w-full max-w-7xl space-y-7 px-4 py-4 sm:px-6 sm:py-5 lg:space-y-8 lg:px-8">
-        
-        {(() => {
+        {isSearchMode ? (
+          <section className="space-y-5">
+            <div className="border border-slate-200 bg-white px-4 py-4 sm:px-5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Busca na loja</p>
+                  <div className="space-y-1">
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
+                      Resultados para &quot;{query}&quot;
+                    </h1>
+                    <p className="text-sm text-slate-500">
+                      {storefront.filteredProducts.length} produto{storefront.filteredProducts.length === 1 ? '' : 's'} encontrado{storefront.filteredProducts.length === 1 ? '' : 's'}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
+                  {matchedCategories.map((item) => (
+                    <Link key={`category:${item}`} href={`/?q=${encodeURIComponent(item)}`} className="border border-slate-200 px-3 py-2 text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950">
+                      {item}
+                    </Link>
+                  ))}
+                  {matchedBrands.map((item) => (
+                    <Link key={`brand:${item}`} href={`/?q=${encodeURIComponent(item)}`} className="border border-slate-200 px-3 py-2 text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950">
+                      {item}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {storefront.filteredProducts.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4">
+                {storefront.filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="border border-slate-200 bg-white px-5 py-10 text-center">
+                <p className="text-lg font-semibold text-slate-900">Nenhum produto encontrado.</p>
+                <p className="mt-2 text-sm text-slate-500">
+                  Tente buscar por nome do produto, categoria, marca, cor ou outra palavra relacionada.
+                </p>
+              </div>
+            )}
+          </section>
+        ) : (
+        (() => {
           const layoutArray = normalizeHomepageLayout(
             settings.homepage_layout,
             categorySections.map((section) => getCategorySectionId(section.key))
@@ -239,7 +299,7 @@ export default async function Home({
                 )
               }
           }
-        })})()}
+        })})() )}
 
         {storefront.errorMessage ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{storefront.errorMessage}</div>
