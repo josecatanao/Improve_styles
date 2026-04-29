@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { CartProvider } from '@/components/store/CartProvider'
+import { FeedbackProvider } from '@/components/ui/feedback-provider'
 
 export const metadata: Metadata = {
   title: 'Improve Style',
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <CartProvider>{children}</CartProvider>
+        <FeedbackProvider>
+          <CartProvider>{children}</CartProvider>
+        </FeedbackProvider>
       </body>
     </html>
   )

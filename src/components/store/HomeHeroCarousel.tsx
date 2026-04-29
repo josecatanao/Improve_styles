@@ -3,9 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import type { ProductListItem } from '@/lib/product-shared'
 import { StoreImage } from '@/components/store/StoreImage'
-import { getProductPrimaryImage } from '@/lib/storefront'
 
 type Slide = {
   id: string
@@ -14,16 +12,16 @@ type Slide = {
   alt: string
 }
 
-export function HomeHeroCarousel({ products }: { products: ProductListItem[] }) {
+export function HomeHeroCarousel({ banners }: { banners: { id: string; image_url: string; link_url: string | null }[] }) {
   const slides = useMemo<Slide[]>(
     () =>
-      products.slice(0, 3).map((product) => ({
-        id: product.id,
-        href: `/produto/${product.id}`,
-        image: getProductPrimaryImage(product),
-        alt: product.name,
+      banners.map((banner) => ({
+        id: banner.id,
+        href: banner.link_url || '#',
+        image: banner.image_url,
+        alt: 'Banner da loja',
       })),
-    [products]
+    [banners]
   )
   const [activeIndex, setActiveIndex] = useState(0)
 

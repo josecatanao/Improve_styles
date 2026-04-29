@@ -1,22 +1,28 @@
 import Link from 'next/link'
-import { Briefcase, Grid2X2, MonitorPlay, Shirt, ShoppingBag, Sparkles, UserRound } from 'lucide-react'
+import { Grid2X2 } from 'lucide-react'
 import { HomeHeroCarousel } from '@/components/store/HomeHeroCarousel'
 import { ProductCarouselRail } from '@/components/store/ProductCarouselRail'
 import { StoreShell } from '@/components/store/StoreShell'
+import { resolveCategoryIcon } from '@/lib/category-visuals'
 import { getStorefrontData } from '@/lib/products'
-import { getStoreCategoryKey, normalizeStoreCategoryLabel, slugifyStoreValue, type ExtendedStoreSortOption } from '@/lib/storefront'
+import { getStorefrontCategories } from '@/lib/store-categories'
+import { buildStoreBrandStyle, normalizeStoreSettings } from '@/lib/store-settings'
+import {
+  getCategorySectionId,
+  getCategorySectionSlug,
+  getStoreCategoryKey,
+  normalizeHomepageLayout,
+  normalizeStoreCategoryLabel,
+  slugifyStoreValue,
+  type ExtendedStoreSortOption,
+} from '@/lib/storefront'
+import { createClient } from '@/utils/supabase/server'
 
 function parseSort(value: string | string[] | undefined): ExtendedStoreSortOption {
   if (value === 'price_asc' || value === 'price_desc' || value === 'recent') {
     return value
   }
-
   return 'popular'
-}
-
-function getCategoryIcon(index: number) {
-  const icons = [Shirt, ShoppingBag, Sparkles, Briefcase, MonitorPlay, UserRound, Grid2X2]
-  return icons[index % icons.length]
 }
 
 export default async function Home({
@@ -28,15 +34,41 @@ export default async function Home({
   const query = typeof params.q === 'string' ? params.q : ''
   const category = typeof params.category === 'string' ? params.category : ''
   const sort = parseSort(params.sort)
-  const storefront = await getStorefrontData({ query, category, sort })
+  
+  const supabase = await createClient()
+
+  const [storefront, settingsResponse, bannersResponse, storefrontCategoryResult] = await Promise.all([
+    getStorefrontData({ query, category, sort }),
+    supabase.from('store_settings').select('*').single(),
+    supabase.from('store_banners').select('*').eq('is_active', true).order('order_index', { ascending: true }),
+    getStorefrontCategories(),
+  ])
+
+  const storefrontCategories = storefrontCategoryResult.categories
+  const settings = normalizeStoreSettings(settingsResponse.data)
+  
+  const banners = bannersResponse.data || []
+
   const categorySectionMap = new Map<
     string,
     {
+      key: string
       label: string
       href: string
       products: typeof storefront.allProducts
+      sortOrder: number
     }
   >()
+
+  storefrontCategories.forEach((storeCategory, index) => {
+    categorySectionMap.set(storeCategory.slug, {
+      key: storeCategory.slug,
+      label: storeCategory.name,
+      href: `/loja/${storeCategory.slug}`,
+      products: [],
+      sortOrder: index,
+    })
+  })
 
   storefront.allProducts.forEach((product) => {
     const label = normalizeStoreCategoryLabel(product.category)
@@ -48,111 +80,180 @@ export default async function Home({
       return
     }
 
+    if (storefrontCategoryResult.source !== 'fallback') {
+      return
+    }
+
     categorySectionMap.set(key, {
+      key,
       label,
       href: `/loja/${key}`,
       products: [product],
+      sortOrder: storefrontCategories.length + categorySectionMap.size,
     })
   })
 
   const categories = Array.from(categorySectionMap.values())
-    .sort((a, b) => b.products.length - a.products.length)
+    .sort((a, b) => a.sortOrder - b.sortOrder || b.products.length - a.products.length)
     .slice(0, 7)
-    .map(({ label, href }) => ({ label, href }))
+    .map(({ label, href, key }) => {
+      const managedCategory = storefrontCategories.find((category) => category.slug === key)
+
+      return {
+        label,
+        href,
+        iconName: managedCategory?.icon_name || null,
+        imageUrl: managedCategory?.image_url || null,
+      }
+    })
 
   const categorySections = Array.from(categorySectionMap.values())
     .map((section) => ({
       ...section,
       products: section.products.slice(0, 8),
     }))
-    .filter((section) => section.products.length > 0)
-    .sort((a, b) => b.products.length - a.products.length)
-  const offers = (storefront.featuredProducts.length > 0 ? storefront.featuredProducts : storefront.newestProducts).slice(0, 4)
-  const bestSellers = storefront.popularProducts.slice(0, 8)
-  const newestProducts = storefront.newestProducts.slice(0, 8)
-  const heroProducts = [...storefront.featuredProducts, ...storefront.newestProducts].filter(
-    (product, index, array) => array.findIndex((item) => item.id === product.id) === index
-  )
+    .sort((a, b) => a.sortOrder - b.sortOrder || b.products.length - a.products.length)
+
+  // Filter products for the dynamic sections
+  const promotionalProducts = storefront.allProducts.filter(p => p.compare_at_price && p.compare_at_price > (p.price || 0)).slice(0, 8)
+  const featuredProducts = storefront.allProducts.filter(p => p.is_featured).slice(0, 8)
+  
+  // se nao houver nenhum "destacado" manualmente, a gente cai para o mais vendido ou mais recente
+  const finalFeatured = featuredProducts.length > 0 
+    ? featuredProducts 
+    : (storefront.popularProducts.length > 0 ? storefront.popularProducts : storefront.newestProducts).slice(0, 8)
 
   return (
-    <StoreShell categories={categories} query={query}>
+    <StoreShell 
+      categories={categories} 
+      query={query} 
+      branding={{ logoUrl: settings.store_logo_url }}
+      brandStyle={buildStoreBrandStyle(settings)}
+      announcement={settings.announcement_active ? {
+        active: settings.announcement_active,
+        text: settings.announcement_text,
+        link: settings.announcement_link,
+        backgroundColor: settings.announcement_background_color,
+      } : null}
+    >
       <main className="mx-auto w-full max-w-7xl space-y-7 px-4 py-4 sm:px-6 sm:py-5 lg:space-y-8 lg:px-8">
-        <HomeHeroCarousel products={heroProducts} />
+        
+        {(() => {
+          const layoutArray = normalizeHomepageLayout(
+            settings.homepage_layout,
+            categorySections.map((section) => getCategorySectionId(section.key))
+          )
+          
+          return layoutArray.map((sectionId: string) => {
+            switch (sectionId) {
+              case 'banners':
+                return banners.length > 0 ? (
+                  <HomeHeroCarousel key="banners" banners={banners} />
+                ) : null
 
-        <section className="space-y-3 sm:space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[1.45rem] font-semibold tracking-tight text-slate-950 sm:text-[1.8rem]">Categorias</h2>
-            <span className="text-xs text-slate-500 sm:text-sm">Navegacao rapida</span>
-          </div>
+            case 'promotions':
+              return promotionalProducts.length > 0 ? (
+                <div key="promotions" id="promocoes">
+                  <ProductCarouselRail title="Ofertas Especiais" href="#promocoes" products={promotionalProducts} />
+                </div>
+              ) : null
 
-          <div className="flex items-start gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {categories.length > 0 ? (
-              <>
-                {categories.slice(0, 7).map((item, index) => {
-                  const Icon = getCategoryIcon(index)
-                  return (
-                    <Link key={item.href} href={item.href} className="shrink-0 text-center">
-                      <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 transition-transform hover:-translate-y-0.5 sm:h-20 sm:w-20">
-                        <Icon className="h-5 w-5 text-slate-700 sm:h-7 sm:w-7" />
-                      </span>
-                      <span className="mt-2 block max-w-20 text-xs font-medium text-slate-700 sm:mt-3 sm:max-w-none sm:text-sm">
-                        {item.label}
-                      </span>
-                    </Link>
-                  )
-                })}
-                <a href="#produtos" className="shrink-0 text-center">
-                  <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 sm:h-20 sm:w-20">
-                    <Grid2X2 className="h-5 w-5 text-slate-700 sm:h-7 sm:w-7" />
-                  </span>
-                  <span className="mt-2 block text-xs font-medium text-slate-700 sm:mt-3 sm:text-sm">Ver todas</span>
-                </a>
-              </>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-500">
-                Publique produtos para preencher as categorias da loja.
-              </div>
-            )}
-          </div>
-        </section>
+            case 'featured':
+              return finalFeatured.length > 0 ? (
+                <div key="featured" id="produtos">
+                  <ProductCarouselRail title="Produtos em Destaque" href="#produtos" products={finalFeatured} />
+                </div>
+              ) : null
 
-        <div id="produtos">
-          <ProductCarouselRail title="Ofertas em destaque" href="#produtos" products={offers} />
-        </div>
+            case 'category-nav':
+              return (
+                <section key="category-nav" className="space-y-3 sm:space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-[1.08rem] font-semibold tracking-tight text-slate-950 sm:text-[1.2rem] lg:text-[1.35rem]">Categorias</h2>
+                    <span className="text-xs text-slate-500 sm:text-sm">Navegacao rapida</span>
+                  </div>
 
-        {newestProducts.length > 0 ? (
-          <div id="novidades">
-            <ProductCarouselRail title="Novidades" href="/?sort=recent" products={newestProducts} />
-          </div>
-        ) : null}
+                  <div className="flex items-start gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {categories.length > 0 ? (
+                      <>
+                        {categories.slice(0, 7).map((item) => {
+                          const Icon = resolveCategoryIcon(item.iconName)
+                          return (
+                            <Link key={item.href} href={item.href} className="shrink-0 text-center">
+                              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 transition-transform hover:-translate-y-0.5 sm:h-20 sm:w-20">
+                                {item.imageUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={item.imageUrl} alt={item.label} className="h-full w-full object-cover" />
+                                ) : (
+                                  <Icon className="h-5 w-5 text-slate-700 sm:h-7 sm:w-7" />
+                                )}
+                              </span>
+                              <span className="mt-2 block max-w-20 text-[11px] font-medium text-slate-700 sm:mt-2.5 sm:max-w-none sm:text-[13px]">
+                                {item.label}
+                              </span>
+                            </Link>
+                          )
+                        })}
+                        <a href="#produtos" className="shrink-0 text-center">
+                          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 sm:h-20 sm:w-20">
+                            <Grid2X2 className="h-5 w-5 text-slate-700 sm:h-7 sm:w-7" />
+                          </span>
+                          <span className="mt-2 block text-[11px] font-medium text-slate-700 sm:mt-2.5 sm:text-[13px]">Ver todas</span>
+                        </a>
+                      </>
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-500">
+                        Publique produtos para preencher as categorias da loja.
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )
+            
+            default:
+              if (!sectionId.startsWith('category:')) {
+                return null
+              }
 
-        {bestSellers.length > 0 ? (
-          <div id="mais-vendidos">
-            <ProductCarouselRail title="Mais vendidos" href="#mais-vendidos" products={bestSellers} />
-          </div>
-        ) : null}
+              {
+                const categorySlug = getCategorySectionSlug(sectionId)
+                const categorySection = categorySections.find((section) => section.key === categorySlug)
+
+                if (!categorySection) {
+                  return null
+                }
+
+                return (
+                  <section key={sectionId} id={slugifyStoreValue(categorySection.label)} className="space-y-3">
+                    {categorySection.products.length > 0 ? (
+                      <ProductCarouselRail title={categorySection.label} href={categorySection.href} products={categorySection.products} />
+                    ) : (
+                      <div className="space-y-3 rounded-[1.5rem] border border-dashed border-slate-300 bg-white p-6">
+                        <div className="space-y-1">
+                          <h2 className="text-[1.08rem] font-semibold tracking-tight text-slate-950 sm:text-[1.2rem] lg:text-[1.35rem]">
+                            {categorySection.label}
+                          </h2>
+                          <p className="text-sm text-slate-500">Associe produtos a esta categoria para preencher a secao na home.</p>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                )
+              }
+          }
+        })})()}
 
         {storefront.errorMessage ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{storefront.errorMessage}</div>
         ) : null}
 
         {storefront.setupRequired ? (
-          <section id="produtos" className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+          <section id="produtos-aviso" className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
             <p className="text-lg font-semibold text-slate-900">A loja esta pronta para receber o catalogo.</p>
             <p className="mt-2 text-sm text-slate-500">Configure os produtos no painel para publicar a vitrine.</p>
           </section>
-        ) : categorySections.length > 0 ? (
-          categorySections.map((section) => (
-            <div key={section.label} id={slugifyStoreValue(section.label)}>
-              <ProductCarouselRail title={section.label} href={section.href} products={section.products} />
-            </div>
-          ))
-        ) : (
-          <section id="produtos" className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
-            <p className="text-lg font-semibold text-slate-900">Nenhum produto encontrado.</p>
-            <p className="mt-2 text-sm text-slate-500">Publique produtos para preencher as secoes por categoria.</p>
-          </section>
-        )}
+        ) : null}
+
       </main>
     </StoreShell>
   )

@@ -26,10 +26,14 @@ export function Header({
   categories,
   query = '',
   customerSession,
+  branding,
 }: {
   categories: HeaderCategory[]
   query?: string
   customerSession: StoreCustomerSession
+  branding?: {
+    logoUrl?: string | null
+  }
 }) {
   const customerName = customerSession?.profile?.full_name?.trim() || customerSession?.email || 'Minha conta'
   const customerPhotoUrl = customerSession?.profile?.photo_url?.trim() || null
@@ -50,6 +54,12 @@ export function Header({
             <SheetContent side="left" className="w-[88%] max-w-sm overflow-y-auto bg-white p-0">
               <div className="border-b border-slate-200 px-5 py-4">
                 <Link href="/" className="flex items-center gap-2">
+                  {branding?.logoUrl ? (
+                    <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={branding.logoUrl} alt="Logo da loja" className="h-full w-full object-cover" />
+                    </span>
+                  ) : null}
                   <span className="text-xl font-bold tracking-tight text-slate-950">
                     Improve Styles
                   </span>
@@ -125,6 +135,12 @@ export function Header({
           </Sheet>
 
           <Link href="/" className="flex shrink-0 items-center gap-2">
+            {branding?.logoUrl ? (
+              <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 sm:h-11 sm:w-11">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={branding.logoUrl} alt="Logo da loja" className="h-full w-full object-cover" />
+              </span>
+            ) : null}
             <span className="text-[1.45rem] font-bold tracking-tight text-slate-950 sm:text-[1.8rem]">
               Improve Styles
             </span>
@@ -141,7 +157,7 @@ export function Header({
               />
               <button
                 type="submit"
-                className="inline-flex w-16 items-center justify-center bg-[#0f172a] text-white transition-colors hover:bg-[#111f3b]"
+                className="inline-flex w-16 items-center justify-center bg-primary text-primary-foreground transition-colors hover:opacity-90"
                 aria-label="Buscar produtos"
               >
                 <Search className="h-5 w-5" />
@@ -173,7 +189,7 @@ export function Header({
             />
             <button
               type="submit"
-              className="inline-flex w-12 items-center justify-center bg-[#0f172a] text-white"
+              className="inline-flex w-12 items-center justify-center bg-primary text-primary-foreground"
               aria-label="Buscar produtos"
             >
               <Search className="h-4 w-4" />

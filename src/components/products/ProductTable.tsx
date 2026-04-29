@@ -4,7 +4,9 @@ import Link from 'next/link'
 import { startTransition, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoaderCircle, Pencil, Trash2 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { createClient } from '@/utils/supabase/client'
+import { useConfirm, useToast } from '@/components/ui/feedback-provider'
 import {
   getProductStatusClasses,
   getProductStatusLabel,
@@ -49,9 +51,9 @@ export function ProductTable({
 }: ProductTableProps) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
+  const showToast = useToast()
+  const confirm = useConfirm()
   const [busyProductId, setBusyProductId] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   if (products.length === 0) {
     return (
@@ -86,8 +88,6 @@ export function ProductTable({
 
   async function handleStatusChange(productId: string, nextStatus: ProductStatus) {
     setBusyProductId(productId)
-    setError(null)
-    setMessage(null)
 
     const { error: updateError } = await supabase
       .from('products')
@@ -99,24 +99,61 @@ export function ProductTable({
 
     if (updateError) {
       setBusyProductId(null)
-      setError(updateError.message)
+      showToast({
+        variant: 'error',
+        title: 'Falha ao atualizar status',
+        description: updateError.message,
+      })
       return
     }
 
     setBusyProductId(null)
-    setMessage('Status atualizado com sucesso.')
+    showToast({
+      variant: 'success',
+      title: 'Status atualizado',
+    })
+    await refreshTable()
+  }
+
+  async function handleFeaturedChange(productId: string, isFeatured: boolean) {
+    setBusyProductId(productId)
+
+    const { error: updateError } = await supabase
+      .from('products')
+      .update({ is_featured: isFeatured })
+      .eq('id', productId)
+
+    if (updateError) {
+      setBusyProductId(null)
+      showToast({
+        variant: 'error',
+        title: 'Falha ao atualizar destaque',
+        description: updateError.message,
+      })
+      return
+    }
+
+    setBusyProductId(null)
+    showToast({
+      variant: 'success',
+      title: isFeatured ? 'Produto adicionado aos destaques' : 'Produto removido dos destaques',
+    })
     await refreshTable()
   }
 
   async function handleDelete(productId: string, productName: string) {
-    const confirmed = window.confirm(`Deseja apagar o produto "${productName}"? Essa acao nao pode ser desfeita.`)
+    const confirmed = await confirm({
+      title: 'Excluir produto?',
+      description: `O produto "${productName}" sera apagado permanentemente.`,
+      confirmLabel: 'Excluir produto',
+      cancelLabel: 'Cancelar',
+      variant: 'destructive',
+    })
     if (!confirmed) {
       return
     }
 
     setBusyProductId(productId)
-    setError(null)
-    setMessage(null)
 
     const { data: imageRows, error: imagesError } = await supabase
       .from('product_images')
@@ -125,7 +162,11 @@ export function ProductTable({
 
     if (imagesError) {
       setBusyProductId(null)
-      setError(imagesError.message)
+      showToast({
+        variant: 'error',
+        title: 'Falha ao buscar imagens',
+        description: imagesError.message,
+      })
       return
     }
 
@@ -136,7 +177,11 @@ export function ProductTable({
 
     if (deleteError) {
       setBusyProductId(null)
-      setError(deleteError.message)
+      showToast({
+        variant: 'error',
+        title: 'Falha ao apagar produto',
+        description: deleteError.message,
+      })
       return
     }
 
@@ -145,21 +190,15 @@ export function ProductTable({
     }
 
     setBusyProductId(null)
-    setMessage('Produto apagado com sucesso.')
+    showToast({
+      variant: 'success',
+      title: 'Produto apagado',
+    })
     await refreshTable()
   }
 
   return (
     <div className="space-y-4">
-      {error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
-      ) : null}
-      {message ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {message}
-        </div>
-      ) : null}
-
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
@@ -169,6 +208,7 @@ export function ProductTable({
                 <th className="px-4 py-3">Comercial</th>
                 <th className="px-4 py-3">Variacoes</th>
                 <th className="px-4 py-3">Estoque</th>
+                <th className="px-4 py-3 text-center">Vitrine</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Criado em</th>
                 <th className="px-4 py-3 text-right">Acoes</th>
@@ -257,6 +297,18 @@ export function ProductTable({
                       <p className="mt-1 text-xs text-slate-500">
                         {product.stock <= 3 ? 'Estoque baixo' : 'Estoque regular'}
                       </p>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <Switch 
+                          checked={product.is_featured || false}
+                          disabled={isBusy}
+                          onCheckedChange={(checked) => handleFeaturedChange(product.id, checked)}
+                        />
+                        <span className="text-[10px] uppercase font-semibold text-slate-400">
+                          {product.is_featured ? 'Destaque' : 'Normal'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="space-y-2">

@@ -4,7 +4,13 @@ import { useEffect, useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 
-export function Header() {
+export function Header({
+  branding,
+}: {
+  branding?: {
+    logoUrl?: string | null
+  }
+}) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
@@ -50,7 +56,7 @@ export function Header() {
               </button>
             </div>
             <div className="h-[calc(100%-4rem)] overflow-y-auto">
-              <Sidebar onNavigate={() => setIsMobileMenuOpen(false)} />
+              <Sidebar branding={branding} onNavigate={() => setIsMobileMenuOpen(false)} />
             </div>
           </div>
         </div>

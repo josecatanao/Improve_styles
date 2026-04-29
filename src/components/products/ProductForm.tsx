@@ -48,7 +48,9 @@ type ProductFormState = {
   shortDescription: string
   description: string
   price: string
+  compare_at_price: string
   status: ProductStatus
+  is_featured: boolean
 }
 
 type VariantRow = {
@@ -57,6 +59,7 @@ type VariantRow = {
   sku: string
   stock: string
   price: string
+  compare_at_price: string
   status: ProductVariantStatus
 }
 
@@ -111,7 +114,9 @@ const initialState: ProductFormState = {
   shortDescription: '',
   description: '',
   price: '',
+  compare_at_price: '',
   status: 'draft',
+  is_featured: false,
 }
 
 const stepItems = [
@@ -299,6 +304,7 @@ function buildVariantRow(
     sku: existing?.sku ?? createVariantSku(productName, colorName, size, index),
     stock: existing?.stock ?? '0',
     price: existing?.price ?? '',
+    compare_at_price: existing?.compare_at_price ?? '',
     status: existing?.status ?? 'active',
   }
 }
@@ -318,6 +324,7 @@ function buildInitialGroups(product?: ProductDetail | null): ColorGroup[] {
           sku: variant.sku ?? undefined,
           stock: String(variant.stock ?? 0),
           price: variant.price == null ? '' : String(variant.price),
+          compare_at_price: variant.compare_at_price == null ? '' : String(variant.compare_at_price),
           status: variant.status ?? 'active',
         })
 
@@ -345,6 +352,7 @@ function buildInitialGroups(product?: ProductDetail | null): ColorGroup[] {
         buildVariantRow(product.name, color.name, 'Unico', index, {
           stock: index === 0 ? String(product.stock ?? 0) : '0',
           price: product.price == null ? '' : String(product.price),
+          compare_at_price: product.compare_at_price == null ? '' : String(product.compare_at_price),
         }),
       ],
     }))
@@ -447,6 +455,7 @@ function FieldGroup({
 
 function CreatableField({
   label,
+  hint,
   value,
   draft,
   options,
@@ -455,6 +464,7 @@ function CreatableField({
   onSelect,
 }: {
   label: string
+  hint?: string
   value: string
   draft: string
   options: string[]
@@ -480,7 +490,7 @@ function CreatableField({
   }
 
   return (
-    <FieldGroup label={label}>
+    <FieldGroup label={label} hint={hint}>
       <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-2.5">
         {value && !isEditing ? (
           <div className="flex min-h-10 items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200">
@@ -563,7 +573,9 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
           shortDescription: product.short_description ?? '',
           description: product.description ?? '',
           price: String(product.price ?? ''),
+          compare_at_price: String(product.compare_at_price ?? ''),
           status: product.status ?? 'draft',
+          is_featured: product.is_featured ?? false,
         }
       : initialState
   )
@@ -608,7 +620,6 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
   const generatedSku = mode === 'edit' && product?.sku ? product.sku : createSku(form.name, 'PREVIEW')
   const colors = colorGroups.map<ProductColor>((group) => ({ name: group.name, hex: group.hex }))
-  const totalVariants = colorGroups.reduce((total, group) => total + group.variants.length, 0)
   const totalStock = colorGroups.reduce(
     (total, group) => total + group.variants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0),
     0
@@ -1003,7 +1014,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
           sku: variant.sku,
           stock: Number(variant.stock),
           price: parseOptionalNumber(variant.price),
-          compare_at_price: null,
+          compare_at_price: parseOptionalNumber(variant.compare_at_price),
           cost_price: null,
           status: variant.status,
           position: index,
@@ -1032,7 +1043,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         short_description: form.shortDescription.trim() || null,
         description: form.description.trim() || null,
         price,
-        compare_at_price: null,
+        compare_at_price: parseOptionalNumber(form.compare_at_price),
         cost_price: null,
         stock: totalStock,
         status: form.status,
@@ -1041,7 +1052,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         collection: null,
         audience: null,
         tags: [],
-        is_featured: false,
+        is_featured: form.is_featured,
         is_new: false,
         weight: null,
         width: null,
@@ -1351,6 +1362,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
                   <CreatableField
                     label="Categoria"
+                    hint="Use as categorias criadas em Produtos > Categorias para manter a vitrine organizada."
                     value={form.category}
                     draft={categoryDraft}
                     options={options.categories}
@@ -1369,14 +1381,37 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                     onSelect={(value) => setForm((current) => ({ ...current, brand: value }))}
                   />
 
-                  <FieldGroup label="Preco" hint="Valor base usado como referencia para as variacoes.">
-                    <Input
-                      inputMode="decimal"
-                      value={form.price}
-                      onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
-                      placeholder="89.90"
-                      className="h-11"
-                    />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FieldGroup label="Preco" hint="Valor de venda padrao.">
+                      <Input
+                        inputMode="decimal"
+                        value={form.price}
+                        onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
+                        placeholder="89.90"
+                        className="h-11"
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Preco Antigo (Promocao)" hint="Preco original para exibir oferta (De/Por). Opcional.">
+                      <Input
+                        inputMode="decimal"
+                        value={form.compare_at_price}
+                        onChange={(event) => setForm((current) => ({ ...current, compare_at_price: event.target.value }))}
+                        placeholder="119.90"
+                        className="h-11"
+                      />
+                    </FieldGroup>
+                  </div>
+
+                  <FieldGroup label="Destaque na Loja" hint="Exibe este produto na secao principal de destaques da Home.">
+                    <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
+                      <input 
+                        type="checkbox"
+                        checked={form.is_featured}
+                        onChange={(e) => setForm(current => ({...current, is_featured: e.target.checked}))}
+                        className="h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                      />
+                      <span className="text-sm font-medium text-slate-700">Sim, destacar este produto</span>
+                    </label>
                   </FieldGroup>
 
                   <FieldGroup label="Status" hint="Defina como o produto entra no catalogo.">
@@ -1647,7 +1682,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                                   group.variants.map((variant, index) => (
                                     <div
                                       key={variant.id}
-                                      className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-[120px_120px_140px_150px_minmax(0,1fr)_auto]"
+                                      className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-[100px_100px_120px_120px_120px_minmax(0,1fr)_auto]"
                                     >
                                       <FieldGroup label={useSizes ? 'Tamanho' : 'Variacao'}>
                                         {useSizes ? (
@@ -1680,6 +1715,16 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                                           value={variant.price}
                                           onChange={(event) => updateVariant(group.id, variant.id, 'price', event.target.value)}
                                           placeholder={form.price || '89.90'}
+                                          className="h-10"
+                                        />
+                                      </FieldGroup>
+
+                                      <FieldGroup label="Preco Antigo">
+                                        <Input
+                                          inputMode="decimal"
+                                          value={variant.compare_at_price}
+                                          onChange={(event) => updateVariant(group.id, variant.id, 'compare_at_price', event.target.value)}
+                                          placeholder={form.compare_at_price || '119.90'}
                                           className="h-10"
                                         />
                                       </FieldGroup>

@@ -4,6 +4,7 @@ import { Mail, MapPin, Phone, UserRound, Users, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { deleteCustomer } from '@/app/dashboard/clientes/actions'
 import type { CustomerProfile, CustomerSummary } from '@/lib/customer-shared'
+import { useConfirm, useToast } from '@/components/ui/feedback-provider'
 import { Card, CardContent } from '@/components/ui/card'
 
 function formatDate(value: string | null) {
@@ -23,18 +24,36 @@ type CustomerManagementProps = {
 }
 
 export function CustomerManagement({ customers, summary }: CustomerManagementProps) {
+  const showToast = useToast()
+  const confirm = useConfirm()
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   async function handleDelete(id: string) {
-    if (!window.confirm('Tem certeza que deseja excluir este cliente definitivamente? Esta acao nao pode ser desfeita.')) {
+    const confirmed = await confirm({
+      title: 'Excluir cliente?',
+      description: 'Essa exclusao e definitiva e nao pode ser desfeita.',
+      confirmLabel: 'Excluir cliente',
+      cancelLabel: 'Cancelar',
+      variant: 'destructive',
+    })
+
+    if (!confirmed) {
       return
     }
 
     try {
       setIsDeleting(id)
       await deleteCustomer(id)
+      showToast({
+        variant: 'success',
+        title: 'Cliente excluido',
+      })
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Falha ao excluir o cliente.')
+      showToast({
+        variant: 'error',
+        title: 'Falha ao excluir cliente',
+        description: error instanceof Error ? error.message : 'Erro inesperado.',
+      })
     } finally {
       setIsDeleting(null)
     }

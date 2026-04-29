@@ -15,6 +15,8 @@ export default async function CheckoutPage() {
     redirect('/login?mode=customer&next=%2Fcheckout')
   }
 
+  const { data: profile } = await supabase.from('customer_profiles').select('*').eq('id', user.id).single()
+
   const storefront = await getStorefrontData()
   const categories = storefront.categoryHighlights.map((item) => ({
     label: item.label,
@@ -29,7 +31,7 @@ export default async function CheckoutPage() {
           <p className="mt-2 text-sm text-slate-500">Revise os itens e informe os dados basicos do pedido.</p>
         </div>
 
-        <CheckoutClient />
+        <CheckoutClient initialProfile={profile} />
       </main>
     </StoreShell>
   )

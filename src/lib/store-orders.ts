@@ -7,6 +7,12 @@ export type StoreOrderCustomer = {
   name: string
   phone: string
   notes: string
+  delivery_method: string
+  payment_method: string
+  installments: number
+  delivery_address: string
+  delivery_lat: number | null
+  delivery_lng: number | null
 }
 
 export type StoreOrder = {

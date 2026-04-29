@@ -17,6 +17,7 @@ import {
   type StaffStatus,
   type StaffSummary,
 } from '@/lib/staff-shared'
+import { useConfirm, useToast } from '@/components/ui/feedback-provider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -49,12 +50,12 @@ const initialFormState: StaffFormState = {
 export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamManagementProps) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
+  const showToast = useToast()
+  const confirm = useConfirm()
   const [staff] = useState(initialStaff)
   const [form, setForm] = useState<StaffFormState>(initialFormState)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   function updateForm<K extends keyof StaffFormState>(key: K, value: StaffFormState[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -78,11 +79,13 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
   async function handleCreateStaff(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsCreating(true)
-    setMessage(null)
-    setError(null)
 
     if (!form.fullName.trim() || !form.email.trim()) {
-      setError('Informe nome e e-mail do funcionario.')
+      showToast({
+        variant: 'error',
+        title: 'Dados incompletos',
+        description: 'Informe nome e e-mail do funcionario.',
+      })
       setIsCreating(false)
       return
     }
@@ -103,7 +106,11 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
       .single()
 
     if (insertError || !createdStaff) {
-      setError(insertError?.message ?? 'Nao foi possivel cadastrar o funcionario.')
+      showToast({
+        variant: 'error',
+        title: 'Falha ao cadastrar funcionario',
+        description: insertError?.message ?? 'Nao foi possivel cadastrar o funcionario.',
+      })
       setIsCreating(false)
       return
     }
@@ -122,7 +129,11 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
 
       if (!response.ok) {
         const result = (await response.json()) as { error?: string }
-        setError(result.error ?? 'Funcionario criado, mas o convite nao foi enviado.')
+        showToast({
+          variant: 'error',
+          title: 'Convite nao enviado',
+          description: result.error ?? 'Funcionario criado, mas o convite nao foi enviado.',
+        })
         setIsCreating(false)
         refreshPage()
         return
@@ -130,11 +141,10 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
     }
 
     setForm(initialFormState)
-    setMessage(
-      form.sendInvite && inviteEnabled
-        ? 'Funcionario cadastrado e convite enviado.'
-        : 'Funcionario cadastrado com sucesso.'
-    )
+    showToast({
+      variant: 'success',
+      title: form.sendInvite && inviteEnabled ? 'Funcionario cadastrado e convite enviado' : 'Funcionario cadastrado',
+    })
     setIsCreating(false)
     refreshPage()
   }
@@ -144,49 +154,63 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
     payload: Partial<Pick<StaffMember, 'role' | 'status' | 'permissions'>>
   ) {
     setBusyId(staffId)
-    setMessage(null)
-    setError(null)
 
     const { error: updateError } = await supabase.from('staff_members').update(payload).eq('id', staffId)
 
     if (updateError) {
       setBusyId(null)
-      setError(updateError.message)
+      showToast({
+        variant: 'error',
+        title: 'Falha ao atualizar equipe',
+        description: updateError.message,
+      })
       return
     }
 
     setBusyId(null)
-    setMessage('Equipe atualizada com sucesso.')
+    showToast({
+      variant: 'success',
+      title: 'Equipe atualizada',
+    })
     refreshPage()
   }
 
   async function handleDelete(staffId: string, fullName: string) {
-    const confirmed = window.confirm(`Deseja remover ${fullName} da equipe?`)
+    const confirmed = await confirm({
+      title: 'Remover funcionario?',
+      description: `${fullName} perdera acesso ao painel da loja.`,
+      confirmLabel: 'Remover',
+      cancelLabel: 'Cancelar',
+      variant: 'destructive',
+    })
     if (!confirmed) {
       return
     }
 
     setBusyId(staffId)
-    setMessage(null)
-    setError(null)
 
     const { error: deleteError } = await supabase.from('staff_members').delete().eq('id', staffId)
 
     if (deleteError) {
       setBusyId(null)
-      setError(deleteError.message)
+      showToast({
+        variant: 'error',
+        title: 'Falha ao remover funcionario',
+        description: deleteError.message,
+      })
       return
     }
 
     setBusyId(null)
-    setMessage('Funcionario removido da equipe.')
+    showToast({
+      variant: 'success',
+      title: 'Funcionario removido da equipe',
+    })
     refreshPage()
   }
 
   async function handleResendInvite(member: StaffMember) {
     setBusyId(member.id)
-    setMessage(null)
-    setError(null)
 
     const response = await fetch('/api/staff/invite', {
       method: 'POST',
@@ -202,12 +226,19 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
     if (!response.ok) {
       const result = (await response.json()) as { error?: string }
       setBusyId(null)
-      setError(result.error ?? 'Nao foi possivel reenviar o convite.')
+      showToast({
+        variant: 'error',
+        title: 'Falha ao reenviar convite',
+        description: result.error ?? 'Nao foi possivel reenviar o convite.',
+      })
       return
     }
 
     setBusyId(null)
-    setMessage('Convite reenviado com sucesso.')
+    showToast({
+      variant: 'success',
+      title: 'Convite reenviado',
+    })
     refreshPage()
   }
 
@@ -235,16 +266,6 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
           )
         })}
       </div>
-
-      {error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
-      ) : null}
-      {message ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {message}
-        </div>
-      ) : null}
-
       <Card className="border-0 bg-white ring-1 ring-slate-200">
         <CardHeader className="border-b border-slate-100">
           <CardTitle>Cadastrar funcionario</CardTitle>

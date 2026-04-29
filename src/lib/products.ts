@@ -187,6 +187,7 @@ export async function getProducts(options: {
         category,
         brand,
         tags,
+        is_featured,
         sales_count,
         product_images(public_url, assigned_color_name, assigned_color_hex),
         product_variants(id, color_name, color_hex, size, sku, stock, price, compare_at_price, cost_price, status, position)
@@ -671,6 +672,49 @@ export async function getPublicProductById(productId: string): Promise<{
 
 export async function getProductFormOptions(): Promise<ProductFormOptions> {
   const supabase = await createClient()
+  const { data: categoryRows, error: categoryError } = await supabase
+    .from('store_categories')
+    .select('name')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  if (!isMissingTable(categoryError) && !categoryError && categoryRows) {
+    const categories = Array.from(
+      new Set(
+        categoryRows
+          .map((item) => item.name?.trim())
+          .filter((value): value is string => Boolean(value))
+          .map((value) => normalizeStoreCategoryLabel(value))
+      )
+    )
+
+    const { data: brandRows, error: brandError } = await supabase
+      .from('products')
+      .select('brand')
+      .order('created_at', { ascending: false })
+
+    if (isMissingTable(brandError) || brandError || !brandRows) {
+      return {
+        categories,
+        brands: [],
+      }
+    }
+
+    const brands = Array.from(
+      new Set(
+        brandRows
+          .map((item) => item.brand?.trim())
+          .filter((value): value is string => Boolean(value))
+      )
+    )
+
+    return {
+      categories,
+      brands,
+    }
+  }
+
   const { data, error } = await supabase
     .from('products')
     .select('category, brand')

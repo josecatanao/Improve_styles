@@ -65,50 +65,46 @@ export function ProductCarouselRail({
     <section className="space-y-4 sm:space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
-          <h2 className="text-[1.45rem] font-semibold tracking-tight text-slate-950 sm:text-[1.65rem] lg:text-[2rem]">{title}</h2>
+          <h2 className="text-[1.08rem] font-semibold tracking-tight text-slate-950 sm:text-[1.2rem] lg:text-[1.35rem]">{title}</h2>
           {useCarousel ? <p className="text-xs text-slate-500 sm:hidden">Deslize para ver mais</p> : null}
         </div>
         <div className="flex items-center gap-2">
           {href ? (
-            <Link href={href} className="mr-2 text-sm font-medium text-[#2563eb]">
+            <Link href={href} className="mr-2 text-xs font-medium text-[#2563eb] sm:text-sm">
               Ver todos
             </Link>
-          ) : null}
-          {useCarousel ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-lg"
-                className="hidden rounded-full border-slate-200 bg-white md:inline-flex"
-                onClick={() => scrollByDirection('left')}
-                disabled={!canScrollLeft}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-lg"
-                className="hidden rounded-full border-slate-200 bg-white md:inline-flex"
-                onClick={() => scrollByDirection('right')}
-                disabled={!canScrollRight}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </>
           ) : null}
         </div>
       </div>
 
       {useCarousel ? (
         <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-[#f7f8fa] to-transparent sm:w-8 lg:w-12" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-[#f7f8fa] to-transparent sm:w-8 lg:w-12" />
+
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-lg"
+            className="absolute left-2 top-1/2 z-20 hidden -translate-y-1/2 rounded-full border-slate-200 bg-white/95 shadow-sm md:inline-flex lg:left-3"
+            onClick={() => scrollByDirection('left')}
+            disabled={!canScrollLeft}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-lg"
+            className="absolute right-2 top-1/2 z-20 hidden -translate-y-1/2 rounded-full border-slate-200 bg-white/95 shadow-sm md:inline-flex lg:right-3"
+            onClick={() => scrollByDirection('right')}
+            disabled={!canScrollRight}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
 
           <div
             ref={viewportRef}
-            className="flex gap-3 overflow-x-auto scroll-smooth px-1 pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4"
+            className="flex gap-3 overflow-x-auto scroll-smooth px-1 pb-2 snap-x snap-mandatory md:px-12 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4 lg:px-14"
           >
             {products.map((product) => (
               <div

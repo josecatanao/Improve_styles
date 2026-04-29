@@ -1,7 +1,9 @@
 import Link from 'next/link'
+import type { CSSProperties } from 'react'
 import { LockKeyhole, RefreshCcw, Truck } from 'lucide-react'
 import { Header } from '@/components/store/Header'
 import { getStoreCustomerSession } from '@/lib/customer-session'
+import { getContrastingTextColor } from '@/lib/store-settings'
 
 const footerColumns = [
   {
@@ -27,17 +29,46 @@ const footerColumns = [
 export async function StoreShell({
   categories,
   query,
+  branding,
+  brandStyle,
+  announcement,
   children,
 }: {
   categories: Array<{ label: string; href: string }>
   query?: string
+  branding?: {
+    logoUrl?: string | null
+  }
+  brandStyle?: CSSProperties
+  announcement?: {
+    active: boolean
+    text: string
+    link: string
+    backgroundColor?: string
+  } | null
   children: React.ReactNode
 }) {
   const customerSession = await getStoreCustomerSession()
+  const announcementBackgroundColor = announcement?.backgroundColor || '#3483fa'
+  const announcementTextColor = getContrastingTextColor(announcementBackgroundColor)
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa]">
-      <Header categories={categories} query={query} customerSession={customerSession} />
+    <div className="min-h-screen bg-[#f7f8fa]" style={brandStyle}>
+      {announcement?.active && announcement.text ? (
+        <div
+          className="px-4 py-2 text-center text-sm font-medium"
+          style={{ backgroundColor: announcementBackgroundColor, color: announcementTextColor }}
+        >
+          {announcement.link ? (
+            <Link href={announcement.link} className="hover:underline">
+              {announcement.text}
+            </Link>
+          ) : (
+            <span>{announcement.text}</span>
+          )}
+        </div>
+      ) : null}
+      <Header branding={branding} categories={categories} query={query} customerSession={customerSession} />
       {children}
 
       <footer className="mt-12 border-t border-slate-200 bg-white">
@@ -78,6 +109,12 @@ export async function StoreShell({
           <div className="mt-8 grid gap-8 lg:mt-10 lg:grid-cols-[1.1fr_repeat(3,minmax(0,1fr))]">
             <div id="institucional">
               <Link href="/" className="flex items-center gap-2">
+                {branding?.logoUrl ? (
+                  <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={branding.logoUrl} alt="Logo da loja" className="h-full w-full object-cover" />
+                  </span>
+                ) : null}
                 <span className="text-[1.7rem] font-bold tracking-tight text-slate-950 sm:text-[2rem]">
                   Improve Styles
                 </span>

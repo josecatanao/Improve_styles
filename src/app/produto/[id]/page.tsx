@@ -3,8 +3,10 @@ import { notFound } from 'next/navigation'
 import { ProductDetailClient } from '@/components/store/ProductDetailClient'
 import { ProductCard } from '@/components/store/ProductCard'
 import { StoreShell } from '@/components/store/StoreShell'
+import { ProductReviews } from '@/components/store/ProductReviews'
 import { getPublicProductById, getStorefrontData } from '@/lib/products'
 import { getStoreCategoryKey, slugifyStoreValue } from '@/lib/storefront'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function ProductDetailPage({
@@ -14,13 +16,29 @@ export default async function ProductDetailPage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+  const adminSupabase = createAdminClient()
   const [
     productResult,
     storefront,
     {
       data: { user },
     },
-  ] = await Promise.all([getPublicProductById(id), getStorefrontData(), supabase.auth.getUser()])
+    { data: reviewsData },
+  ] = await Promise.all([
+    getPublicProductById(id),
+    getStorefrontData(),
+    supabase.auth.getUser(),
+    adminSupabase
+      .from('product_reviews')
+      .select('id, rating, comment, created_at, customer:customer_profiles(full_name)')
+      .eq('product_id', id)
+      .order('created_at', { ascending: false }),
+  ])
+
+  const reviews = (reviewsData || []).map((r) => ({
+    ...r,
+    customer: r.customer ? (Array.isArray(r.customer) ? r.customer[0] : r.customer) : null,
+  }))
 
   if (!productResult.setupRequired && !productResult.product) {
     notFound()
@@ -75,6 +93,8 @@ export default async function ProductDetailPage({
             {product.description?.trim() || 'Adicione mais detalhes do produto no painel para enriquecer esta pagina.'}
           </p>
         </section>
+
+        <ProductReviews productId={product.id} reviews={reviews} isLoggedIn={Boolean(user)} />
 
         <section className="space-y-4">
           <div>

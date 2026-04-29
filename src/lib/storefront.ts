@@ -17,6 +17,61 @@ export type VariantSizeOption = {
   hasStock: boolean
 }
 
+export const STATIC_HOME_SECTION_IDS = ['banners', 'promotions', 'featured', 'category-nav'] as const
+
+export function getCategorySectionId(slug: string) {
+  return `category:${slug}`
+}
+
+export function getCategorySectionSlug(sectionId: string) {
+  return sectionId.startsWith('category:') ? sectionId.slice('category:'.length) : null
+}
+
+export function normalizeHomepageLayout(layoutInput: unknown, categorySectionIds: string[]) {
+  const raw =
+    Array.isArray(layoutInput)
+      ? layoutInput
+      : typeof layoutInput === 'string'
+        ? (() => {
+            try {
+              const parsed = JSON.parse(layoutInput)
+              return Array.isArray(parsed) ? parsed : []
+            } catch {
+              return []
+            }
+          })()
+        : []
+
+  const availableIds = [...STATIC_HOME_SECTION_IDS, ...categorySectionIds]
+  const availableIdSet = new Set<string>(availableIds)
+  const normalized: string[] = []
+
+  function append(sectionId: string) {
+    if (availableIdSet.has(sectionId)) {
+      if (!normalized.includes(sectionId)) {
+        normalized.push(sectionId)
+      }
+    }
+  }
+
+  raw.forEach((item) => {
+    if (typeof item !== 'string') {
+      return
+    }
+
+    if (item === 'categories') {
+      append('category-nav')
+      categorySectionIds.forEach(append)
+      return
+    }
+
+    append(item)
+  })
+
+  availableIds.forEach(append)
+  return normalized
+}
+
 export function formatMoney(value: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',

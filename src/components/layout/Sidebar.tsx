@@ -14,6 +14,8 @@ import {
   PanelLeftOpen,
   PlusCircle,
   Settings,
+  ShoppingBag,
+  Tags,
   User as UserIcon,
   Users,
 } from 'lucide-react'
@@ -22,17 +24,27 @@ import { logout } from '@/app/login/actions'
 const productNavigation = [
   { name: 'Visao geral', href: '/dashboard/produtos', icon: Grid2X2 },
   { name: 'Catalogo', href: '/dashboard/produtos/catalogo', icon: FolderKanban },
+  { name: 'Categorias', href: '/dashboard/produtos/categorias', icon: Tags },
   { name: 'Cadastrar produto', href: '/dashboard/produtos/novo', icon: PlusCircle },
 ]
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Pedidos', href: '/dashboard/pedidos', icon: ShoppingBag },
+  { name: 'Marketing', href: '/dashboard/marketing', icon: Grid2X2 },
   { name: 'Clientes', href: '/dashboard/clientes', icon: UserIcon },
   { name: 'Usuários', href: '/dashboard/usuarios', icon: Users },
   { name: 'Configurações', href: '/dashboard/configuracoes', icon: Settings },
 ]
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+type SidebarProps = {
+  onNavigate?: () => void
+  branding?: {
+    logoUrl?: string | null
+  }
+}
+
+export function Sidebar({ onNavigate, branding }: SidebarProps) {
   const pathname = usePathname()
   const isProductsSectionActive = pathname === '/dashboard/produtos' || pathname.startsWith('/dashboard/produtos/')
   const [isProductsOpen, setIsProductsOpen] = useState(isProductsSectionActive)
@@ -68,6 +80,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         }`}
       >
         <div className={`flex items-center ${isCollapsed ? '' : 'gap-3'}`}>
+          {branding?.logoUrl ? (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={branding.logoUrl} alt="Logo da loja" className="h-full w-full object-cover" />
+            </div>
+          ) : null}
           {!isCollapsed ? (
             <div className="min-w-0">
               <span className="block truncate text-[2rem] leading-none font-bold tracking-tight text-slate-900">
