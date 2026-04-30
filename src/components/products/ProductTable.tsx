@@ -204,14 +204,14 @@ export function ProductTable({
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                <th className="px-4 py-3">Produto</th>
-                <th className="px-4 py-3">Comercial</th>
-                <th className="px-4 py-3">Variacoes</th>
-                <th className="px-4 py-3">Estoque</th>
-                <th className="px-4 py-3 text-center">Vitrine</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Criado em</th>
-                <th className="px-4 py-3 text-right">Acoes</th>
+                <th scope="col" className="px-4 py-3">Produto</th>
+                <th scope="col" className="px-4 py-3">Comercial</th>
+                <th scope="col" className="px-4 py-3">Variacoes</th>
+                <th scope="col" className="px-4 py-3">Estoque</th>
+                <th scope="col" className="px-4 py-3 text-center">Vitrine</th>
+                <th scope="col" className="px-4 py-3">Status</th>
+                <th scope="col" className="px-4 py-3">Criado em</th>
+                <th scope="col" className="px-4 py-3 text-right">Acoes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -222,7 +222,7 @@ export function ProductTable({
 
                 return (
                   <tr key={product.id} className="align-top">
-                    <td className="px-4 py-4">
+                    <td scope="row" className="px-4 py-4">
                       <div className="flex items-start gap-3">
                         <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
                           {cover ? (
@@ -320,7 +320,9 @@ export function ProductTable({
                         >
                           {getProductStatusLabel(product.status)}
                         </span>
+                        <label htmlFor={`status-${product.id}`} className="sr-only">Alterar status do produto</label>
                         <select
+                          id={`status-${product.id}`}
                           value={product.status}
                           disabled={isBusy}
                           onChange={(event) => handleStatusChange(product.id, event.target.value as ProductStatus)}
@@ -339,6 +341,7 @@ export function ProductTable({
                         <Link
                           href={`/dashboard/produtos/${product.id}/editar`}
                           className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200"
+                          aria-label="Editar produto"
                         >
                           <Pencil className="h-4 w-4" />
                           Editar
@@ -348,6 +351,7 @@ export function ProductTable({
                           disabled={isBusy}
                           onClick={() => handleDelete(product.id, product.name)}
                           className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          aria-label="Excluir produto"
                         >
                           {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                           Apagar

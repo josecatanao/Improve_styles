@@ -100,12 +100,12 @@ export function CustomerManagement({ customers, summary }: CustomerManagementPro
             <table className="min-w-full divide-y divide-slate-100">
               <thead className="bg-slate-50">
                 <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  <th className="px-6 py-3">Cliente</th>
-                  <th className="px-6 py-3">Contato</th>
-                  <th className="px-6 py-3">Entrega</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Ultimo acesso</th>
-                  <th className="px-6 py-3 text-right">Acoes</th>
+                  <th scope="col" className="px-6 py-3">Cliente</th>
+                  <th scope="col" className="px-6 py-3">Contato</th>
+                  <th scope="col" className="px-6 py-3">Entrega</th>
+                  <th scope="col" className="px-6 py-3">Status</th>
+                  <th scope="col" className="px-6 py-3">Ultimo acesso</th>
+                  <th scope="col" className="px-6 py-3 text-right">Acoes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -165,7 +165,7 @@ export function CustomerManagement({ customers, summary }: CustomerManagementPro
                         onClick={() => handleDelete(customer.id)}
                         disabled={isDeleting === customer.id}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                        title="Excluir cliente"
+                        aria-label="Excluir cliente"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

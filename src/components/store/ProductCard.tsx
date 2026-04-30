@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Check, Heart, ShoppingCart, Star } from 'lucide-react'
 import type { ProductListItem } from '@/lib/product-shared'
 import { StoreImage } from '@/components/store/StoreImage'
-import { useCart } from '@/components/store/CartProvider'
+import { useCart, buildCartItemId } from '@/components/store/CartProvider'
 import { formatMoney, getProductDisplayBadge, getProductPrimaryImage, normalizeStoreCategoryLabel } from '@/lib/storefront'
 
 function getBadgeStyles(product: ProductListItem, badge: string | null) {
@@ -64,6 +64,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
   const swatches = (product.colors ?? []).slice(0, 4)
   const displayPrice = Number(product.price ?? 0)
   const displayComparePrice = Number(product.compare_at_price ?? 0)
+  const addPrice = Number(product.product_variants?.[0]?.price ?? product.price ?? 0)
   const installmentCount = getInstallments(displayPrice)
   const badgeLabel = getBadgeLabel(product, badge)
   const badgeStyles = getBadgeStyles(product, badge)
@@ -166,10 +167,11 @@ export function ProductCard({ product }: { product: ProductListItem }) {
                 e.preventDefault()
                 e.stopPropagation()
                 addItem({
-                  id: `${product.id}-${swatches[0]?.hex ?? 'default'}-default`,
+                  id: buildCartItemId(product.id, swatches[0]?.hex ?? null, null),
                   productId: product.id,
                   name: product.name,
-                  price: displayPrice,
+                  category: product.category ?? null,
+                  price: addPrice,
                   quantity: 1,
                   image,
                   colorName: swatches[0]?.name ?? null,

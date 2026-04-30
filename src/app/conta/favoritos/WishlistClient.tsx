@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Heart, ShoppingCart, Trash2, Check } from 'lucide-react'
-import { useCart } from '@/components/store/CartProvider'
+import { useCart, buildCartItemId } from '@/components/store/CartProvider'
 import type { ProductListItem } from '@/lib/product-shared'
 import { formatMoney } from '@/lib/storefront'
 import { getProductsByIds } from './actions'
@@ -16,17 +16,28 @@ export function WishlistClient() {
 
   useEffect(() => {
     if (wishlist.length === 0) {
-      setProducts([])
-      setLoading(false)
-      return
+      const resetTimer = window.setTimeout(() => {
+        setProducts([])
+        setLoading(false)
+      }, 0)
+      return () => window.clearTimeout(resetTimer)
     }
 
+    let isCancelled = false
     getProductsByIds(wishlist).then((data) => {
-      setProducts(data)
-      setLoading(false)
+      if (!isCancelled) {
+        setProducts(data)
+        setLoading(false)
+      }
     }).catch(() => {
-      setLoading(false)
+      if (!isCancelled) {
+        setLoading(false)
+      }
     })
+
+    return () => {
+      isCancelled = true
+    }
   }, [wishlist])
 
   if (loading) {
@@ -127,9 +138,10 @@ export function WishlistClient() {
                           e.stopPropagation()
 
                           addItem({
-                            id: `${product.id}-${primaryImage?.assigned_color_hex ?? 'default'}-default`,
+                            id: buildCartItemId(product.id, primaryImage?.assigned_color_hex ?? null, null),
                             productId: product.id,
                             name: product.name,
+                            category: product.category ?? null,
                             price: Number(product.price),
                             quantity: 1,
                             image: imageUrl,

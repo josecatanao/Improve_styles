@@ -309,18 +309,19 @@ export default async function DashboardPage() {
   const orders = ordersResult.orders
   const completedOrders = orders.filter((order) => order.status === 'completed')
   const openOrders = orders.filter((order) => ['pending', 'processing', 'shipped'].includes(order.status))
-  const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0)
+  const activeOrders = orders.filter((order) => order.status !== 'cancelled')
+  const totalRevenue = activeOrders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0)
   const completedRevenue = completedOrders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0)
-  const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0
-  const averageItemsPerOrder = orders.length > 0 ? orders.reduce((sum, order) => sum + Number(order.total_items ?? 0), 0) / orders.length : 0
+  const averageTicket = activeOrders.length > 0 ? totalRevenue / activeOrders.length : 0
+  const averageItemsPerOrder = activeOrders.length > 0 ? activeOrders.reduce((sum, order) => sum + Number(order.total_items ?? 0), 0) / activeOrders.length : 0
   const activeCustomers = customersResult.summary.active
   const customersWithAddressRate =
     customersResult.summary.total > 0 ? (customersResult.summary.withAddress / customersResult.summary.total) * 100 : 0
-  const salesTimeline = buildSalesTimeline(orders, 7)
+  const salesTimeline = buildSalesTimeline(activeOrders, 7)
   const orderStatusBreakdown = buildBreakdown(orders.map((order) => getOrderStatusLabel(order.status)))
   const paymentBreakdown = buildBreakdown(orders.map((order) => getPaymentLabel(order.payment_method)))
   const deliveryBreakdown = buildBreakdown(orders.map((order) => getDeliveryLabel(order.delivery_method)))
-  const topSellingProducts = getTopSellingProducts(orders)
+  const topSellingProducts = getTopSellingProducts(activeOrders)
   const recentOrders = orders.slice(0, 5)
 
   const hasAnySetupRequired =

@@ -1,8 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import { useMemo } from 'react'
 import { Minus, Plus, Trash2 } from 'lucide-react'
 import { useCart } from '@/components/store/CartProvider'
+import {
+  calculateCouponDiscountFromItems,
+  getEligibleCouponItems,
+} from '@/lib/store-coupons'
 import { formatMoney } from '@/lib/storefront'
 
 export function CartContents({
@@ -10,7 +15,20 @@ export function CartContents({
 }: {
   showActions?: boolean
 }) {
-  const { items, totalPrice, updateQuantity, removeItem, isReady } = useCart()
+  const { items, totalPrice, updateQuantity, removeItem, isReady, appliedCoupon } = useCart()
+
+  const couponDiscount = useMemo(() => {
+    if (!appliedCoupon) return 0
+    const scopedItems = items.map((item) => ({
+      ...item,
+      productCategory: item.category ?? null,
+    }))
+    const eligibleItems = getEligibleCouponItems(scopedItems, appliedCoupon)
+
+    if (eligibleItems.length === 0) return 0
+
+    return calculateCouponDiscountFromItems(eligibleItems, appliedCoupon)
+  }, [appliedCoupon, items])
 
   if (!isReady) {
     return <div className="rounded-none border border-slate-200 bg-white p-6 text-sm text-slate-500">Carregando carrinho...</div>
@@ -86,13 +104,21 @@ export function CartContents({
         </div>
       ))}
 
-      {showActions ? (
-        <div className="rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-5">
-          <div className="flex items-center justify-between text-sm text-slate-500">
-            <span>Total geral</span>
-            <span className="text-2xl font-semibold text-slate-950">{formatMoney(totalPrice)}</span>
+      <div className="rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-5">
+        {appliedCoupon ? (
+          <div className="mb-3 flex items-center justify-between text-sm text-emerald-600">
+            <span>Desconto ({appliedCoupon.code})</span>
+            <span className="font-medium">
+              {appliedCoupon.discount_type === 'free_shipping' ? 'Frete gratis' : `-${formatMoney(couponDiscount)}`}
+            </span>
           </div>
+        ) : null}
+        <div className="flex items-center justify-between text-sm text-slate-500">
+          <span>{appliedCoupon ? 'Total com desconto' : 'Total geral'}</span>
+          <span className="text-2xl font-semibold text-slate-950">{formatMoney(Math.max(0, totalPrice - couponDiscount))}</span>
+        </div>
 
+        {showActions ? (
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/"
@@ -107,8 +133,8 @@ export function CartContents({
               Ir para checkout
             </Link>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   )
 }

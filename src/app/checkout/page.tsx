@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation'
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string; orderId?: string }>
+  searchParams: Promise<{ success?: string; orderId?: string; coupon?: string }>
 }) {
   const supabase = await createClient()
   const {
@@ -38,7 +38,7 @@ export default async function CheckoutPage({
           <p className="mt-2 text-sm text-slate-500">Revise os itens e informe os dados basicos do pedido.</p>
         </div>
 
-        <CheckoutClient initialProfile={profile} orderId={orderId} />
+        <CheckoutClient initialProfile={profile} orderId={orderId} initialCoupon={params.coupon ?? null} />
       </main>
     </StoreShell>
   )

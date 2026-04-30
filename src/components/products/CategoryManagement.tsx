@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, CheckCircle2, ImagePlus, Loader2, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ImagePlus, Loader2, Plus, Trash2 } from 'lucide-react'
 import {
   createStoreCategory,
   moveStoreCategory,
@@ -33,6 +33,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
   const [isCreating, setIsCreating] = useState(false)
   const [isUploadingNewImage, setIsUploadingNewImage] = useState(false)
   const [uploadingCategoryId, setUploadingCategoryId] = useState<string | null>(null)
+  const [openCategoryId, setOpenCategoryId] = useState<string | null>(initialCategories[0]?.id ?? null)
   const newImageInputRef = useRef<HTMLInputElement>(null)
   const editImageInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -358,158 +359,188 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
           ) : (
             sortedCategories.map((category, index) => {
               const isBusy = busyId === category.id
+              const isOpen = openCategoryId === category.id
 
               return (
-                <div key={category.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="space-y-4">
-                    <div className="grid gap-3 lg:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Nome da categoria</label>
-                        <Input
-                          value={category.name}
-                          onChange={(event) =>
-                            setCategories((current) =>
-                              current.map((item) =>
-                                item.id === category.id ? { ...item, name: event.target.value } : item
-                              )
-                            )
-                          }
-                          disabled={isBusy}
-                        />
+                <div key={category.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setOpenCategoryId((current) => (current === category.id ? null : category.id))}
+                    className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-slate-50"
+                  >
+                    <CategoryPreview
+                      name={category.name}
+                      iconName={category.icon_name || CATEGORY_ICON_OPTIONS[0].name}
+                      imageUrl={category.image_url || null}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-slate-900">{category.name}</p>
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${category.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {category.is_active ? 'Ativa' : 'Oculta'}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                          Ordem {index + 1}
+                        </span>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Imagem da categoria (opcional)</label>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Slug da vitrine: <code>{category.slug}</code>
+                      </p>
+                    </div>
+                    <ChevronDown className={`h-5 w-5 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isOpen ? (
+                    <div className="space-y-4 border-t border-slate-200 bg-slate-50/60 px-4 py-4">
+                      <div className="grid gap-3 lg:grid-cols-2">
                         <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-700">Nome da categoria</label>
                           <Input
-                            value={category.image_url || ''}
+                            value={category.name}
                             onChange={(event) =>
                               setCategories((current) =>
                                 current.map((item) =>
-                                  item.id === category.id ? { ...item, image_url: event.target.value } : item
+                                  item.id === category.id ? { ...item, name: event.target.value } : item
                                 )
                               )
                             }
                             disabled={isBusy}
-                            placeholder="https://..."
                           />
-                          <div className="flex items-center gap-2">
-                            <input
-                              ref={(node) => {
-                                editImageInputRefs.current[category.id] = node
-                              }}
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(event) => handleUploadExistingCategoryImage(category.id, event)}
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              disabled={isBusy || uploadingCategoryId === category.id}
-                              onClick={() => editImageInputRefs.current[category.id]?.click()}
-                            >
-                              {uploadingCategoryId === category.id ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              ) : (
-                                <ImagePlus className="mr-2 h-4 w-4" />
-                              )}
-                              Enviar da galeria
-                            </Button>
-                          </div>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Biblioteca de icones</label>
-                      <div className="flex flex-wrap gap-2">
-                        {CATEGORY_ICON_OPTIONS.map((option) => {
-                          const Icon = option.icon
-                          const isSelected = category.icon_name === option.name
-
-                          return (
-                            <button
-                              key={`${category.id}-${option.name}`}
-                              type="button"
-                              onClick={() =>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-700">Imagem da categoria (opcional)</label>
+                          <div className="space-y-2">
+                            <Input
+                              value={category.image_url || ''}
+                              onChange={(event) =>
                                 setCategories((current) =>
                                   current.map((item) =>
-                                    item.id === category.id ? { ...item, icon_name: option.name } : item
+                                    item.id === category.id ? { ...item, image_url: event.target.value } : item
                                   )
                                 )
                               }
                               disabled={isBusy}
-                              className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors ${
-                                isSelected
-                                  ? 'border-[#3483fa] bg-blue-50 text-[#1d4ed8]'
-                                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                              }`}
-                            >
-                              <Icon className="h-4 w-4" />
-                              {option.label}
-                            </button>
-                          )
-                        })}
+                              placeholder="https://..."
+                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                ref={(node) => {
+                                  editImageInputRefs.current[category.id] = node
+                                }}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(event) => handleUploadExistingCategoryImage(category.id, event)}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled={isBusy || uploadingCategoryId === category.id}
+                                onClick={() => editImageInputRefs.current[category.id]?.click()}
+                              >
+                                {uploadingCategoryId === category.id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <ImagePlus className="mr-2 h-4 w-4" />
+                                )}
+                                Enviar da galeria
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                      <CategoryPreview
-                        name={category.name}
-                        iconName={category.icon_name || CATEGORY_ICON_OPTIONS[0].name}
-                        imageUrl={category.image_url || null}
-                      />
-                      <p className="text-xs text-slate-500">Slug da vitrine: <code>{category.slug}</code></p>
-                      <div className="ml-auto flex items-center gap-3">
-                        <span className="text-sm text-slate-600">Ativa</span>
-                        <Switch
-                          checked={category.is_active}
-                          disabled={isBusy}
-                          onCheckedChange={(checked) => handleToggle(category.id, checked)}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">Biblioteca de icones</label>
+                        <div className="flex flex-wrap gap-2">
+                          {CATEGORY_ICON_OPTIONS.map((option) => {
+                            const Icon = option.icon
+                            const isSelected = category.icon_name === option.name
+
+                            return (
+                              <button
+                                key={`${category.id}-${option.name}`}
+                                type="button"
+                                onClick={() =>
+                                  setCategories((current) =>
+                                    current.map((item) =>
+                                      item.id === category.id ? { ...item, icon_name: option.name } : item
+                                    )
+                                  )
+                                }
+                                disabled={isBusy}
+                                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                                  isSelected
+                                    ? 'border-[#3483fa] bg-blue-50 text-[#1d4ed8]'
+                                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                                }`}
+                              >
+                                <Icon className="h-4 w-4" />
+                                {option.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3">
+                        <CategoryPreview
+                          name={category.name}
+                          iconName={category.icon_name || CATEGORY_ICON_OPTIONS[0].name}
+                          imageUrl={category.image_url || null}
                         />
+                        <p className="text-xs text-slate-500">Slug da vitrine: <code>{category.slug}</code></p>
+                        <div className="ml-auto flex items-center gap-3">
+                          <span className="text-sm text-slate-600">Ativa</span>
+                          <Switch
+                            checked={category.is_active}
+                            disabled={isBusy}
+                            onCheckedChange={(checked) => handleToggle(category.id, checked)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={isBusy || index === 0}
+                          onClick={() => handleMove(category.id, 'up')}
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={isBusy || index === sortedCategories.length - 1}
+                          onClick={() => handleMove(category.id, 'down')}
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => handleSave(category.id, category)}
+                          disabled={isBusy || !category.name.trim()}
+                          className="bg-[#3483fa] hover:bg-[#2968c8]"
+                        >
+                          {isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                          Salvar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={isBusy}
+                          onClick={() => handleRemove(category.id, category.name)}
+                          className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        disabled={isBusy || index === 0}
-                        onClick={() => handleMove(category.id, 'up')}
-                      >
-                        <ArrowUp className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        disabled={isBusy || index === sortedCategories.length - 1}
-                        onClick={() => handleMove(category.id, 'down')}
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => handleSave(category.id, category)}
-                        disabled={isBusy || !category.name.trim()}
-                        className="bg-[#3483fa] hover:bg-[#2968c8]"
-                      >
-                        {isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                        Salvar
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        disabled={isBusy}
-                        onClick={() => handleRemove(category.id, category.name)}
-                        className="text-red-500 hover:bg-red-50 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  ) : null}
                 </div>
               )
             })

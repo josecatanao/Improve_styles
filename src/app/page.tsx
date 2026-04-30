@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { Grid2X2 } from 'lucide-react'
 import { HomeHeroCarousel } from '@/components/store/HomeHeroCarousel'
@@ -9,6 +10,7 @@ import { resolveCategoryIcon } from '@/lib/category-visuals'
 import { getStorefrontData } from '@/lib/products'
 import { getStorefrontCategories } from '@/lib/store-categories'
 import { buildStorefrontThemeStyle } from '@/lib/store-settings'
+import { HomeLoading } from '@/components/store/HomeLoading'
 import {
   getCategorySectionId,
   getCategorySectionSlug,
@@ -148,7 +150,8 @@ export default async function Home({
         backgroundColor: settings.announcement_background_color,
       } : null}
     >
-      <main className="mx-auto w-full max-w-7xl space-y-7 px-4 py-4 sm:px-6 sm:py-5 lg:space-y-8 lg:px-8">
+      <Suspense fallback={<HomeLoading />}>
+        <main className="mx-auto w-full max-w-7xl space-y-7 px-4 py-4 sm:px-6 sm:py-5 lg:space-y-8 lg:px-8">
         {isSearchMode ? (
           <section className="space-y-5">
             <div className="border border-slate-200 bg-white px-4 py-4 sm:px-5">
@@ -312,7 +315,8 @@ export default async function Home({
           </section>
         ) : null}
 
-      </main>
+        </main>
+      </Suspense>
     </StoreShell>
   )
 }

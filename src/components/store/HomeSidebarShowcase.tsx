@@ -169,6 +169,7 @@ export function HomeSidebarShowcase({ product }: { product: ProductListItem | nu
               id: `${product.id}:${selectedVariant?.id ?? 'default'}:${selectedColor ?? colorOptions[0]?.name ?? 'sem-cor'}:${selectedSize ?? sizeOptions[0] ?? 'sem-tamanho'}`,
               productId: product.id,
               name: product.name,
+              category: product.category ?? null,
               price: displayPrice,
               quantity: 1,
               image: displayImage,

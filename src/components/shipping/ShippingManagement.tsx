@@ -43,10 +43,11 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setIsSubmitting(true)
+    const form = e.currentTarget
     try {
-      const formData = new FormData(e.currentTarget)
+      const formData = new FormData(form)
       await createShippingZone(formData)
-      e.currentTarget.reset()
+      form.reset()
       resetForm()
       router.refresh()
       showToast({ variant: 'success', title: 'Zona de entrega criada' })
@@ -61,10 +62,11 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
     e.preventDefault()
     if (!editZoneId) return
     setIsSubmitting(true)
+    const form = e.currentTarget
     try {
-      const formData = new FormData(e.currentTarget)
+      const formData = new FormData(form)
       await updateShippingZone(editZoneId, formData)
-      e.currentTarget.reset()
+      form.reset()
       resetForm()
       router.refresh()
       showToast({ variant: 'success', title: 'Zona de entrega atualizada' })
@@ -88,6 +90,7 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
     setDeletingId(zoneId)
     try {
       await deleteShippingZone(zoneId)
+      setZones((current) => current.filter((z) => z.id !== zoneId))
       router.refresh()
       showToast({ variant: 'success', title: 'Zona de entrega excluida' })
     } catch (error) {
@@ -193,18 +196,6 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
                 />
               </label>
               <label className="grid gap-1.5">
-                <span className="text-xs font-medium text-slate-600">Preco por km (R$)</span>
-                <input
-                  name="price_per_km"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  defaultValue={editingZone?.price_per_km || ''}
-                  placeholder="Opcional"
-                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                />
-              </label>
-              <label className="grid gap-1.5">
                 <span className="text-xs font-medium text-slate-600">Prazo estimado (dias)</span>
                 <input
                   name="estimated_days"
@@ -281,11 +272,6 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900 font-medium">
                       {formatCurrency(zone.base_price)}
-                      {zone.price_per_km ? (
-                        <span className="block text-xs font-normal text-slate-500">
-                          + {formatCurrency(zone.price_per_km)}/km
-                        </span>
-                      ) : null}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {zone.estimated_days} dias uteis

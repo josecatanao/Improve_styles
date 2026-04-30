@@ -1,10 +1,8 @@
-import { createClient } from '@/utils/supabase/server'
-
 export type StoreCoupon = {
   id: string
   code: string
   description: string | null
-  discount_type: 'percentage' | 'fixed'
+  discount_type: 'percentage' | 'fixed' | 'free_shipping'
   discount_value: number
   min_order_value: number
   max_uses: number | null
@@ -16,102 +14,30 @@ export type StoreCoupon = {
   updated_at: string | null
 }
 
-function isMissingTable(error: { code?: string } | null) {
-  return error?.code === '42P01'
-}
-
-export async function getManagedCoupons(): Promise<{
-  coupons: StoreCoupon[]
-  setupRequired: boolean
-  errorMessage: string | null
-}> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('store_coupons')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (isMissingTable(error)) {
-    return {
-      coupons: [],
-      setupRequired: true,
-      errorMessage: null,
-    }
-  }
-
-  if (error || !data) {
-    return {
-      coupons: [],
-      setupRequired: false,
-      errorMessage: error?.message ?? 'Nao foi possivel carregar os cupons.',
-    }
-  }
-
-  return {
-    coupons: data as StoreCoupon[],
-    setupRequired: false,
-    errorMessage: null,
-  }
-}
-
 export type ValidatedCoupon = {
   id: string
   code: string
-  discount_type: 'percentage' | 'fixed'
+  discount_type: 'percentage' | 'fixed' | 'free_shipping'
   discount_value: number
-  min_order_value: number
+  min_order_value: number | null
+  productIds: string[]
+  categories: string[]
 }
 
-export async function validateCouponOnServer(code: string): Promise<{
-  coupon: ValidatedCoupon | null
-  error: string | null
-}> {
-  const supabase = await createClient()
-  const normalizedCode = code.trim().toUpperCase()
-
-  if (!normalizedCode) {
-    return { coupon: null, error: 'Informe um codigo de cupom.' }
-  }
-
-  const { data, error } = await supabase
-    .from('store_coupons')
-    .select('id, code, discount_type, discount_value, min_order_value, max_uses, current_uses, is_active, expires_at')
-    .ilike('code', normalizedCode)
-    .single()
-
-  if (error || !data) {
-    return { coupon: null, error: 'Cupom nao encontrado.' }
-  }
-
-  if (!data.is_active) {
-    return { coupon: null, error: 'Este cupom nao esta mais ativo.' }
-  }
-
-  if (data.expires_at && new Date(data.expires_at) < new Date()) {
-    return { coupon: null, error: 'Este cupom expirou.' }
-  }
-
-  if (data.max_uses !== null && data.current_uses >= data.max_uses) {
-    return { coupon: null, error: 'Este cupom atingiu o limite de uso.' }
-  }
-
-  return {
-    coupon: {
-      id: data.id,
-      code: data.code,
-      discount_type: data.discount_type,
-      discount_value: data.discount_value,
-      min_order_value: data.min_order_value,
-    },
-    error: null,
-  }
+export type CouponScopedItem = {
+  productId: string
+  productCategory: string | null
+  price: number
+  quantity: number
 }
 
 export function computeCouponDiscount(
   totalPrice: number,
   coupon: ValidatedCoupon
 ): number {
-  if (totalPrice < coupon.min_order_value) {
+  if (coupon.discount_type === 'free_shipping') return 0
+
+  if (coupon.min_order_value != null && totalPrice < coupon.min_order_value) {
     return 0
   }
 
@@ -120,4 +46,62 @@ export function computeCouponDiscount(
   }
 
   return Math.round((totalPrice * coupon.discount_value) / 100 * 100) / 100
+}
+
+export function isProductEligibleForCoupon(
+  productId: string,
+  productCategory: string | null,
+  coupon: ValidatedCoupon
+): boolean {
+  if (coupon.productIds.length === 0 && coupon.categories.length === 0) return true
+
+  if (coupon.productIds.includes(productId)) return true
+
+  if (productCategory && coupon.categories.length > 0) {
+    return coupon.categories.some((cat) =>
+      productCategory.toLowerCase().includes(cat.toLowerCase())
+    )
+  }
+
+  return false
+}
+
+export function getEligibleCouponItems<T extends CouponScopedItem>(
+  items: T[],
+  coupon: ValidatedCoupon
+): T[] {
+  return items.filter((item) =>
+    isProductEligibleForCoupon(item.productId, item.productCategory, coupon)
+  )
+}
+
+export function getEligibleCouponTotal<T extends CouponScopedItem>(
+  items: T[],
+  coupon: ValidatedCoupon
+): number {
+  return getEligibleCouponItems(items, coupon).reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  )
+}
+
+export function couponMeetsMinimumOrderValue<T extends CouponScopedItem>(
+  items: T[],
+  coupon: ValidatedCoupon
+): boolean {
+  if (coupon.min_order_value == null) return true
+  return getEligibleCouponTotal(items, coupon) >= coupon.min_order_value
+}
+
+export function calculateCouponDiscountFromItems<T extends CouponScopedItem>(
+  items: T[],
+  coupon: ValidatedCoupon
+): number {
+  if (coupon.discount_type === 'free_shipping') return 0
+
+  const eligibleItems = getEligibleCouponItems(items, coupon)
+  if (eligibleItems.length === 0) return 0
+
+  const eligibleTotal = eligibleItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  return computeCouponDiscount(eligibleTotal, coupon)
 }

@@ -49,7 +49,7 @@ export function StoreAppearanceManager({
     dashboardTheme: initialSettings.dashboard_theme,
   })
   const [isSaving, setIsSaving] = useState(false)
-  const [activeStep, setActiveStep] = useState<'identity' | 'colors' | 'components' | 'review'>('identity')
+  const [activeStep, setActiveStep] = useState<'identity' | 'components' | 'review'>('identity')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [previewLogoUrl, setPreviewLogoUrl] = useState(initialSettings.store_logo_url ?? '')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -178,9 +178,8 @@ export function StoreAppearanceManager({
             <div className="overflow-x-auto rounded-[1.5rem] border border-slate-200 bg-white p-2 shadow-sm">
               <div className="flex min-w-max items-center gap-2">
                 <StepPill number={1} title="Identidade" active={activeStep === 'identity'} onClick={() => setActiveStep('identity')} />
-                <StepPill number={2} title="Publicação" active={activeStep === 'colors'} onClick={() => setActiveStep('colors')} />
-                <StepPill number={3} title="Componentes" active={activeStep === 'components'} onClick={() => setActiveStep('components')} />
-                <StepPill number={4} title="Revisao" active={activeStep === 'review'} onClick={() => setActiveStep('review')} />
+                <StepPill number={2} title="Componentes" active={activeStep === 'components'} onClick={() => setActiveStep('components')} />
+                <StepPill number={3} title="Revisao" active={activeStep === 'review'} onClick={() => setActiveStep('review')} />
               </div>
             </div>
 
@@ -238,24 +237,6 @@ export function StoreAppearanceManager({
                     </div>
                   </div>
                 </FieldGroup>
-              </SectionCard>
-            ) : null}
-
-            {activeStep === 'colors' ? (
-              <SectionCard
-                title="Publicação da loja"
-                description="Confira se a identidade e os componentes da loja estão prontos para publicar."
-              >
-                <div className="rounded-[1.25rem] border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-                  As cores de marca e a aparência do painel administrativo agora ficam em <span className="font-semibold">Configurações do dashboard</span>.
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <MiniThemeCard title="Menu" accent={form.storeHeaderBackgroundColor} />
-                  <MiniThemeCard title="Cards" accent={form.storeCardBackgroundColor} />
-                  <MiniThemeCard title="Botões" accent={form.storeButtonBackgroundColor} />
-                  <MiniThemeCard title="Carrinho" accent={form.storeCartButtonColor} />
-                </div>
               </SectionCard>
             ) : null}
 
@@ -329,7 +310,6 @@ export function StoreAppearanceManager({
                 <h2 className="text-lg font-semibold text-slate-950">Visualizacao da loja</h2>
                 <p className="mt-1 text-sm text-slate-500">
                   {activeStep === 'identity' ? 'Visualize nome e logo da sua marca.' : null}
-                  {activeStep === 'colors' ? 'Veja se os elementos da loja estao consistentes para publicacao.' : null}
                   {activeStep === 'components' ? 'Confira topo, cards e botoes da vitrine.' : null}
                   {activeStep === 'review' ? 'Revise os principais elementos antes de salvar.' : null}
                 </p>
@@ -359,31 +339,6 @@ export function StoreAppearanceManager({
                     <div className="rounded-[1.25rem] border border-blue-100 bg-blue-50 px-4 py-3">
                       <p className="text-sm font-medium text-blue-900">Essa etapa altera a assinatura visual da loja.</p>
                       <p className="mt-1 text-xs text-blue-700">Nome e logo aparecem no cabeçalho, carrinho e rodapé.</p>
-                    </div>
-                  </div>
-                ) : null}
-
-                {activeStep === 'colors' ? (
-                  <div className="space-y-4">
-                    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Publicação</p>
-                      <div className="mt-4 space-y-3">
-                        <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-4 py-3">
-                          <p className="text-sm font-semibold text-slate-900">Loja pronta para publicar</p>
-                          <p className="mt-1 text-xs text-slate-500">Use esta etapa para revisar rapidamente os elementos principais da vitrine. A paleta da marca foi movida para Configurações do dashboard.</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="rounded-[1rem] border border-slate-200 bg-white p-3">
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Menu</p>
-                            <span className="mt-2 block h-10 rounded-xl border border-slate-200" style={{ backgroundColor: form.storeHeaderBackgroundColor }} />
-                          </div>
-                          <div className="rounded-[1rem] border border-slate-200 bg-white p-3">
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Carrinho</p>
-                            <span className="mt-2 block h-10 rounded-xl border border-slate-200" style={{ backgroundColor: form.storeCartButtonColor }} />
-                          </div>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 ) : null}

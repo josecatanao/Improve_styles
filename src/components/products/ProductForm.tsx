@@ -40,8 +40,22 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  resolveUniqueProductSlug,
+  createSku,
+  createVariantSku,
+  normalizeHex,
+  isValidHex,
+  parseOptionalNumber,
+  formatCurrency,
+  checkSkuUniqueness,
+  resolveUniqueSku,
+  validateRemoteImageUrl,
+} from '@/lib/product-form-utils'
+import { useProductDraft } from '@/hooks/use-product-draft'
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes'
 
-type ProductFormState = {
+export type ProductFormState = {
   name: string
   category: string
   brand: string
@@ -53,9 +67,13 @@ type ProductFormState = {
   is_featured: boolean
   collection: string
   audience: string
+  weight: string
+  width: string
+  height: string
+  length: string
 }
 
-type VariantRow = {
+export type VariantRow = {
   id: string
   size: string
   sku: string
@@ -65,7 +83,7 @@ type VariantRow = {
   status: ProductVariantStatus
 }
 
-type ColorGroup = {
+export type ColorGroup = {
   id: string
   name: string
   hex: string
@@ -98,7 +116,7 @@ type RemoteImageItem = {
   assignedColorHex: string | null
 }
 
-type ImageItem = ExistingImageItem | NewImageItem | RemoteImageItem
+export type ImageItem = ExistingImageItem | NewImageItem | RemoteImageItem
 type ProductType = 'simple' | 'variant'
 type ToastState = { type: 'success' | 'error'; message: string } | null
 
@@ -121,6 +139,10 @@ const initialState: ProductFormState = {
   is_featured: false,
   collection: '',
   audience: '',
+  weight: '',
+  width: '',
+  height: '',
+  length: '',
 }
 
 const stepItems = [
@@ -173,97 +195,6 @@ const commonColors = [
 ]
 
 const suggestedSizes = ['P', 'M', 'G', 'GG'] as const
-
-function slugify(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-async function resolveUniqueProductSlug({
-  supabase,
-  ownerId,
-  productName,
-  productId,
-}: {
-  supabase: ReturnType<typeof createClient>
-  ownerId: string
-  productName: string
-  productId?: string | null
-}) {
-  const baseSlug = slugify(productName) || 'produto'
-
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    const candidate = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`
-    let query = supabase
-      .from('products')
-      .select('id')
-      .eq('owner_id', ownerId)
-      .eq('slug', candidate)
-      .limit(1)
-
-    if (productId) {
-      query = query.neq('id', productId)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      throw new Error(error.message)
-    }
-
-    if (!data || data.length === 0) {
-      return candidate
-    }
-  }
-
-  return `${baseSlug}-${crypto.randomUUID().slice(0, 6).toLowerCase()}`
-}
-
-function normalizeHex(value: string) {
-  const cleaned = value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6).toUpperCase()
-  return cleaned ? `#${cleaned}` : '#000000'
-}
-
-function isValidHex(value: string) {
-  return /^#[0-9A-F]{6}$/i.test(value)
-}
-
-function parseOptionalNumber(value: string) {
-  const normalized = value.replace(',', '.').trim()
-  if (!normalized) {
-    return null
-  }
-
-  const parsed = Number(normalized)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-function formatCurrency(value: number | null) {
-  if (value == null) {
-    return 'Preco nao informado'
-  }
-
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value)
-}
-
-function createSku(name: string, seed: string) {
-  const base = slugify(name).replace(/-/g, '').toUpperCase().slice(0, 6) || 'PROD'
-  return `${base}-${seed}`
-}
-
-function createVariantSku(name: string, colorName: string, size: string, index: number) {
-  const base = slugify(name).replace(/-/g, '').toUpperCase().slice(0, 5) || 'PROD'
-  const color = slugify(colorName).replace(/-/g, '').toUpperCase().slice(0, 3) || 'COR'
-  const variantSize = slugify(size).replace(/-/g, '').toUpperCase().slice(0, 3) || 'UNI'
-  return `${base}-${color}-${variantSize}-${String(index + 1).padStart(2, '0')}`
-}
 
 function revokeNewImageUrls(images: ImageItem[]) {
   images.forEach((image) => {
@@ -568,23 +499,33 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
   const initialGroups = buildInitialGroups(product)
   const initialUseSizes = initialGroups.some((group) => group.variants.some((variant) => variant.size !== 'Unico'))
 
-  const [form, setForm] = useState<ProductFormState>(
-    mode === 'edit' && product
-      ? {
-          name: product.name,
-          category: product.category ?? '',
-          brand: product.brand ?? '',
-          shortDescription: product.short_description ?? '',
-          description: product.description ?? '',
-          price: String(product.price ?? ''),
-          compare_at_price: String(product.compare_at_price ?? ''),
-          status: product.status ?? 'draft',
-          is_featured: product.is_featured ?? false,
-          collection: product.collection ?? '',
-          audience: product.audience ?? '',
-        }
-      : initialState
-  )
+  const draft = useProductDraft(mode, product?.id ?? null)
+
+  const getInitialForm = (): ProductFormState => {
+    if (draft.draftRestored) return initialState
+    if (mode === 'edit' && product) {
+      return {
+        name: product.name,
+        category: product.category ?? '',
+        brand: product.brand ?? '',
+        shortDescription: product.short_description ?? '',
+        description: product.description ?? '',
+        price: String(product.price ?? ''),
+        compare_at_price: String(product.compare_at_price ?? ''),
+        status: product.status ?? 'draft',
+        is_featured: product.is_featured ?? false,
+        collection: product.collection ?? '',
+        audience: product.audience ?? '',
+        weight: product.weight != null ? String(product.weight) : '',
+        width: product.width != null ? String(product.width) : '',
+        height: product.height != null ? String(product.height) : '',
+        length: product.length != null ? String(product.length) : '',
+      }
+    }
+    return initialState
+  }
+
+  const [form, setForm] = useState<ProductFormState>(getInitialForm)
   const [step, setStep] = useState(0)
   const [productType, setProductType] = useState<ProductType>(initialUseSizes ? 'variant' : 'simple')
   const [requestId, setRequestId] = useState(() => crypto.randomUUID())
@@ -601,18 +542,64 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastState>(null)
   const [hasSubmittedSuccessfully, setHasSubmittedSuccessfully] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<{ completed: number; total: number } | null>(null)
+  const [showDraftRestoreDialog, setShowDraftRestoreDialog] = useState(draft.hasDraft)
 
   const imagesRef = useRef<ImageItem[]>(initialImages)
   const removedExistingImageIdsRef = useRef<string[]>([])
   const removedExistingStoragePathsRef = useRef<string[]>([])
   const submissionLockRef = useRef(false)
+  const saveDraftRef = useRef(draft.saveDraft)
+  const mountedRef = useRef(false)
+  const isDirtyRef = useRef(false)
+
+  useEffect(() => {
+    saveDraftRef.current = draft.saveDraft
+  }, [draft.saveDraft])
+
   const useSizes = productType === 'variant'
+
+  const isDirty =
+    form.name.trim() !== '' ||
+    form.category.trim() !== '' ||
+    form.brand.trim() !== '' ||
+    form.shortDescription.trim() !== '' ||
+    form.description.trim() !== '' ||
+    form.price !== '' ||
+    colorGroups.length > 0 ||
+    images.length > 0
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty
+  })
+
+  useUnsavedChanges(isDirty)
 
   useEffect(() => {
     return () => {
       revokeNewImageUrls(imagesRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (isSubmitting || hasSubmittedSuccessfully) return
+    if (!mountedRef.current) {
+      mountedRef.current = true
+      return
+    }
+    if (!isDirtyRef.current) return
+    saveDraftRef.current({
+      form,
+      step,
+      productType,
+      colorGroups,
+      categoryDraft,
+      brandDraft,
+      sizeDrafts,
+      imageUrlDraft,
+      mode,
+    })
+  }, [form, step, productType, colorGroups, categoryDraft, brandDraft, sizeDrafts, imageUrlDraft, mode, isSubmitting, hasSubmittedSuccessfully])
 
   useEffect(() => {
     if (!toast) {
@@ -622,6 +609,27 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
     const timeoutId = window.setTimeout(() => setToast(null), 3200)
     return () => window.clearTimeout(timeoutId)
   }, [toast])
+
+  function restoreDraft() {
+    const saved = draft.loadDraft()
+    if (!saved) return
+
+    setForm(saved.form)
+    setStep(saved.step)
+    setProductType(saved.productType)
+    setColorGroups(saved.colorGroups)
+    setCategoryDraft(saved.categoryDraft)
+    setBrandDraft(saved.brandDraft)
+    setSizeDrafts(saved.sizeDrafts)
+    setImageUrlDraft(saved.imageUrlDraft)
+    setShowDraftRestoreDialog(false)
+    showToast('success', 'Rascunho restaurado com sucesso.')
+  }
+
+  function discardDraftDialog() {
+    draft.discardDraft()
+    setShowDraftRestoreDialog(false)
+  }
 
 
   const generatedSku = mode === 'edit' && product?.sku ? product.sku : createSku(form.name, 'PREVIEW')
@@ -661,7 +669,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
     showToast('success', `${nextFiles.length} imagem(ns) adicionada(s) a galeria.`)
   }
 
-  function appendImageUrl() {
+  async function appendImageUrl() {
     const trimmedUrl = imageUrlDraft.trim()
 
     if (!trimmedUrl) {
@@ -673,6 +681,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       const parsed = new URL(trimmedUrl)
       if (!['http:', 'https:'].includes(parsed.protocol)) {
         showToast('error', 'Use um link http ou https valido.')
+        return
+      }
+
+      const validation = await validateRemoteImageUrl(parsed.toString())
+      if (!validation.valid) {
+        showToast('error', validation.error ?? 'URL de imagem invalida.')
         return
       }
 
@@ -1014,6 +1028,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
       const preparedVariants = preparedGroups.flatMap((group) =>
         group.variants.map((variant, index) => ({
+          id: variant.id,
           color_name: group.name,
           color_hex: group.hex,
           size: variant.size,
@@ -1029,6 +1044,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
       const totalStock = preparedVariants.reduce((total, variant) => total + variant.stock, 0)
       let productId = product?.id ?? null
+
+      const productSku =
+        mode === 'edit' && product?.sku
+          ? product.sku
+          : createSku(form.name, crypto.randomUUID().slice(0, 6).toUpperCase())
+
       const uniqueSlug = await resolveUniqueProductSlug({
         supabase,
         ownerId: user.id,
@@ -1036,15 +1057,35 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         productId,
       })
 
+      for (const variant of preparedVariants) {
+        const skuIsUnique = await checkSkuUniqueness(supabase, user.id, variant.sku, productId)
+        if (!skuIsUnique) {
+          variant.sku = await resolveUniqueSku(supabase, user.id, variant.sku, productId)
+        }
+      }
+
+      let skuIsUniqueOnProduct = true
+      if (mode === 'create') {
+        const { data: existingProductSku } = await supabase
+          .from('products')
+          .select('id')
+          .eq('owner_id', user.id)
+          .eq('sku', productSku)
+          .limit(1)
+
+        skuIsUniqueOnProduct = (existingProductSku?.length ?? 0) === 0
+      }
+
+      const finalProductSku = skuIsUniqueOnProduct
+        ? productSku
+        : `${productSku}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`
+
       const productPayload = {
         owner_id: user.id,
         client_request_id: mode === 'create' ? requestId : product?.client_request_id ?? null,
         name: form.name.trim(),
         slug: uniqueSlug,
-        sku:
-          mode === 'edit' && product?.sku
-            ? product.sku
-            : createSku(form.name, crypto.randomUUID().slice(0, 6).toUpperCase()),
+        sku: finalProductSku,
         colors: preparedGroups.map((group) => ({ name: group.name, hex: group.hex })),
         short_description: form.shortDescription.trim() || null,
         description: form.description.trim() || null,
@@ -1060,10 +1101,10 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         tags: [],
         is_featured: form.is_featured,
         is_new: false,
-        weight: null,
-        width: null,
-        height: null,
-        length: null,
+        weight: parseOptionalNumber(form.weight),
+        width: parseOptionalNumber(form.width),
+        height: parseOptionalNumber(form.height),
+        length: parseOptionalNumber(form.length),
         is_active: form.status === 'active',
       }
 
@@ -1091,9 +1132,48 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         throw new Error('Produto invalido para salvar.')
       }
 
-      const { error: deleteVariantsError } = await supabase.from('product_variants').delete().eq('product_id', productId)
-      if (deleteVariantsError) {
-        throw new Error(deleteVariantsError.message)
+      const oldVariantIds = mode === 'edit' && product?.product_variants
+        ? new Set(product.product_variants.map((v) => v.id).filter((id): id is string => Boolean(id)))
+        : new Set<string>()
+
+      const variantsToUpsert = preparedVariants.map((variant) => ({
+        id: variant.id,
+        owner_id: user.id,
+        product_id: productId,
+        color_name: variant.color_name,
+        color_hex: variant.color_hex,
+        size: variant.size,
+        sku: variant.sku,
+        stock: variant.stock,
+        price: variant.price,
+        compare_at_price: variant.compare_at_price,
+        cost_price: variant.cost_price,
+        status: variant.status,
+        position: variant.position,
+      }))
+
+      const { error: upsertVariantsError } = await supabase
+        .from('product_variants')
+        .upsert(variantsToUpsert, { onConflict: 'id' })
+
+      if (upsertVariantsError) {
+        throw new Error(upsertVariantsError.message)
+      }
+
+      if (oldVariantIds.size > 0) {
+        const newVariantIds = new Set(variantsToUpsert.map((v) => v.id))
+        const idsToDelete = [...oldVariantIds].filter((id) => !newVariantIds.has(id))
+
+        if (idsToDelete.length > 0) {
+          const { error: deleteRemovedError } = await supabase
+            .from('product_variants')
+            .delete()
+            .in('id', idsToDelete)
+
+          if (deleteRemovedError) {
+            throw new Error(deleteRemovedError.message)
+          }
+        }
       }
 
       if (mode === 'create') {
@@ -1122,18 +1202,6 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         }
       }
 
-      const { error: insertVariantsError } = await supabase.from('product_variants').insert(
-        preparedVariants.map((variant) => ({
-          owner_id: user.id,
-          product_id: productId,
-          ...variant,
-        }))
-      )
-
-      if (insertVariantsError) {
-        throw new Error(insertVariantsError.message)
-      }
-
       if (removedExistingImageIdsRef.current.length > 0) {
         const { error: deleteImagesError } = await supabase
           .from('product_images')
@@ -1153,79 +1221,128 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         }
       }
 
-      for (const [index, image] of imagesRef.current.entries()) {
-        if (image.kind === 'existing') {
-          const { error: sortOrderError } = await supabase
-            .from('product_images')
-            .update({
-              sort_order: index,
-              alt_text: form.name.trim(),
-              assigned_color_name: image.assignedColorName,
-              assigned_color_hex: image.assignedColorHex,
-            })
-            .eq('id', image.id)
+      const existingImages = imagesRef.current.filter((img) => img.kind === 'existing')
+      const remoteImages = imagesRef.current.filter((img) => img.kind === 'remote')
+      const newImages = imagesRef.current.filter((img) => img.kind === 'new')
 
-          if (sortOrderError) {
-            throw new Error(sortOrderError.message)
-          }
-
-          continue
-        }
-
-        if (image.kind === 'remote') {
-          const { error: imageInsertError } = await supabase.from('product_images').insert({
-            owner_id: user.id,
-            product_id: productId,
-            storage_path: null,
-            public_url: image.url,
+      for (const [index, image] of existingImages.entries()) {
+        const { error: sortOrderError } = await supabase
+          .from('product_images')
+          .update({
+            sort_order: index,
             alt_text: form.name.trim(),
             assigned_color_name: image.assignedColorName,
             assigned_color_hex: image.assignedColorHex,
-            sort_order: index,
           })
+          .eq('id', image.id)
 
-          if (imageInsertError) {
-            throw new Error(imageInsertError.message || 'Nao foi possivel salvar o link da imagem.')
-          }
-
-          continue
+        if (sortOrderError) {
+          throw new Error(sortOrderError.message)
         }
+      }
 
-        const optimized = await imageCompression(image.file, {
-          maxSizeMB: 0.3,
-          maxWidthOrHeight: 1600,
-          useWebWorker: true,
-        })
-
-        const extension = optimized.name.split('.').pop()?.toLowerCase() || 'jpg'
-        const path = `${user.id}/${productId}/${crypto.randomUUID()}.${extension}`
-
-        const { error: uploadError } = await supabase.storage.from('product-images').upload(path, optimized, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: optimized.type || image.file.type || 'image/jpeg',
-        })
-
-        if (uploadError) {
-          throw new Error(uploadError.message)
-        }
-
-        const { data: publicUrlData } = supabase.storage.from('product-images').getPublicUrl(path)
-
+      const remoteStartIndex = existingImages.length
+      for (const [index, image] of remoteImages.entries()) {
         const { error: imageInsertError } = await supabase.from('product_images').insert({
           owner_id: user.id,
           product_id: productId,
-          storage_path: path,
-          public_url: publicUrlData.publicUrl,
+          storage_path: null,
+          public_url: image.url,
           alt_text: form.name.trim(),
           assigned_color_name: image.assignedColorName,
           assigned_color_hex: image.assignedColorHex,
-          sort_order: index,
+          sort_order: remoteStartIndex + index,
         })
 
         if (imageInsertError) {
-          throw new Error(imageInsertError.message || 'Nao foi possivel salvar as imagens.')
+          throw new Error(imageInsertError.message || 'Nao foi possivel salvar o link da imagem.')
         }
+      }
+
+      const newStartIndex = existingImages.length + remoteImages.length
+      const totalNewImages = newImages.length
+
+      if (totalNewImages > 0) {
+        setUploadProgress({ completed: 0, total: totalNewImages })
+      }
+
+      const uploadedPaths: string[] = []
+      const uploadedImageIds: string[] = []
+
+      try {
+        const CONCURRENCY = 3
+
+        for (let batchStart = 0; batchStart < newImages.length; batchStart += CONCURRENCY) {
+          const batch = newImages.slice(batchStart, batchStart + CONCURRENCY)
+
+          const batchResults = await Promise.allSettled(
+            batch.map(async (image, batchIndex) => {
+              const globalIndex = newStartIndex + batchStart + batchIndex
+              const optimized = await imageCompression(image.file, {
+                maxSizeMB: 0.3,
+                maxWidthOrHeight: 1600,
+                useWebWorker: true,
+              })
+
+              const extension = optimized.name.split('.').pop()?.toLowerCase() || 'jpg'
+              const path = `${user.id}/${productId}/${crypto.randomUUID()}.${extension}`
+
+              const { error: uploadError } = await supabase.storage.from('product-images').upload(path, optimized, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: optimized.type || image.file.type || 'image/jpeg',
+              })
+
+              if (uploadError) {
+                throw new Error(uploadError.message)
+              }
+
+              uploadedPaths.push(path)
+
+              const { data: publicUrlData } = supabase.storage.from('product-images').getPublicUrl(path)
+
+              const { error: imageInsertError } = await supabase.from('product_images').insert({
+                owner_id: user.id,
+                product_id: productId,
+                storage_path: path,
+                public_url: publicUrlData.publicUrl,
+                alt_text: form.name.trim(),
+                assigned_color_name: image.assignedColorName,
+                assigned_color_hex: image.assignedColorHex,
+                sort_order: globalIndex,
+              })
+
+              if (imageInsertError) {
+                throw new Error(imageInsertError.message || 'Nao foi possivel salvar as imagens.')
+              }
+
+              return { path, globalIndex }
+            })
+          )
+
+          setUploadProgress({
+            completed: Math.min(batchStart + CONCURRENCY, totalNewImages),
+            total: totalNewImages,
+          })
+
+          const failed = batchResults.filter((r) => r.status === 'rejected')
+          if (failed.length > 0) {
+            const firstError = (failed[0] as PromiseRejectedResult).reason
+            throw new Error(firstError instanceof Error ? firstError.message : 'Falha ao processar imagens.')
+          }
+        }
+      } catch (uploadError) {
+        if (uploadedPaths.length > 0) {
+          await supabase.storage.from('product-images').remove(uploadedPaths)
+        }
+
+        if (uploadedImageIds.length > 0) {
+          await supabase.from('product_images').delete().in('id', uploadedImageIds)
+        }
+
+        throw uploadError
+      } finally {
+        setUploadProgress(null)
       }
 
       removedExistingImageIdsRef.current = []
@@ -1234,6 +1351,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         setRequestId(crypto.randomUUID())
       }
       setHasSubmittedSuccessfully(true)
+      draft.clearDraft()
       showToast('success', mode === 'edit' ? 'Produto atualizado com sucesso.' : 'Produto cadastrado com sucesso.')
 
       if (mode === 'create') {
@@ -1265,12 +1383,32 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
     } catch (submitError) {
       submissionLockRef.current = false
       setIsSubmitting(false)
+      setUploadProgress(null)
       showToast('error', submitError instanceof Error ? submitError.message : 'Falha ao salvar o produto.')
     }
   }
 
   return (
     <>
+      {showDraftRestoreDialog && mode === 'create' ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-lg font-semibold text-slate-950 dark:text-slate-50">Rascunho encontrado</p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Voce tem um rascunho salvo. Deseja restaura-lo ou comecar um novo cadastro?
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={discardDraftDialog}>
+                Novo cadastro
+              </Button>
+              <Button type="button" size="sm" className="rounded-xl" onClick={restoreDraft}>
+                Restaurar rascunho
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.55)] sm:p-6 dark:border-slate-800 dark:bg-[linear-gradient(180deg,#0f172a_0%,#020617_100%)]">
         <div
           aria-hidden="true"
@@ -1289,6 +1427,8 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   key={item.key}
                   type="button"
                   onClick={() => setStep(index)}
+                  aria-current={isActive ? 'step' : undefined}
+                  aria-label={`Etapa ${index + 1}: ${item.title}${isCompleted ? ' (concluida)' : isActive ? ' (atual)' : ''}`}
                   className={cn(
                     'group rounded-[1.5rem] border p-4 text-left transition-all',
                     isActive
@@ -1417,6 +1557,21 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       <option value="Unissex">Unissex</option>
                     </select>
                   </FieldGroup>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FieldGroup label="Peso (kg)" hint="Usado para calculo de frete">
+                      <Input type="number" step="0.01" min="0" value={form.weight} onChange={(e) => setForm(f => ({ ...f, weight: e.target.value }))} placeholder="0.30" className="h-11" />
+                    </FieldGroup>
+                    <FieldGroup label="Largura (cm)" hint="Usado para calculo de frete">
+                      <Input type="number" step="0.1" min="0" value={form.width} onChange={(e) => setForm(f => ({ ...f, width: e.target.value }))} placeholder="20" className="h-11" />
+                    </FieldGroup>
+                    <FieldGroup label="Altura (cm)" hint="Usado para calculo de frete">
+                      <Input type="number" step="0.1" min="0" value={form.height} onChange={(e) => setForm(f => ({ ...f, height: e.target.value }))} placeholder="30" className="h-11" />
+                    </FieldGroup>
+                    <FieldGroup label="Comprimento (cm)" hint="Usado para calculo de frete">
+                      <Input type="number" step="0.1" min="0" value={form.length} onChange={(e) => setForm(f => ({ ...f, length: e.target.value }))} placeholder="5" className="h-11" />
+                    </FieldGroup>
+                  </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FieldGroup label="Preco" hint="Valor de venda padrao.">
@@ -2103,7 +2258,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
             <Card className="border-0 bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
               <CardContent className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm text-slate-500 dark:text-slate-400">
-                  {step < stepItems.length - 1
+                  {uploadProgress ? (
+                    <span className="flex items-center gap-2 font-medium text-blue-600 dark:text-blue-400">
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Enviando imagens: {uploadProgress.completed} de {uploadProgress.total}
+                    </span>
+                  ) : step < stepItems.length - 1
                     ? 'Avance etapa por etapa para reduzir erros no cadastro.'
                     : 'Revise os dados e finalize o cadastro do produto.'}
                 </div>

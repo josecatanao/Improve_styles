@@ -72,7 +72,7 @@ export function StoreSearchBox({
       .toLowerCase()
 
     if (!normalizedQuery) {
-      return suggestions.slice(0, 8)
+      return suggestions.slice(0, 12)
     }
 
     return suggestions
@@ -109,7 +109,7 @@ export function StoreSearchBox({
       .filter(({ score }) => score > 0)
       .sort((a, b) => b.score - a.score || a.item.label.localeCompare(b.item.label))
       .map(({ item }) => item)
-      .slice(0, 8)
+      .slice(0, 12)
   }, [suggestions, debouncedTerm])
 
   const showRecent = value.trim().length === 0 && recentSearches.length > 0

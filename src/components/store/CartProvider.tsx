@@ -1,12 +1,13 @@
 'use client'
 
-import { createContext, useContext, useSyncExternalStore, useEffect, useRef } from 'react'
+import { createContext, useContext, useSyncExternalStore, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 
 export type CartItem = {
   id: string
   productId: string
   name: string
+  category?: string | null
   price: number
   quantity: number
   image: string | null
@@ -14,6 +15,10 @@ export type CartItem = {
   colorName?: string | null
   colorHex?: string | null
   sku?: string | null
+}
+
+export function buildCartItemId(productId: string, colorHex?: string | null, size?: string | null): string {
+  return `${productId}:${colorHex || 'no-color'}:${size || 'no-size'}`
 }
 
 type CartContextValue = {
@@ -29,12 +34,16 @@ type CartContextValue = {
   addToWishlist: (productId: string) => void
   removeFromWishlist: (productId: string) => void
   isInWishlist: (productId: string) => boolean
+  appliedCoupon: { id: string; code: string; discount_type: 'percentage' | 'fixed' | 'free_shipping'; discount_value: number; min_order_value: number | null; productIds: string[]; categories: string[] } | null
+  applyCoupon: (coupon: { id: string; code: string; discount_type: 'percentage' | 'fixed' | 'free_shipping'; discount_value: number; min_order_value: number | null; productIds: string[]; categories: string[] }) => void
+  removeCoupon: () => void
 }
 
 const CART_STORAGE_KEY = 'improve-style-cart'
 const CART_EVENT = 'improve-style-cart-updated'
 const WISHLIST_STORAGE_KEY = 'improve-style-wishlist'
 const WISHLIST_EVENT = 'improve-style-wishlist-updated'
+const COUPON_STORAGE_KEY = 'improve-style-coupon'
 const CartContext = createContext<CartContextValue | null>(null)
 const EMPTY_CART: CartItem[] = []
 const EMPTY_WISHLIST: string[] = []
@@ -152,18 +161,39 @@ function getItemTotals(items: CartItem[]) {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const items = useSyncExternalStore(subscribeCart, readItemsFromStorage, () => EMPTY_CART)
   const wishlist = useSyncExternalStore(subscribeWishlist, readWishlistFromStorage, () => EMPTY_WISHLIST)
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount_type: 'percentage' | 'fixed' | 'free_shipping'; discount_value: number; min_order_value: number | null; productIds: string[]; categories: string[] } | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const stored = window.localStorage.getItem(COUPON_STORAGE_KEY)
+      return stored ? JSON.parse(stored) : null
+    } catch { return null }
+  })
   const { totalItems, totalPrice } = getItemTotals(items)
+
+  useEffect(() => {
+    if (appliedCoupon) {
+      localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(appliedCoupon))
+    } else {
+      localStorage.removeItem(COUPON_STORAGE_KEY)
+    }
+  }, [appliedCoupon])
   const supabase = createClient()
   const userIdRef = useRef<string | null>(null)
-  const isHydratedRef = useRef(false)
+  const appliedCouponRef = useRef(appliedCoupon)
+  const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    appliedCouponRef.current = appliedCoupon
+  }, [appliedCoupon])
 
   useEffect(() => {
     async function fetchDBCart(userId: string, isLoginEvent: boolean) {
-      const { data } = await supabase.from('customer_profiles').select('cart, wishlist').eq('id', userId).single()
+      const { data } = await supabase.from('customer_profiles').select('cart, wishlist, coupon').eq('id', userId).single()
       const dbCart = (data?.cart as CartItem[]) || []
       const dbWishlist = (data?.wishlist as string[]) || EMPTY_WISHLIST
+      const dbCoupon = (data?.coupon as { id: string; code: string; discount_type: 'percentage' | 'fixed' | 'free_shipping'; discount_value: number; min_order_value: number | null; productIds: string[]; categories: string[] } | null) || null
 
-      if (isLoginEvent) {
+        if (isLoginEvent) {
         const currentLocal = readItemsFromStorage()
         const merged = [...dbCart]
 
@@ -181,6 +211,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const currentLocalWishlist = readWishlistFromLocalStorage()
         const mergedWishlist = [...new Set([...dbWishlist, ...currentLocalWishlist])]
         writeWishlistToStorage(mergedWishlist)
+
+        if (dbCoupon && !appliedCouponRef.current) {
+          setAppliedCoupon(dbCoupon)
+        }
       } else {
         writeItemsToStorage(dbCart)
         const currentLocalWishlist = readWishlistFromLocalStorage()
@@ -199,7 +233,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       } else if (event === 'SIGNED_OUT') {
         userIdRef.current = null
         writeItemsToStorage([])
-        writeWishlistToStorage([])
+        setAppliedCoupon(null)
       }
     })
 
@@ -212,18 +246,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
-    isHydratedRef.current = true
+    const readyTimer = window.setTimeout(() => {
+      setIsReady(true)
+    }, 0)
 
     return () => {
+      window.clearTimeout(readyTimer)
       authListener.subscription.unsubscribe()
     }
   }, [supabase])
 
   useEffect(() => {
-    if (isHydratedRef.current && userIdRef.current) {
-      void supabase.from('customer_profiles').update({ cart: items, wishlist }).eq('id', userIdRef.current)
+    if (isReady && userIdRef.current) {
+      void supabase.from('customer_profiles').update({ cart: items, wishlist, coupon: appliedCoupon }).eq('id', userIdRef.current)
     }
-  }, [items, wishlist, supabase])
+  }, [appliedCoupon, isReady, items, supabase, wishlist])
 
   function addItem(item: CartItem) {
     const current = readItemsFromStorage()
@@ -262,6 +299,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   function clearCart() {
     writeItemsToStorage([])
+    setAppliedCoupon(null)
+  }
+
+  function applyCoupon(coupon: { id: string; code: string; discount_type: 'percentage' | 'fixed' | 'free_shipping'; discount_value: number; min_order_value: number | null; productIds: string[]; categories: string[] }) {
+    setAppliedCoupon(coupon)
+  }
+
+  function removeCoupon() {
+    setAppliedCoupon(null)
   }
 
   function addToWishlist(productId: string) {
@@ -284,7 +330,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     <CartContext.Provider
       value={{
         items,
-        isReady: true,
+        isReady: isReady,
         totalItems,
         totalPrice,
         addItem,
@@ -295,6 +341,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         addToWishlist,
         removeFromWishlist,
         isInWishlist,
+        appliedCoupon,
+        applyCoupon,
+        removeCoupon,
       }}
     >
       {children}

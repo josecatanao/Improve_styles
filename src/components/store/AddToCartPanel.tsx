@@ -17,9 +17,15 @@ import {
   Truck,
 } from 'lucide-react'
 import type { ProductDetail } from '@/lib/product-shared'
-import { useCart } from '@/components/store/CartProvider'
+import { useCart, buildCartItemId } from '@/components/store/CartProvider'
 import { useToast } from '@/components/ui/feedback-provider'
-import { calculateProductShipping } from '@/app/produto/actions'
+import { calculateShipping, type ShippingCalculation } from '@/lib/shipping'
+import { validateCoupon } from '@/app/checkout/actions'
+import {
+  calculateCouponDiscountFromItems,
+  couponMeetsMinimumOrderValue,
+  getEligibleCouponItems,
+} from '@/lib/store-coupons'
 import {
   formatMoney,
   getExactVariant,
@@ -63,7 +69,7 @@ export function AddToCartPanel({
   onSelectionChange?: (selection: SelectionSnapshot) => void
 }) {
   const router = useRouter()
-  const { addItem } = useCart()
+  const { addItem, appliedCoupon, applyCoupon, removeCoupon } = useCart()
   const toast = useToast()
   const hasVariants = hasRealVariants(product)
   const initialSelection = useMemo(() => getFirstAvailableVariantSelection(product), [product])
@@ -72,20 +78,11 @@ export function AddToCartPanel({
   const [quantity, setQuantity] = useState(1)
   const [added, setAdded] = useState(false)
   const [cep, setCep] = useState('')
-  const [shippingResult, setShippingResult] = useState<{
-    local: {
-      price: number
-      days: number
-      zoneName: string
-      freeShippingThreshold: number | null
-    } | null
-    correios: {
-      pac: { price: number; minDays: number; maxDays: number }
-      sedex: { price: number; minDays: number; maxDays: number }
-    } | null
-    error: string | null
-  } | null>(null)
+  const [shippingResult, setShippingResult] = useState<ShippingCalculation | null>(null)
   const [calculatingShipping, setCalculatingShipping] = useState(false)
+  const [couponInput, setCouponInput] = useState('')
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [applyingCoupon, setApplyingCoupon] = useState(false)
 
   const colorOptions = useMemo(() => getVariantColorOptions(product), [product])
   const sizeOptions = useMemo(() => getVariantSizeOptions(product, selectedColor), [product, selectedColor])
@@ -110,6 +107,17 @@ export function AddToCartPanel({
           (selectedColor && item.assigned_color_name === selectedColor))
     )?.public_url ?? getProductPrimaryImage(product)
   const stockMessage = getVariantStockMessage(availableStock)
+  const currentScopedItems = useMemo(
+    () => [
+      {
+        productId: product.id,
+        productCategory: product.category?.trim() ?? null,
+        price: displayPrice,
+        quantity,
+      },
+    ],
+    [displayPrice, product.category, product.id, quantity]
+  )
   const effectiveColorName = selectedColor ?? initialSelection.colorName
   const effectiveSize = resolvedSelectedSize ?? initialSelection.size
   const canPurchase = availableStock > 0
@@ -165,16 +173,19 @@ export function AddToCartPanel({
       return
     }
 
+    const colorHex = selectedVariant?.color_hex ?? colorOptions.find((item) => item.name === effectiveColorName)?.hex ?? null
+
     addItem({
-      id: `${product.id}:${selectedVariant?.id ?? 'default'}:${effectiveColorName ?? 'sem-cor'}:${effectiveSize ?? 'sem-tamanho'}`,
+      id: buildCartItemId(product.id, colorHex, hasVariants ? effectiveSize : null),
       productId: product.id,
       name: product.name,
+      category: product.category ?? null,
       price: displayPrice,
       quantity,
       image,
       size: hasVariants ? effectiveSize : null,
       colorName: hasVariants ? effectiveColorName : null,
-      colorHex: selectedVariant?.color_hex ?? colorOptions.find((item) => item.name === effectiveColorName)?.hex ?? null,
+      colorHex,
       sku: selectedVariant?.sku ?? product.sku ?? null,
     })
 
@@ -221,17 +232,67 @@ export function AddToCartPanel({
     setShippingResult(null)
 
     const productWeight = product.weight ?? null
-    const productDimensions =
-      product.width != null && product.height != null && product.length != null
-        ? { width: product.width, height: product.height, length: product.length }
-        : null
 
     try {
-      const result = await calculateProductShipping(cleanCep, productWeight, productDimensions)
+      const result = await calculateShipping(cleanCep, { productWeight, orderTotal: 0 })
       setShippingResult(result)
     } finally {
       setCalculatingShipping(false)
     }
+  }
+
+  const couponDiscountUnit = useMemo(() => {
+    if (!appliedCoupon) return 0
+    const eligibleItems = getEligibleCouponItems(currentScopedItems, appliedCoupon)
+    if (eligibleItems.length === 0) return 0
+    if (!couponMeetsMinimumOrderValue(eligibleItems, appliedCoupon)) return 0
+    const totalDiscount = calculateCouponDiscountFromItems(eligibleItems, appliedCoupon)
+    return quantity > 0 ? totalDiscount / quantity : 0
+  }, [appliedCoupon, currentScopedItems, quantity])
+
+  const finalUnitPrice = Math.max(0, displayPrice - couponDiscountUnit)
+  const couponAppliesToSelection =
+    !!appliedCoupon &&
+    getEligibleCouponItems(currentScopedItems, appliedCoupon).length > 0 &&
+    couponMeetsMinimumOrderValue(currentScopedItems, appliedCoupon) &&
+    (appliedCoupon.discount_type === 'free_shipping' || couponDiscountUnit > 0)
+
+  async function handleApplyCoupon() {
+    const code = couponInput.trim().toUpperCase()
+    if (!code) return
+    setApplyingCoupon(true)
+    setCouponError(null)
+    try {
+      const result = await validateCoupon(code)
+      if (result.valid && result.coupon) {
+        const coupon = result.coupon
+        const eligibleItems = getEligibleCouponItems(currentScopedItems, coupon)
+        if (eligibleItems.length === 0) {
+          setCouponError('Este cupom nao se aplica a este produto.')
+          return
+        }
+
+        if (!couponMeetsMinimumOrderValue(eligibleItems, coupon)) {
+          setCouponError('Este cupom ainda nao atende ao valor minimo para este produto.')
+          return
+        }
+
+        applyCoupon(coupon)
+        setCouponInput('')
+        toast({ variant: 'success', title: 'Cupom aplicado', description: `Desconto de ${coupon.code} aplicado.` })
+      } else {
+        setCouponError(result.error || 'Cupom invalido.')
+      }
+    } catch (err) {
+      setCouponError(err instanceof Error ? err.message : 'Erro ao validar cupom.')
+    } finally {
+      setApplyingCoupon(false)
+    }
+  }
+
+  function handleRemoveCoupon() {
+    removeCoupon()
+    setCouponError(null)
   }
 
   return (
@@ -260,31 +321,34 @@ export function AddToCartPanel({
                 <p className="text-sm text-slate-400">
                   De: <span className="line-through">{formatMoney(displayComparePrice)}</span>
                 </p>
+              ) : couponAppliesToSelection ? (
+                <p className="text-sm text-slate-400">
+                  De: <span className="line-through">{formatMoney(displayPrice)}</span>
+                </p>
               ) : null}
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[1.9rem] font-semibold tracking-tight text-slate-950 sm:text-4xl">{formatMoney(displayPrice)}</p>
+                <p className={`text-[1.9rem] font-semibold tracking-tight sm:text-4xl ${
+                  couponAppliesToSelection ? 'text-emerald-600' : 'text-slate-950'
+                }`}>
+                  {formatMoney(couponAppliesToSelection ? finalUnitPrice : displayPrice)}
+                </p>
                 {discountPercentage ? (
                   <span className="rounded-none bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
                     -{discountPercentage}%
                   </span>
                 ) : null}
+                {couponAppliesToSelection && appliedCoupon ? (
+                  <span className="rounded-none bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                    {appliedCoupon.discount_type === 'free_shipping' ? 'Frete gratis' : appliedCoupon.discount_type === 'percentage' ? `-${appliedCoupon.discount_value}%` : `-${formatMoney(appliedCoupon.discount_value)}`}
+                  </span>
+                ) : null}
               </div>
+              {couponAppliesToSelection && appliedCoupon ? (
+                <p className="text-xs font-medium text-emerald-600">
+                  Preco com cupom {appliedCoupon.code}
+                </p>
+              ) : null}
             </div>
-
-            <span
-              className={`rounded-none px-3 py-1.5 text-xs font-semibold ring-1 ${
-                availableStock <= 0
-                  ? 'bg-red-50 text-red-700 ring-red-100'
-                  : availableStock <= 3
-                    ? 'bg-amber-50 text-amber-700 ring-amber-100'
-                    : 'bg-emerald-50 text-emerald-700 ring-emerald-100'
-              }`}
-            >
-              <span className="inline-flex items-center gap-1.5">
-                {availableStock > 0 && availableStock <= 3 ? <Rocket className="h-3.5 w-3.5" /> : null}
-                {stockMessage}
-              </span>
-            </span>
           </div>
 
           {product.average_rating != null ? (
@@ -425,7 +489,23 @@ export function AddToCartPanel({
         ) : null}
 
         <div className="space-y-3">
-          <p className="text-sm font-semibold text-slate-950">Quantidade</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-950">Quantidade</p>
+            <span
+              className={`rounded-none px-2.5 py-1 text-xs font-semibold ring-1 ${
+                availableStock <= 0
+                  ? 'bg-red-50 text-red-700 ring-red-100'
+                  : availableStock <= 3
+                    ? 'bg-amber-50 text-amber-700 ring-amber-100'
+                    : 'bg-emerald-50 text-emerald-700 ring-emerald-100'
+              }`}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                {availableStock > 0 && availableStock <= 3 ? <Rocket className="h-3 w-3" /> : null}
+                {stockMessage}
+              </span>
+            </span>
+          </div>
           <div className="inline-flex items-center rounded-none border border-slate-200 bg-slate-50">
             <button
               type="button"
@@ -505,6 +585,46 @@ export function AddToCartPanel({
           ) : null}
         </div>
 
+        {isAuthenticated ? (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-slate-950">Cupom de desconto</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Digite o codigo"
+                value={couponInput}
+                onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(null) }}
+                disabled={!!appliedCoupon}
+                className="h-10 flex-1 rounded-none border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 disabled:bg-slate-50 sm:h-11"
+              />
+              {appliedCoupon ? (
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="inline-flex h-10 items-center justify-center rounded-none border border-red-200 bg-white px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 sm:h-11"
+                >
+                  Remover
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  disabled={!couponInput.trim() || applyingCoupon}
+                  className="inline-flex h-10 items-center justify-center rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 sm:h-11"
+                >
+                  {applyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+                </button>
+              )}
+            </div>
+            {couponError ? <p className="text-xs text-red-500">{couponError}</p> : null}
+            {couponAppliesToSelection && appliedCoupon ? (
+              <p className="text-xs text-emerald-600">
+                Cupom <span className="font-semibold">{appliedCoupon.code}</span> aplicado
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="grid gap-3 pt-1">
           {isAuthenticated ? (
             <button
@@ -515,7 +635,7 @@ export function AddToCartPanel({
                 }
 
                 handleAddToCart()
-                router.push('/checkout')
+                router.push(`/checkout${couponAppliesToSelection && appliedCoupon ? `?coupon=${encodeURIComponent(appliedCoupon.code)}` : ''}`)
               }}
               disabled={!canPurchase}
               className="inline-flex h-12 items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"

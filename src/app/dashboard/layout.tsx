@@ -1,5 +1,6 @@
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
+import { Breadcrumb } from '@/components/layout/Breadcrumb'
 import { getRecentOrderSignals } from '@/lib/orders'
 import { getPublicStoreSettings } from '@/lib/store-branding'
 import { buildStoreBrandStyle, normalizeStoreSettings } from '@/lib/store-settings'
@@ -57,6 +58,7 @@ export default async function DashboardLayout({
 
         <main className="flex-1 overflow-y-auto p-4 pt-16 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
           <div className="mx-auto max-w-7xl">
+            <Breadcrumb />
             {children}
           </div>
         </main>

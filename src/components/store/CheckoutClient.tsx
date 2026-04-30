@@ -7,8 +7,14 @@ import { Loader2, MapPin, Navigation2, TicketPercent, Truck, X } from 'lucide-re
 import { useCart } from '@/components/store/CartProvider'
 import { useToast } from '@/components/ui/feedback-provider'
 import type { CustomerProfile } from '@/lib/customer-shared'
+import {
+  calculateCouponDiscountFromItems,
+  couponMeetsMinimumOrderValue,
+  getEligibleCouponItems,
+} from '@/lib/store-coupons'
 import { formatMoney } from '@/lib/storefront'
-import { submitOrder, calculateShipping, validateCoupon } from '@/app/checkout/actions'
+import { submitOrder, validateCoupon } from '@/app/checkout/actions'
+import { calculateShipping } from '@/lib/shipping'
 import { readStoredOrders, saveStoreOrder, type StoreOrder, type StoreOrderCustomer } from '@/lib/store-orders'
 
 const SESSION_ORDER_KEY = 'improve-styles-last-order-id'
@@ -18,8 +24,21 @@ type CheckoutInitialProfile = CustomerProfile & {
   delivery_lng?: number | null
 }
 
-export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: CheckoutInitialProfile | null; orderId?: string }) {
-  const { items, totalPrice, clearCart, isReady } = useCart()
+function getEligibleCartItems(
+  items: ReturnType<typeof useCart>['items'],
+  coupon: NonNullable<Awaited<ReturnType<typeof validateCoupon>>['coupon']>
+) {
+  return getEligibleCouponItems(
+    items.map((item) => ({
+      ...item,
+      productCategory: item.category ?? null,
+    })),
+    coupon
+  )
+}
+
+export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { initialProfile?: CheckoutInitialProfile | null; orderId?: string; initialCoupon?: string | null }) {
+  const { items, totalPrice, clearCart, isReady, appliedCoupon, applyCoupon, removeCoupon } = useCart()
   const showToast = useToast()
   const router = useRouter()
   const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items])
@@ -50,22 +69,51 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
     notFound: boolean
   } | null>(null)
   const [couponInput, setCouponInput] = useState('')
-  const [appliedCoupon, setAppliedCoupon] = useState<{
-    code: string
-    discount_type: 'percentage' | 'fixed'
-    discount_value: number
-  } | null>(null)
   const [couponError, setCouponError] = useState<string | null>(null)
   const [applyingCoupon, setApplyingCoupon] = useState(false)
 
-  useEffect(() => {
-    const effectiveId = orderId || sessionStorage.getItem(SESSION_ORDER_KEY)
-    if (!effectiveId || !isReady) return
-    if (items.length > 0) return
+  const recoveredOrder = useMemo(() => {
+    const effectiveId =
+      orderId || (typeof window !== 'undefined' ? sessionStorage.getItem(SESSION_ORDER_KEY) : null)
+    if (!effectiveId || !isReady || items.length > 0) return null
     const orders = readStoredOrders()
-    const found = orders.find((o) => o.id === effectiveId)
-    if (found) setSubmittedOrder(found)
+    return orders.find((order) => order.id === effectiveId) ?? null
   }, [orderId, isReady, items.length])
+
+  const visibleOrder = submittedOrder ?? recoveredOrder
+
+  useEffect(() => {
+    if (initialCoupon && !appliedCoupon) {
+      validateCoupon(initialCoupon).then((result) => {
+        if (!result.valid || !result.coupon) return
+        const eligibleItems = getEligibleCartItems(items, result.coupon)
+        if (eligibleItems.length === 0) return
+        if (!couponMeetsMinimumOrderValue(eligibleItems, result.coupon)) {
+          return
+        }
+        applyCoupon(result.coupon)
+      })
+    }
+  }, [appliedCoupon, applyCoupon, initialCoupon, items])
+
+  const couponDiscount = useMemo(() => {
+    if (!appliedCoupon) return 0
+    const scopedItems = items.map((item) => ({
+      ...item,
+      productCategory: item.category ?? null,
+    }))
+    const eligibleItems = getEligibleCouponItems(scopedItems, appliedCoupon)
+    if (eligibleItems.length === 0) return 0
+    return calculateCouponDiscountFromItems(eligibleItems, appliedCoupon)
+  }, [appliedCoupon, items])
+
+  const finalTotalPrice = Math.max(0, totalPrice - couponDiscount)
+  const effectiveShippingCost =
+    shippingResult && !shippingResult.notFound
+      ? appliedCoupon?.discount_type === 'free_shipping'
+        ? 0
+        : shippingResult.cost
+      : 0
 
   const hasRequiredCustomerData = 
     customer.name.trim().length > 0 && 
@@ -120,12 +168,12 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
     )
   }
 
-  if (submittedOrder) {
+  if (visibleOrder) {
     return (
       <div className="rounded-none border border-emerald-200 bg-emerald-50 p-8 text-center">
         <p className="text-lg font-semibold text-emerald-800">Pedido salvo com sucesso.</p>
         <p className="mt-2 text-sm text-emerald-700">
-          O pedido <span className="font-semibold">{submittedOrder.id}</span> foi registrado neste navegador e o carrinho foi liberado para uma nova compra.
+          O pedido <span className="font-semibold">{visibleOrder.id}</span> foi registrado neste navegador e o carrinho foi liberado para uma nova compra.
         </p>
         <Link
           href="/conta"
@@ -142,15 +190,28 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
     setCalculatingShipping(true)
     setShippingResult(null)
     try {
-      const result = await calculateShipping(shippingZip, totalPrice)
-      setShippingResult({
-        cost: result.shippingCost,
-        estimatedDays: result.estimatedDays,
-        zoneName: result.zoneName,
-        zoneId: result.zoneId,
-        isFree: result.isFree,
-        notFound: result.notFound,
-      })
+      const result = await calculateShipping(shippingZip, { orderTotal: totalPrice })
+      if (result.local) {
+        setShippingResult({
+          cost: result.local.price,
+          estimatedDays: result.local.days,
+          zoneName: result.local.zoneName,
+          zoneId: null,
+          isFree: result.local.isFree,
+          notFound: false,
+        })
+      } else if (result.correios) {
+        setShippingResult({
+          cost: result.correios.pac.price,
+          estimatedDays: result.correios.pac.maxDays,
+          zoneName: 'Correios PAC',
+          zoneId: null,
+          isFree: false,
+          notFound: false,
+        })
+      } else {
+        setShippingResult({ cost: 0, estimatedDays: 0, zoneName: null, zoneId: null, isFree: false, notFound: true })
+      }
     } catch {
       setShippingResult({ cost: 0, estimatedDays: 0, zoneName: null, zoneId: null, isFree: false, notFound: true })
     } finally {
@@ -166,7 +227,18 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
     try {
       const result = await validateCoupon(code)
       if (result.valid && result.coupon) {
-        setAppliedCoupon(result.coupon)
+        const eligibleItems = getEligibleCartItems(items, result.coupon)
+        if (eligibleItems.length === 0) {
+          setCouponError('Nenhum produto no carrinho e elegivel para este cupom.')
+          return
+        }
+
+        if (!couponMeetsMinimumOrderValue(eligibleItems, result.coupon)) {
+          setCouponError('O carrinho ainda nao atende ao valor minimo para este cupom.')
+          return
+        }
+
+        applyCoupon(result.coupon)
         setCouponInput('')
         showToast({ variant: 'success', title: 'Cupom aplicado', description: `Desconto de ${result.coupon.code} aplicado.` })
       } else {
@@ -180,19 +252,9 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
   }
 
   function handleRemoveCoupon() {
-    setAppliedCoupon(null)
+    removeCoupon()
     setCouponError(null)
   }
-
-  const couponDiscount = useMemo(() => {
-    if (!appliedCoupon) return 0
-    if (appliedCoupon.discount_type === 'fixed') {
-      return Math.min(appliedCoupon.discount_value, totalPrice)
-    }
-    return Math.round((totalPrice * appliedCoupon.discount_value) / 100 * 100) / 100
-  }, [appliedCoupon, totalPrice])
-
-  const finalTotalPrice = Math.max(0, totalPrice - couponDiscount)
 
   async function handleConfirmOrder() {
     setIsSubmitting(true)
@@ -214,11 +276,11 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
         createdAt: new Date().toISOString(),
         customer,
         items,
-        totalPrice,
-        totalItems,
+        totalPrice: response.totalPrice,
+        totalItems: response.totalItems,
         shipping: shippingResult
           ? {
-              cost: shippingResult.cost,
+              cost: response.shippingCost,
               zoneId: shippingResult.zoneId,
               zoneName: shippingResult.zoneName,
               zip: shippingZip,
@@ -229,6 +291,7 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
 
       saveStoreOrder(order)
       clearCart()
+      removeCoupon()
       sessionStorage.setItem(SESSION_ORDER_KEY, response.orderId)
       setSubmittedOrder(order)
       router.replace(`/checkout?orderId=${response.orderId}`)
@@ -451,7 +514,7 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
               {appliedCoupon ? (
                 <p className="text-xs text-emerald-600">
                   Cupom <span className="font-semibold">{appliedCoupon.code}</span> aplicado
-                  ({appliedCoupon.discount_type === 'percentage' ? `${appliedCoupon.discount_value}%` : formatMoney(appliedCoupon.discount_value)} de desconto)
+                  ({appliedCoupon.discount_type === 'free_shipping' ? 'Frete gratis' : appliedCoupon.discount_type === 'percentage' ? `${appliedCoupon.discount_value}%` : formatMoney(appliedCoupon.discount_value)} de desconto)
                 </p>
               ) : null}
             </label>
@@ -517,7 +580,9 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
         {appliedCoupon ? (
           <div className="mt-1 flex items-center justify-between text-sm">
             <span className="text-emerald-600">Desconto ({appliedCoupon.code})</span>
-            <span className="font-medium text-emerald-600">-{formatMoney(couponDiscount)}</span>
+            <span className="font-medium text-emerald-600">
+              {appliedCoupon.discount_type === 'free_shipping' ? 'Frete gratis' : `-${formatMoney(couponDiscount)}`}
+            </span>
           </div>
         ) : null}
 
@@ -532,7 +597,7 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
               Frete{shippingResult.isFree ? ' (gratis)' : ''}
             </span>
             <span className="text-sm font-medium text-slate-900">
-              {shippingResult.isFree ? 'Gratis' : formatMoney(shippingResult.cost)}
+              {effectiveShippingCost === 0 ? 'Gratis' : formatMoney(effectiveShippingCost)}
             </span>
           </div>
         ) : null}
@@ -545,7 +610,7 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
         <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-3">
           <span className="text-sm font-medium text-slate-700">Total</span>
           <span className="text-2xl font-semibold text-slate-950">
-            {formatMoney(finalTotalPrice + ((shippingResult && !shippingResult.notFound) ? shippingResult.cost : 0))}
+            {formatMoney(finalTotalPrice + effectiveShippingCost)}
           </span>
         </div>
 
@@ -568,7 +633,7 @@ export function CheckoutClient({ initialProfile, orderId }: { initialProfile?: C
           {shippingResult && !shippingResult.notFound ? (
             <p className="mt-2 text-slate-500">
               <Truck className="mb-0.5 mr-1.5 inline-block h-3.5 w-3.5" />
-              {shippingResult.isFree ? 'Frete gratis' : `Frete: ${formatMoney(shippingResult.cost)}`}
+              {effectiveShippingCost === 0 ? 'Frete gratis' : `Frete: ${formatMoney(effectiveShippingCost)}`}
               {shippingResult.estimatedDays > 0 ? ` • ${shippingResult.estimatedDays} dias uteis` : ''}
             </p>
           ) : null}

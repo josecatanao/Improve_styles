@@ -3,6 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import type { CartItem } from '@/components/store/CartProvider'
+import {
+  calculateCouponDiscountFromItems,
+  getEligibleCouponItems,
+} from '@/lib/store-coupons'
+import { validateCouponOnServer } from '@/lib/store-coupons.server'
 
 type CheckoutPayload = {
   customer: {
@@ -31,75 +36,13 @@ export type ValidateCouponResult = {
   coupon?: {
     id: string
     code: string
-    discount_type: 'percentage' | 'fixed'
+    discount_type: 'percentage' | 'fixed' | 'free_shipping'
     discount_value: number
+    min_order_value: number | null
+    productIds: string[]
+    categories: string[]
   }
   error?: string
-}
-
-function stripNonDigits(value: string) {
-  return value.replace(/\D/g, '')
-}
-
-export async function calculateShipping(zipCode: string, orderTotal: number) {
-  const supabase = await createClient()
-  const cleanZip = stripNonDigits(zipCode)
-
-  const { data: zones, error } = await supabase
-    .from('shipping_zones')
-    .select('*')
-    .eq('is_active', true)
-
-  if (error || !zones || zones.length === 0) {
-    return {
-      shippingCost: 0,
-      estimatedDays: 0,
-      zoneName: null,
-      zoneId: null,
-      isFree: false,
-      notFound: false,
-    }
-  }
-
-  const matchingZone = zones.find((zone) => {
-    const start = stripNonDigits(zone.zip_code_start)
-    const end = stripNonDigits(zone.zip_code_end)
-    return cleanZip >= start && cleanZip <= end
-  })
-
-  if (!matchingZone) {
-    return {
-      shippingCost: 0,
-      estimatedDays: 0,
-      zoneName: null,
-      zoneId: null,
-      isFree: false,
-      notFound: true,
-    }
-  }
-
-  const basePrice = Number(matchingZone.base_price)
-  const threshold = matchingZone.free_shipping_threshold ? Number(matchingZone.free_shipping_threshold) : null
-
-  if (threshold !== null && orderTotal >= threshold) {
-    return {
-      shippingCost: 0,
-      estimatedDays: matchingZone.estimated_days,
-      zoneName: matchingZone.name,
-      zoneId: matchingZone.id,
-      isFree: true,
-      notFound: false,
-    }
-  }
-
-  return {
-    shippingCost: basePrice,
-    estimatedDays: matchingZone.estimated_days,
-    zoneName: matchingZone.name,
-    zoneId: matchingZone.id,
-    isFree: false,
-    notFound: false,
-  }
 }
 
 function validateCheckoutPayload(payload: CheckoutPayload) {
@@ -133,44 +76,12 @@ function validateCheckoutPayload(payload: CheckoutPayload) {
 }
 
 export async function validateCoupon(code: string): Promise<ValidateCouponResult> {
-  const normalizedCode = code.trim().toUpperCase()
-
-  if (!normalizedCode) {
-    return { valid: false, error: 'Informe um codigo de cupom.' }
-  }
-
-  const supabase = await createClient()
-
-  const { data, error } = await supabase
-    .from('store_coupons')
-    .select('id, code, discount_type, discount_value, min_order_value, max_uses, current_uses, is_active, expires_at')
-    .ilike('code', normalizedCode)
-    .single()
-
-  if (error || !data) {
-    return { valid: false, error: 'Cupom nao encontrado.' }
-  }
-
-  if (!data.is_active) {
-    return { valid: false, error: 'Este cupom nao esta mais ativo.' }
-  }
-
-  if (data.expires_at && new Date(data.expires_at) < new Date()) {
-    return { valid: false, error: 'Este cupom expirou.' }
-  }
-
-  if (data.max_uses !== null && data.current_uses >= data.max_uses) {
-    return { valid: false, error: 'Este cupom atingiu o limite de uso.' }
-  }
+  const { coupon, error } = await validateCouponOnServer(code)
 
   return {
-    valid: true,
-    coupon: {
-      id: data.id,
-      code: data.code,
-      discount_type: data.discount_type,
-      discount_value: data.discount_value,
-    },
+    valid: Boolean(coupon),
+    coupon: coupon ?? undefined,
+    error: error ?? undefined,
   }
 }
 
@@ -203,47 +114,111 @@ export async function submitOrder(payload: CheckoutPayload) {
 
   const { data: dbProducts } = await supabase
     .from('products')
-    .select('id, price')
+    .select('id, price, category')
     .in('id', productIds)
 
   const priceMap = new Map<string, number>()
+  const categoryMap = new Map<string, string | null>()
   if (dbProducts) {
     for (const product of dbProducts) {
       priceMap.set(product.id, Number(product.price))
+      categoryMap.set(product.id, product.category ?? null)
+    }
+  }
+
+  const { data: dbVariants } = await supabase
+    .from('product_variants')
+    .select('product_id, color_hex, size, price')
+    .in('product_id', productIds)
+
+  const variantPriceMap = new Map<string, number>()
+  if (dbVariants) {
+    for (const v of dbVariants) {
+      const key = `${v.product_id}:${v.color_hex || ''}:${v.size || ''}`
+      if (v.price != null) {
+        variantPriceMap.set(key, Number(v.price))
+      }
     }
   }
 
   let verifiedTotalPrice = 0
   const verifiedItems = payload.items.map((item) => {
-    const verifiedPrice = priceMap.get(item.productId) ?? item.price
+    const variantKey = `${item.productId}:${item.colorHex || ''}:${item.size || ''}`
+    const verifiedPrice = variantPriceMap.get(variantKey) ?? priceMap.get(item.productId) ?? item.price
     verifiedTotalPrice += verifiedPrice * item.quantity
     return { ...item, price: verifiedPrice }
   })
 
+  const { data: productsStock } = await supabase
+    .from('products')
+    .select('id, stock')
+    .in('id', productIds)
+
+  const productStockMap = new Map<string, number>()
+  if (productsStock) {
+    for (const p of productsStock) {
+      productStockMap.set(p.id, Number(p.stock ?? 0))
+    }
+  }
+
+  const { data: variantsStock } = await supabase
+    .from('product_variants')
+    .select('product_id, color_hex, size, stock')
+    .in('product_id', productIds)
+
+  const variantStockMap = new Map<string, number>()
+  if (variantsStock) {
+    for (const v of variantsStock) {
+      const key = `${v.product_id}:${v.color_hex || ''}:${v.size || ''}`
+      variantStockMap.set(key, Number(v.stock ?? 0))
+    }
+  }
+
+  for (const item of verifiedItems) {
+    const variantKey = `${item.productId}:${item.colorHex || ''}:${item.size || ''}`
+    const availableStock = variantStockMap.get(variantKey) ?? productStockMap.get(item.productId) ?? 0
+    if (availableStock < item.quantity) {
+      throw new Error(`Estoque insuficiente para "${item.name}". Disponivel: ${availableStock}, solicitado: ${item.quantity}`)
+    }
+  }
+
   let discountAmount = 0
   let couponCode: string | null = null
+  let isFreeShippingCoupon = false
 
   if (payload.couponCode) {
     const couponResult = await validateCoupon(payload.couponCode)
-    if (couponResult.valid && couponResult.coupon) {
-      couponCode = couponResult.coupon.code
+    if (!couponResult.valid || !couponResult.coupon) {
+      throw new Error(couponResult.error || 'Cupom invalido.')
+    }
 
-      if (couponResult.coupon.discount_type === 'fixed') {
-        discountAmount = Math.min(couponResult.coupon.discount_value, verifiedTotalPrice)
-      } else {
-        discountAmount = Math.round((verifiedTotalPrice * couponResult.coupon.discount_value) / 100 * 100) / 100
-      }
+    const coupon = couponResult.coupon
 
-      const { data: currentCoupon } = await supabase
-        .from('store_coupons')
-        .select('current_uses')
-        .eq('id', couponResult.coupon.id)
-        .single()
+    const scopedItems = verifiedItems.map((item) => ({
+      ...item,
+      productCategory: categoryMap.get(item.productId) ?? null,
+    }))
+    const eligibleItems = getEligibleCouponItems(scopedItems, coupon)
 
-      await supabase
-        .from('store_coupons')
-        .update({ current_uses: (currentCoupon?.current_uses ?? 0) + 1 })
-        .eq('id', couponResult.coupon.id)
+    if (eligibleItems.length === 0) {
+      throw new Error('Nenhum produto no carrinho e elegivel para este cupom.')
+    }
+
+    const eligibleTotal = eligibleItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+    if (coupon.min_order_value != null && eligibleTotal < coupon.min_order_value) {
+      throw new Error(`Pedido minimo de R$ ${coupon.min_order_value.toFixed(2).replace('.', ',')} para usar este cupom`)
+    }
+
+    couponCode = coupon.code
+
+    if (coupon.discount_type === 'fixed') {
+      discountAmount = Math.min(coupon.discount_value, eligibleTotal)
+    } else if (coupon.discount_type === 'free_shipping') {
+      isFreeShippingCoupon = true
+      discountAmount = payload.shippingCost || 0
+    } else {
+      discountAmount = calculateCouponDiscountFromItems(eligibleItems, coupon)
     }
   }
 
@@ -282,7 +257,7 @@ export async function submitOrder(payload: CheckoutPayload) {
     total_items: verifiedTotalItems,
     coupon_code: couponCode,
     discount_amount: discountAmount,
-    shipping_cost: payload.shippingCost || 0,
+    shipping_cost: isFreeShippingCoupon ? 0 : (payload.shippingCost || 0),
     shipping_zone_name: payload.shippingZoneName || null,
     shipping_zip: payload.shippingZip || null,
   }).select('id').single()
@@ -313,8 +288,26 @@ export async function submitOrder(payload: CheckoutPayload) {
     throw new Error('Falha ao registrar os itens do pedido: ' + itemsError.message)
   }
 
+  if (couponCode) {
+    const { data: claimResult, error: claimError } = await supabase.rpc('claim_coupon_use', {
+      input_code: couponCode,
+    })
+
+    if (claimError) {
+      await supabase.from('store_order_items').delete().eq('order_id', orderId)
+      await supabase.from('store_orders').delete().eq('id', orderId)
+      throw new Error('Falha ao reservar o uso do cupom para este pedido.')
+    }
+
+    if (!claimResult) {
+      await supabase.from('store_order_items').delete().eq('order_id', orderId)
+      await supabase.from('store_orders').delete().eq('id', orderId)
+      throw new Error('Este cupom atingiu o limite de uso ou nao esta mais disponivel.')
+    }
+  }
+
   revalidatePath('/conta/pedidos')
   revalidatePath('/dashboard/pedidos')
 
-  return { success: true, orderId, totalPrice: finalTotalPrice, discountAmount, totalItems: verifiedTotalItems, shippingCost: payload.shippingCost || 0, shippingZoneName: payload.shippingZoneName || null }
+  return { success: true, orderId, totalPrice: finalTotalPrice, discountAmount, totalItems: verifiedTotalItems, shippingCost: isFreeShippingCoupon ? 0 : (payload.shippingCost || 0), shippingZoneName: payload.shippingZoneName || null }
 }

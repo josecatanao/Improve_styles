@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { Loader2, Plus, TicketPercent, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, ChevronDown, Loader2, Plus, Search, TicketPercent, Trash2, X } from 'lucide-react'
 import {
   createCoupon,
   deleteCoupon,
+  getCouponDetails,
+  getProductsForCoupon,
+  searchProductsForCoupon,
+  searchCategoriesForCoupon,
   toggleCoupon,
   updateCoupon,
 } from '@/app/dashboard/cupons/actions'
@@ -19,11 +23,13 @@ import { Switch } from '@/components/ui/switch'
 const EMPTY_FORM = {
   code: '',
   description: '',
-  discount_type: 'percentage' as 'percentage' | 'fixed',
+  discount_type: 'percentage' as 'percentage' | 'fixed' | 'free_shipping',
   discount_value: '',
   min_order_value: '',
   max_uses: '',
   expires_at: '',
+  product_ids: '',
+  categories: '',
 }
 
 function getErrorMessage(error: unknown) {
@@ -33,11 +39,6 @@ function getErrorMessage(error: unknown) {
 function formatDate(value: string | null) {
   if (!value) return '—'
   return new Date(value).toLocaleDateString('pt-BR')
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return '—'
-  return new Date(value).toLocaleString('pt-BR')
 }
 
 export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoupon[] }) {
@@ -56,7 +57,8 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
     setShowForm(false)
   }
 
-  function startEdit(coupon: StoreCoupon) {
+  async function startEdit(coupon: StoreCoupon) {
+    const details = await getCouponDetails(coupon.id)
     setForm({
       code: coupon.code,
       description: coupon.description || '',
@@ -65,6 +67,8 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
       min_order_value: String(coupon.min_order_value || ''),
       max_uses: coupon.max_uses ? String(coupon.max_uses) : '',
       expires_at: coupon.expires_at ? coupon.expires_at.slice(0, 16) : '',
+      product_ids: details.productIds.join(', '),
+      categories: details.categories.join(', '),
     })
     setEditingId(coupon.id)
     setShowForm(true)
@@ -81,6 +85,8 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
       formData.append('min_order_value', form.min_order_value)
       formData.append('max_uses', form.max_uses)
       formData.append('expires_at', form.expires_at)
+      formData.append('product_ids', form.product_ids)
+      formData.append('categories', form.categories)
       const created = await createCoupon(formData)
       setCoupons((current) => [created, ...current])
       resetForm()
@@ -109,6 +115,8 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
       formData.append('min_order_value', form.min_order_value)
       formData.append('max_uses', form.max_uses)
       formData.append('expires_at', form.expires_at)
+      formData.append('product_ids', form.product_ids)
+      formData.append('categories', form.categories)
       const updated = await updateCoupon(formData)
       setCoupons((current) => current.map((c) => (c.id === editingId ? updated : c)))
       resetForm()
@@ -192,7 +200,7 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
       </div>
 
       {showForm ? (
-        <Card className="border-0 shadow-sm ring-1 ring-slate-200">
+        <Card className="overflow-visible border-0 shadow-sm ring-1 ring-slate-200">
           <CardHeader>
             <CardTitle className="text-xl">{editingId ? 'Editar cupom' : 'Novo cupom'}</CardTitle>
             <CardDescription>
@@ -227,29 +235,32 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      discount_type: e.target.value as 'percentage' | 'fixed',
+                      discount_type: e.target.value as 'percentage' | 'fixed' | 'free_shipping',
                     }))
                   }
                   className="h-11 w-full rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                 >
                   <option value="percentage">Percentual (%)</option>
                   <option value="fixed">Valor fixo (R$)</option>
+                  <option value="free_shipping">Frete gratis</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  {form.discount_type === 'percentage' ? 'Percentual de desconto' : 'Valor do desconto (R$)'}
-                </label>
-                <Input
-                  type="number"
-                  step={form.discount_type === 'percentage' ? '1' : '0.01'}
-                  min="0"
-                  max={form.discount_type === 'percentage' ? '100' : undefined}
-                  value={form.discount_value}
-                  onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))}
-                  placeholder={form.discount_type === 'percentage' ? '20' : '50.00'}
-                />
-              </div>
+              {form.discount_type !== 'free_shipping' ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    {form.discount_type === 'percentage' ? 'Percentual de desconto' : 'Valor do desconto (R$)'}
+                  </label>
+                  <Input
+                    type="number"
+                    step={form.discount_type === 'percentage' ? '1' : '0.01'}
+                    min="0"
+                    max={form.discount_type === 'percentage' ? '100' : undefined}
+                    value={form.discount_value}
+                    onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))}
+                    placeholder={form.discount_type === 'percentage' ? '20' : '50.00'}
+                  />
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">Valor minimo do pedido (R$)</label>
                 <Input
@@ -280,12 +291,28 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
                   onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
                 />
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Produtos</label>
+                <ProductPicker
+                  selectedIds={form.product_ids.split(',').map((value) => value.trim()).filter(Boolean)}
+                  onChange={(ids) => setForm((f) => ({ ...f, product_ids: ids.join(',') }))}
+                />
+                <p className="text-xs text-slate-400">Deixe vazio para aplicar o cupom a todos os produtos.</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Categorias</label>
+                <CategoryPicker
+                  selected={form.categories.split(',').map((value) => value.trim()).filter(Boolean)}
+                  onChange={(cats) => setForm((f) => ({ ...f, categories: cats.join(',') }))}
+                />
+                <p className="text-xs text-slate-400">Deixe vazio para aplicar o cupom a todas as categorias.</p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Button
                 type="button"
                 onClick={editingId ? handleUpdate : handleCreate}
-                disabled={isCreating || !!busyId || !form.code.trim() || !form.discount_value}
+                disabled={isCreating || !!busyId || !form.code.trim() || (form.discount_type !== 'free_shipping' && !form.discount_value)}
                 className="bg-[#3483fa] hover:bg-[#2968c8]"
               >
                 {isCreating || busyId ? (
@@ -339,12 +366,18 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
                         </span>
                       </td>
                       <td className="px-3 py-3 text-slate-600">
-                        {coupon.discount_type === 'percentage' ? 'Percentual' : 'Valor fixo'}
+                        {coupon.discount_type === 'percentage'
+                          ? 'Percentual'
+                          : coupon.discount_type === 'free_shipping'
+                            ? 'Frete gratis'
+                            : 'Valor fixo'}
                       </td>
                       <td className="px-3 py-3 font-medium text-slate-900">
                         {coupon.discount_type === 'percentage'
                           ? `${coupon.discount_value}%`
-                          : formatMoney(coupon.discount_value)}
+                          : coupon.discount_type === 'free_shipping'
+                            ? '—'
+                            : formatMoney(coupon.discount_value)}
                       </td>
                       <td className="px-3 py-3 text-slate-600">
                         {coupon.max_uses
@@ -404,6 +437,221 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function ProductPicker({ selectedIds, onChange }: { selectedIds: string[]; onChange: (ids: string[]) => void }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [products, setProducts] = useState<Array<{ id: string; name: string }>>([])
+  const [selectedProducts, setSelectedProducts] = useState<Array<{ id: string; name: string }>>([])
+  const [loading, setLoading] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const selectedIdsKey = selectedIds.join(',')
+
+  useEffect(() => {
+    let isCancelled = false
+    const ids = selectedIdsKey ? selectedIdsKey.split(',').filter(Boolean) : []
+    if (ids.length > 0) {
+      getProductsForCoupon(ids).then((data) => {
+        if (!isCancelled) {
+          setSelectedProducts(data)
+        }
+      })
+    }
+    return () => {
+      isCancelled = true
+    }
+  }, [selectedIdsKey])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (!open || search.length < 1) {
+      if (open && search.length === 0) {
+        searchProductsForCoupon('').then(setProducts)
+      }
+      return
+    }
+    const timer = setTimeout(() => {
+      setLoading(true)
+      searchProductsForCoupon(search).then((data) => {
+        setProducts(data)
+        setLoading(false)
+      })
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search, open])
+
+  function toggleProduct(product: { id: string; name: string }) {
+    const exists = selectedIds.includes(product.id)
+    const newIds = exists ? selectedIds.filter((id) => id !== product.id) : [...selectedIds, product.id]
+    const newSelected = exists
+      ? selectedProducts.filter((p) => p.id !== product.id)
+      : [...selectedProducts, product]
+    setSelectedProducts(newSelected)
+    onChange(newIds)
+  }
+
+  function removeProduct(id: string) {
+    onChange(selectedIds.filter((pid) => pid !== id))
+    setSelectedProducts((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex h-11 w-full items-center justify-between rounded-none border border-slate-200 bg-white px-3 text-sm text-slate-900 transition-colors hover:bg-slate-50 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+      >
+        <span className={selectedIds.length > 0 ? '' : 'text-slate-400'}>
+          {selectedIds.length > 0 ? `${selectedIds.length} produto(s) selecionado(s)` : 'Selecionar produtos...'}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open ? (
+        <div className="absolute z-20 mt-1 w-full rounded-none border border-slate-200 bg-white shadow-lg">
+          <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
+            <Search className="h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar produto..."
+              className="flex-1 border-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            />
+            {loading ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : null}
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {products.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-slate-400">Nenhum produto encontrado.</p>
+            ) : (
+              products.map((product) => {
+                const isSelected = selectedIds.includes(product.id)
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => toggleProduct(product)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50"
+                  >
+                    <span className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border ${isSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300'}`}>
+                      {isSelected ? <Check className="h-3 w-3" /> : null}
+                    </span>
+                    <span className="truncate">{product.name}</span>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      ) : null}
+      {selectedIds.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {selectedProducts.length === 0 && selectedIds.map((id) => (
+            <span key={id} className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
+              {id.slice(0, 8)}...
+              <button type="button" onClick={() => removeProduct(id)} className="text-slate-400 hover:text-slate-600">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {selectedProducts.map((p) => (
+            <span key={p.id} className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs text-blue-700">
+              {p.name}
+              <button type="button" onClick={() => removeProduct(p.id)} className="text-blue-400 hover:text-blue-600">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function CategoryPicker({ selected, onChange }: { selected: string[]; onChange: (cats: string[]) => void }) {
+  const [open, setOpen] = useState(false)
+  const [categories, setCategories] = useState<string[]>([])
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (open) {
+      searchCategoriesForCoupon().then(setCategories)
+    }
+  }, [open])
+
+  function toggleCategory(cat: string) {
+    const exists = selected.includes(cat)
+    onChange(exists ? selected.filter((c) => c !== cat) : [...selected, cat])
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex h-11 w-full items-center justify-between rounded-none border border-slate-200 bg-white px-3 text-sm text-slate-900 transition-colors hover:bg-slate-50 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+      >
+        <span className={selected.length > 0 ? '' : 'text-slate-400'}>
+          {selected.length > 0 ? `${selected.length} categoria(s) selecionada(s)` : 'Selecionar categorias...'}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open ? (
+        <div className="absolute z-20 mt-1 w-full rounded-none border border-slate-200 bg-white shadow-lg">
+          <div className="max-h-64 overflow-y-auto">
+            {categories.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-slate-400">Nenhuma categoria encontrada.</p>
+            ) : (
+              categories.map((cat) => {
+                const isSelected = selected.includes(cat)
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => toggleCategory(cat)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50"
+                  >
+                    <span className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border ${isSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300'}`}>
+                      {isSelected ? <Check className="h-3 w-3" /> : null}
+                    </span>
+                    <span className="truncate">{cat}</span>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      ) : null}
+      {selected.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {selected.map((cat) => (
+            <span key={cat} className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs text-blue-700">
+              {cat}
+              <button type="button" onClick={() => toggleCategory(cat)} className="text-blue-400 hover:text-blue-600">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }

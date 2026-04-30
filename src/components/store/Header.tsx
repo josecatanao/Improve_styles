@@ -55,7 +55,7 @@ export function Header({
                 <button
                   type="button"
                   aria-label="Abrir menu da loja"
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-slate-200 bg-white text-slate-600 shadow-sm lg:hidden"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-[color:var(--store-header-border)] bg-[var(--store-header-bg)] text-[var(--store-header-fg)] shadow-sm lg:hidden"
                 />
               }
             >
