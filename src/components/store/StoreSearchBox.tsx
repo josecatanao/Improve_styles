@@ -46,9 +46,15 @@ export function StoreSearchBox({
   const pathname = usePathname()
   const blurTimeoutRef = useRef<number | null>(null)
   const [value, setValue] = useState(query)
+  const [debouncedTerm, setDebouncedTerm] = useState(query)
   const [isOpen, setIsOpen] = useState(false)
   const [recentSearches, setRecentSearches] = useState<string[]>(() => readRecentSearches())
   const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedTerm(value), 300)
+    return () => clearTimeout(timer)
+  }, [value])
 
   useEffect(() => {
     return () => {
@@ -59,7 +65,7 @@ export function StoreSearchBox({
   }, [])
 
   const filteredSuggestions = useMemo(() => {
-    const normalizedQuery = value
+    const normalizedQuery = debouncedTerm
       .trim()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -104,7 +110,7 @@ export function StoreSearchBox({
       .sort((a, b) => b.score - a.score || a.item.label.localeCompare(b.item.label))
       .map(({ item }) => item)
       .slice(0, 8)
-  }, [suggestions, value])
+  }, [suggestions, debouncedTerm])
 
   const showRecent = value.trim().length === 0 && recentSearches.length > 0
 
@@ -184,6 +190,9 @@ export function StoreSearchBox({
               blurTimeoutRef.current = window.setTimeout(() => setIsOpen(false), 120)
             }}
             placeholder="Buscar produtos, categorias, marcas..."
+            role="combobox"
+            aria-expanded={isOpen}
+            aria-autocomplete="list"
             className={mobile ? 'h-full flex-1 px-4 text-sm text-slate-900 outline-none placeholder:text-slate-400' : 'h-full flex-1 px-5 text-sm text-slate-900 outline-none placeholder:text-slate-400'}
           />
           <button
@@ -223,12 +232,13 @@ export function StoreSearchBox({
             </div>
           ) : null}
 
-          <div className="px-2 py-2">
+          <div className="px-2 py-2" role="listbox">
             {filteredSuggestions.length > 0 ? (
               filteredSuggestions.map((item) => (
                 <Link
                   key={item.id}
                   href={item.href}
+                  role="option"
                   onMouseDown={() => {
                     if (value.trim()) {
                       persistRecentSearch(value)

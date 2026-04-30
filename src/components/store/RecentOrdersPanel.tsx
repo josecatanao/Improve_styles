@@ -1,6 +1,7 @@
 import { PackageCheck, Navigation2, MapPin, CreditCard, ShieldAlert, Banknote, Package } from 'lucide-react'
 import { formatMoney } from '@/lib/storefront'
 import { createClient } from '@/utils/supabase/server'
+import type { StoreOrderItem } from '@/lib/orders'
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('pt-BR', {
@@ -133,7 +134,7 @@ export async function RecentOrdersPanel() {
 
               <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
                 <p className="text-xs font-semibold text-slate-900 uppercase tracking-widest">Itens</p>
-                {order.store_order_items.map((item: any) => (
+                {order.store_order_items.map((item: Pick<StoreOrderItem, 'id' | 'name' | 'quantity' | 'price'>) => (
                   <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
                     <span className="min-w-0 truncate text-slate-700">
                       {item.name} x{item.quantity}

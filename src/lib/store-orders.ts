@@ -15,6 +15,14 @@ export type StoreOrderCustomer = {
   delivery_lng: number | null
 }
 
+export type StoreOrderShipping = {
+  cost: number
+  zoneId?: string | null
+  zoneName?: string | null
+  zip?: string
+  estimatedDays?: number
+}
+
 export type StoreOrder = {
   id: string
   createdAt: string
@@ -22,6 +30,7 @@ export type StoreOrder = {
   items: CartItem[]
   totalPrice: number
   totalItems: number
+  shipping?: StoreOrderShipping
 }
 
 let cachedRaw: string | null = null

@@ -53,7 +53,7 @@ export function HomeHeroCarousel({ banners }: { banners: { id: string; image_url
 
   return (
     <section className="relative overflow-hidden rounded-none bg-white shadow-[0_16px_40px_-32px_rgba(15,23,42,0.35)]">
-      <Link href={activeSlide.href} className="block">
+      <Link href={activeSlide.href} className="block relative">
         <StoreImage
           src={activeSlide.image}
           alt={activeSlide.alt}

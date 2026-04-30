@@ -5,8 +5,9 @@ function isMissingTable(error: { code?: string } | null, tableCode = '42P01') {
   return error?.code === tableCode
 }
 
-export async function getCustomerProfiles(): Promise<{
+export async function getCustomerProfiles(page = 1, limit = 20): Promise<{
   customers: CustomerProfile[]
+  total: number
   summary: CustomerSummary
   setupRequired: boolean
   errorMessage: string | null
@@ -18,6 +19,7 @@ export async function getCustomerProfiles(): Promise<{
   } catch (error) {
     return {
       customers: [],
+      total: 0,
       summary: {
         total: 0,
         active: 0,
@@ -30,14 +32,23 @@ export async function getCustomerProfiles(): Promise<{
     }
   }
 
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  const { count, error: countError } = await supabase
+    .from('customer_profiles')
+    .select('*', { count: 'exact', head: true })
+
   const { data, error } = await supabase
     .from('customer_profiles')
     .select('*')
     .order('created_at', { ascending: false })
+    .range(from, to)
 
-  if (isMissingTable(error)) {
+  if (isMissingTable(error) || isMissingTable(countError)) {
     return {
       customers: [],
+      total: 0,
       summary: {
         total: 0,
         active: 0,
@@ -53,6 +64,7 @@ export async function getCustomerProfiles(): Promise<{
   if (error || !data) {
     return {
       customers: [],
+      total: 0,
       summary: {
         total: 0,
         active: 0,
@@ -69,8 +81,9 @@ export async function getCustomerProfiles(): Promise<{
 
   return {
     customers,
+    total: count ?? 0,
     summary: {
-      total: customers.length,
+      total: count ?? 0,
       active: customers.filter((customer) => customer.status === 'active').length,
       inactive: customers.filter((customer) => customer.status === 'inactive').length,
       withWhatsapp: customers.filter((customer) => Boolean(customer.whatsapp?.trim())).length,

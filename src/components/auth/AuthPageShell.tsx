@@ -4,9 +4,11 @@ import { ArrowLeft } from 'lucide-react'
 type AuthPageShellProps = {
   children: React.ReactNode
   isStoreContext: boolean
+  title?: string
+  subtitle?: string
 }
 
-export function AuthPageShell({ children, isStoreContext }: AuthPageShellProps) {
+export function AuthPageShell({ children, isStoreContext, title, subtitle }: AuthPageShellProps) {
   const backHref = isStoreContext ? '/' : '/dashboard'
   const backLabel = isStoreContext ? 'Voltar para a loja' : 'Voltar para o painel'
 
@@ -31,7 +33,13 @@ export function AuthPageShell({ children, isStoreContext }: AuthPageShellProps) 
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        <div className="mx-auto flex max-w-xl items-center justify-center">
+        <div className="mx-auto flex max-w-xl flex-col items-center justify-center gap-6">
+          {title ? (
+            <div className="w-full text-center">
+              <h1 className="text-[1.85rem] font-semibold tracking-tight text-slate-950">{title}</h1>
+              {subtitle ? <p className="mt-2 text-sm leading-6 text-slate-500">{subtitle}</p> : null}
+            </div>
+          ) : null}
           <div className="w-full">{children}</div>
         </div>
       </main>

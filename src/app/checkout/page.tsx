@@ -5,7 +5,11 @@ import { slugifyStoreValue } from '@/lib/storefront'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
-export default async function CheckoutPage() {
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ success?: string; orderId?: string }>
+}) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -23,6 +27,9 @@ export default async function CheckoutPage() {
     href: `/loja/${slugifyStoreValue(item.label)}`,
   }))
 
+  const params = await searchParams
+  const orderId = params.orderId
+
   return (
     <StoreShell categories={categories}>
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -31,7 +38,7 @@ export default async function CheckoutPage() {
           <p className="mt-2 text-sm text-slate-500">Revise os itens e informe os dados basicos do pedido.</p>
         </div>
 
-        <CheckoutClient initialProfile={profile} />
+        <CheckoutClient initialProfile={profile} orderId={orderId} />
       </main>
     </StoreShell>
   )

@@ -174,7 +174,9 @@ function OrderStatusSelect({
 
   return (
     <div className="relative inline-block w-full min-w-[170px]">
+      <label htmlFor={`status-${order.id}`} className="sr-only">Status do pedido</label>
       <select
+        id={`status-${order.id}`}
         disabled={isPending}
         value={order.status}
         onChange={handleStatusChange}
@@ -338,12 +340,12 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
             <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
               <thead className="bg-slate-50 dark:bg-slate-950/60">
                 <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  <th className="px-6 py-3">Pedido</th>
-                  <th className="px-6 py-3">Cliente</th>
-                  <th className="px-6 py-3">Resumo</th>
-                  <th className="px-6 py-3">Entrega e pagamento</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Acoes</th>
+                  <th scope="col" className="px-6 py-3">Pedido</th>
+                  <th scope="col" className="px-6 py-3">Cliente</th>
+                  <th scope="col" className="px-6 py-3">Resumo</th>
+                  <th scope="col" className="px-6 py-3">Entrega e pagamento</th>
+                  <th scope="col" className="px-6 py-3">Status</th>
+                  <th scope="col" className="px-6 py-3">Acoes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -355,7 +357,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                   return (
                     <Fragment key={order.id}>
                       <tr key={order.id} className="align-top hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-6 py-4">
+                        <td scope="row" className="px-6 py-4">
                           <p className="font-semibold text-slate-900 dark:text-slate-50">{getOrderCode(order.id)}</p>
                           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Criado em {formatDate(order.created_at)}</p>
                           <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Atualizado em {formatDate(order.updated_at)}</p>

@@ -25,13 +25,31 @@ type CartContextValue = {
   updateQuantity: (id: string, quantity: number) => void
   removeItem: (id: string) => void
   clearCart: () => void
+  wishlist: string[]
+  addToWishlist: (productId: string) => void
+  removeFromWishlist: (productId: string) => void
+  isInWishlist: (productId: string) => boolean
 }
 
 const CART_STORAGE_KEY = 'improve-style-cart'
 const CART_EVENT = 'improve-style-cart-updated'
+const WISHLIST_STORAGE_KEY = 'improve-style-wishlist'
+const WISHLIST_EVENT = 'improve-style-wishlist-updated'
 const CartContext = createContext<CartContextValue | null>(null)
 const EMPTY_CART: CartItem[] = []
+const EMPTY_WISHLIST: string[] = []
 let cartSnapshot: CartItem[] = EMPTY_CART
+let wishlistSnapshot: string[] = EMPTY_WISHLIST
+
+function readWishlistFromLocalStorage() {
+  try {
+    const stored = window.localStorage.getItem(WISHLIST_STORAGE_KEY)
+    return stored ? (JSON.parse(stored) as string[]) : EMPTY_WISHLIST
+  } catch {
+    window.localStorage.removeItem(WISHLIST_STORAGE_KEY)
+    return EMPTY_WISHLIST
+  }
+}
 
 function readItemsFromLocalStorage() {
   try {
@@ -57,13 +75,33 @@ function readItemsFromStorage() {
   return cartSnapshot
 }
 
+function readWishlistFromStorage() {
+  if (typeof window === 'undefined') {
+    return wishlistSnapshot
+  }
+
+  const latest = readWishlistFromLocalStorage()
+
+  if (JSON.stringify(latest) !== JSON.stringify(wishlistSnapshot)) {
+    wishlistSnapshot = latest
+  }
+
+  return wishlistSnapshot
+}
+
 function writeItemsToStorage(items: CartItem[]) {
   cartSnapshot = items
   window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
   window.dispatchEvent(new Event(CART_EVENT))
 }
 
-function subscribe(callback: () => void) {
+function writeWishlistToStorage(ids: string[]) {
+  wishlistSnapshot = ids
+  window.localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(ids))
+  window.dispatchEvent(new Event(WISHLIST_EVENT))
+}
+
+function subscribeCart(callback: () => void) {
   if (typeof window === 'undefined') {
     return () => undefined
   }
@@ -82,6 +120,25 @@ function subscribe(callback: () => void) {
   }
 }
 
+function subscribeWishlist(callback: () => void) {
+  if (typeof window === 'undefined') {
+    return () => undefined
+  }
+
+  function handleChange() {
+    wishlistSnapshot = readWishlistFromLocalStorage()
+    callback()
+  }
+
+  window.addEventListener(WISHLIST_EVENT, handleChange)
+  window.addEventListener('storage', handleChange)
+
+  return () => {
+    window.removeEventListener(WISHLIST_EVENT, handleChange)
+    window.removeEventListener('storage', handleChange)
+  }
+}
+
 function getItemTotals(items: CartItem[]) {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
   const totalPrice = items.reduce((sum, item) => sum + item.quantity * item.price, 0)
@@ -93,7 +150,8 @@ function getItemTotals(items: CartItem[]) {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const items = useSyncExternalStore(subscribe, readItemsFromStorage, () => EMPTY_CART)
+  const items = useSyncExternalStore(subscribeCart, readItemsFromStorage, () => EMPTY_CART)
+  const wishlist = useSyncExternalStore(subscribeWishlist, readWishlistFromStorage, () => EMPTY_WISHLIST)
   const { totalItems, totalPrice } = getItemTotals(items)
   const supabase = createClient()
   const userIdRef = useRef<string | null>(null)
@@ -101,14 +159,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function fetchDBCart(userId: string, isLoginEvent: boolean) {
-      const { data } = await supabase.from('customer_profiles').select('cart').eq('id', userId).single()
+      const { data } = await supabase.from('customer_profiles').select('cart, wishlist').eq('id', userId).single()
       const dbCart = (data?.cart as CartItem[]) || []
+      const dbWishlist = (data?.wishlist as string[]) || EMPTY_WISHLIST
 
       if (isLoginEvent) {
-        // Active login: Merge local anonymous cart with DB cart
         const currentLocal = readItemsFromStorage()
         const merged = [...dbCart]
-        
+
         for (const localItem of currentLocal) {
           const index = merged.findIndex((i) => i.id === localItem.id)
           if (index === -1) {
@@ -117,11 +175,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             merged[index].quantity = Math.max(merged[index].quantity, localItem.quantity)
           }
         }
-        
+
         writeItemsToStorage(merged)
+
+        const currentLocalWishlist = readWishlistFromLocalStorage()
+        const mergedWishlist = [...new Set([...dbWishlist, ...currentLocalWishlist])]
+        writeWishlistToStorage(mergedWishlist)
       } else {
-        // Page refresh or cross-device sync: DB is the source of truth
         writeItemsToStorage(dbCart)
+        const currentLocalWishlist = readWishlistFromLocalStorage()
+        const mergedWishlist = [...new Set([...dbWishlist, ...currentLocalWishlist])]
+        writeWishlistToStorage(mergedWishlist)
       }
     }
 
@@ -134,7 +198,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
       } else if (event === 'SIGNED_OUT') {
         userIdRef.current = null
-        writeItemsToStorage([]) // Clear cart when logging out
+        writeItemsToStorage([])
+        writeWishlistToStorage([])
       }
     })
 
@@ -156,9 +221,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isHydratedRef.current && userIdRef.current) {
-      supabase.from('customer_profiles').update({ cart: items }).eq('id', userIdRef.current).then()
+      void supabase.from('customer_profiles').update({ cart: items, wishlist }).eq('id', userIdRef.current)
     }
-  }, [items, supabase])
+  }, [items, wishlist, supabase])
 
   function addItem(item: CartItem) {
     const current = readItemsFromStorage()
@@ -199,6 +264,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     writeItemsToStorage([])
   }
 
+  function addToWishlist(productId: string) {
+    const current = readWishlistFromStorage()
+    if (!current.includes(productId)) {
+      writeWishlistToStorage([...current, productId])
+    }
+  }
+
+  function removeFromWishlist(productId: string) {
+    const current = readWishlistFromStorage()
+    writeWishlistToStorage(current.filter((id) => id !== productId))
+  }
+
+  function isInWishlist(productId: string) {
+    return wishlist.includes(productId)
+  }
+
   return (
     <CartContext.Provider
       value={{
@@ -210,6 +291,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateQuantity,
         removeItem,
         clearCart,
+        wishlist,
+        addToWishlist,
+        removeFromWishlist,
+        isInWishlist,
       }}
     >
       {children}

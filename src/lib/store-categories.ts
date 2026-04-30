@@ -23,21 +23,31 @@ function buildCategorySlug(value: string | null | undefined) {
   return getStoreCategoryKey(value)
 }
 
-export async function getManagedStoreCategories(): Promise<{
+export async function getManagedStoreCategories(page = 1, limit = 50): Promise<{
   categories: StoreCategory[]
+  total: number
   setupRequired: boolean
   errorMessage: string | null
 }> {
   const supabase = await createClient()
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  const { count, error: countError } = await supabase
+    .from('store_categories')
+    .select('*', { count: 'exact', head: true })
+
   const { data, error } = await supabase
     .from('store_categories')
     .select('id, name, slug, sort_order, is_active, icon_name, image_url')
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
+    .range(from, to)
 
-  if (isMissingTable(error)) {
+  if (isMissingTable(error) || isMissingTable(countError)) {
     return {
       categories: [],
+      total: 0,
       setupRequired: true,
       errorMessage: null,
     }
@@ -46,6 +56,7 @@ export async function getManagedStoreCategories(): Promise<{
   if (error || !data) {
     return {
       categories: [],
+      total: 0,
       setupRequired: false,
       errorMessage: error?.message ?? 'Nao foi possivel carregar as categorias.',
     }
@@ -57,6 +68,7 @@ export async function getManagedStoreCategories(): Promise<{
       name: buildCategoryName(category.name),
       slug: category.slug?.trim() || buildCategorySlug(category.name),
     })),
+    total: count ?? 0,
     setupRequired: false,
     errorMessage: null,
   }

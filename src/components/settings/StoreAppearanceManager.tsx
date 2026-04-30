@@ -78,6 +78,8 @@ export function StoreAppearanceManager({
 
       await saveStoreAppearance({
         ...form,
+        brandPrimaryColor: '#0f172a',
+        brandSecondaryColor: '#e2e8f0',
         storeLogoUrl,
       })
       setForm((current) => ({ ...current, storeLogoUrl }))

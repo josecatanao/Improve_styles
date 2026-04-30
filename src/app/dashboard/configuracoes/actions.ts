@@ -2,6 +2,7 @@
 
 import { refresh, revalidatePath, revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/utils/supabase/admin'
+import type { DashboardTheme } from '@/lib/store-settings'
 import {
   isMissingStoreSettingsColumnError,
   normalizeDashboardTheme,
@@ -28,7 +29,7 @@ export async function saveStoreAppearance(input: {
   storeCardBackgroundColor: string
   storeCardBorderColor: string
   storeCartButtonColor: string
-  dashboardTheme: string
+  dashboardTheme: DashboardTheme
 }) {
   const supabase = createAdminClient()
   const storeName = input.storeName.trim() || 'Improve Styles'
@@ -92,7 +93,7 @@ export async function saveStoreAppearance(input: {
 }
 
 export async function saveDashboardAppearance(input: {
-  dashboardTheme: string
+  dashboardTheme: DashboardTheme
   brandPrimaryColor: string
   brandSecondaryColor: string
 }) {

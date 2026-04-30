@@ -1,9 +1,9 @@
 import Link from 'next/link'
-import { ArrowRight, BarChart3, ChartColumn, FolderKanban, PackageSearch, Tags } from 'lucide-react'
+import { ArrowRight, BarChart3, ChartColumn, FolderKanban, PackageSearch, Tags, TriangleAlert } from 'lucide-react'
 import { ProductMetricsGrid } from '@/components/products/ProductMetricsGrid'
 import { ProductSetupNotice } from '@/components/products/ProductSetupNotice'
 import { ProductWorkspaceHeader } from '@/components/products/ProductWorkspaceHeader'
-import { getProductMetrics, getProductOverviewData } from '@/lib/products'
+import { getProductMetrics, getProductOverviewData, getLowStockProducts } from '@/lib/products'
 import { getProductStatusClasses, getProductStatusLabel } from '@/lib/product-shared'
 
 function formatMoney(value: number) {
@@ -69,7 +69,11 @@ function BarChartCard({
 }
 
 export default async function ProductsPage() {
-  const [metrics, overview] = await Promise.all([getProductMetrics(), getProductOverviewData()])
+  const [metrics, overview, lowStockProducts] = await Promise.all([
+    getProductMetrics(),
+    getProductOverviewData(),
+    getLowStockProducts(),
+  ])
 
   return (
     <div className="space-y-6">
@@ -84,6 +88,34 @@ export default async function ProductsPage() {
         <ProductSetupNotice />
       ) : (
         <>
+          {lowStockProducts.length > 0 && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+              <div className="flex flex-wrap items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                  <TriangleAlert className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-amber-900">
+                    {lowStockProducts.length} produto(s) com estoque baixo
+                  </p>
+                  <p className="mt-1 text-sm text-amber-700/80">
+                    {lowStockProducts
+                      .slice(0, 5)
+                      .map((p) => `${p.name} (${p.stock} un.)`)
+                      .join(' • ')}
+                    {lowStockProducts.length > 5 ? ` • +${lowStockProducts.length - 5} outros` : ''}
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/produtos?status=active"
+                  className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-200"
+                >
+                  Ver catalogo
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          )}
           {overview.errorMessage ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               {overview.errorMessage}

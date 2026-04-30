@@ -1,10 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Check, ChevronDown, Clock3, CreditCard, FileText, MapPin, Navigation2, Truck, UserRound } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { Check, ChevronDown, Clock3, CreditCard, FileText, MapPin, Navigation2, Truck, UserRound, XCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { formatMoney } from '@/lib/storefront'
 import type { AccountOrder } from '@/lib/account'
 import { getContrastingTextColor } from '@/lib/store-settings'
+import { useToast, useConfirm } from '@/components/ui/feedback-provider'
+import { cancelOrderByCustomer } from '@/app/conta/pedidos/actions'
 
 type FilterValue = 'all' | 'pending' | 'completed'
 type StepState = 'done' | 'current' | 'upcoming' | 'cancelled'
@@ -66,10 +69,17 @@ function getOrderSteps(status: string) {
               ? -1
               : 0
 
-  return steps.map((step, index) => ({
-    ...step,
-    state: status === 'cancelled' ? 'cancelled' : index < currentIndex ? 'done' : index === currentIndex ? 'current' : 'upcoming',
-  }))
+  return steps.map((step, index) => {
+    const state: StepState =
+      status === 'cancelled'
+        ? 'cancelled'
+        : index < currentIndex
+          ? 'done'
+          : index === currentIndex
+            ? 'current'
+            : 'upcoming'
+    return { ...step, state }
+  })
 }
 
 function getStepDescription(stepKey: string, state: StepState, createdAt: string) {
@@ -108,7 +118,46 @@ export function OrdersOverview({
 }) {
   const [filter, setFilter] = useState<FilterValue>('all')
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(orders[0]?.id ?? null)
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null)
   const totalCardTextColor = getContrastingTextColor(brandPrimaryColor)
+  const router = useRouter()
+  const toast = useToast()
+  const confirm = useConfirm()
+
+  const handleCancelOrder = useCallback(
+    async (orderId: string) => {
+      const confirmed = await confirm({
+        title: 'Cancelar pedido',
+        description: 'Tem certeza que deseja cancelar este pedido? Esta ação não pode ser desfeita.',
+        confirmLabel: 'Sim, cancelar',
+        cancelLabel: 'Voltar',
+        variant: 'destructive',
+      })
+
+      if (!confirmed) return
+
+      setCancellingOrderId(orderId)
+
+      try {
+        await cancelOrderByCustomer(orderId)
+        toast({
+          title: 'Pedido cancelado',
+          description: 'O pedido foi cancelado com sucesso.',
+          variant: 'success',
+        })
+        router.refresh()
+      } catch (err) {
+        toast({
+          title: 'Erro ao cancelar',
+          description: err instanceof Error ? err.message : 'Ocorreu um erro inesperado.',
+          variant: 'error',
+        })
+      } finally {
+        setCancellingOrderId(null)
+      }
+    },
+    [confirm, toast, router]
+  )
 
   const filteredOrders = useMemo(() => {
     if (filter === 'pending') {
@@ -388,6 +437,20 @@ export function OrdersOverview({
                     </div>
                   </section>
                 </div>
+
+                {order.status === 'pending' ? (
+                  <div className="border-t border-slate-200/80 px-6 py-4">
+                    <button
+                      type="button"
+                      disabled={cancellingOrderId === order.id}
+                      onClick={() => handleCancelOrder(order.id)}
+                      className="inline-flex items-center gap-2.5 rounded-2xl border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      {cancellingOrderId === order.id ? 'Cancelando...' : 'Cancelar pedido'}
+                    </button>
+                  </div>
+                ) : null}
                   </>
                 ) : null}
               </article>

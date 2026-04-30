@@ -44,12 +44,14 @@ export async function login(formData: FormData) {
   const nextPath = sanitizeNextPath(formData.get('next'), mode)
   const authView = sanitizeAuthView(formData.get('authView'))
 
-  const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
+  const email = (formData.get('email') as string)?.trim()
+  const password = (formData.get('password') as string)?.trim()
+
+  if (!email || !password) {
+    return redirect(buildLoginRedirect(nextPath, 'Preencha email e senha.', authView, mode))
   }
 
-  const { data: authData, error } = await supabase.auth.signInWithPassword(data)
+  const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
     return redirect(buildLoginRedirect(nextPath, error.message, authView, mode))
@@ -62,7 +64,7 @@ export async function login(formData: FormData) {
       const { error: profileUpdateError } = await supabase
         .from('customer_profiles')
         .update({
-          email: authData.user.email ?? data.email,
+          email: authData.user.email ?? email,
           status: 'active',
           full_name: String(authData.user.user_metadata.full_name || 'Cliente'),
           last_login_at: new Date().toISOString(),
@@ -95,9 +97,15 @@ export async function signup(formData: FormData) {
   const authView = sanitizeAuthView(formData.get('authView'))
   const accountType = mode === 'customer' ? 'customer' : 'admin'
 
-  const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
+  const email = (formData.get('email') as string)?.trim()
+  const password = (formData.get('password') as string)?.trim()
+
+  if (!email || !password) {
+    return redirect(buildLoginRedirect(nextPath, 'Preencha email e senha.', authView, mode))
+  }
+
+  if (password.length < 6) {
+    return redirect(buildLoginRedirect(nextPath, 'A senha deve ter pelo menos 6 caracteres.', authView, mode))
   }
 
   const fullName = String(formData.get('fullName') || '').trim()
@@ -106,7 +114,8 @@ export async function signup(formData: FormData) {
   const photoUrl = String(formData.get('photoUrl') || '').trim()
 
   const { data: authData, error } = await supabase.auth.signUp({
-    ...data,
+    email,
+    password,
     options: {
       data: {
         account_type: accountType,
@@ -122,7 +131,7 @@ export async function signup(formData: FormData) {
   if (accountType === 'customer' && authData.user) {
     const payload = {
       id: authData.user.id,
-      email: authData.user.email ?? data.email,
+      email: authData.user.email ?? email,
       full_name: fullName || 'Cliente',
       whatsapp: whatsapp || null,
       photo_url: photoUrl || null,
@@ -148,4 +157,44 @@ export async function logout(formData: FormData) {
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
   redirect(nextPath)
+}
+
+export async function forgotPassword(formData: FormData) {
+  const supabase = await createClient()
+  const email = (formData.get('email') as string)?.trim()
+
+  if (!email) {
+    return redirect(
+      `/login?error=true&message=${encodeURIComponent('Informe seu email para recuperar a senha.')}&view=login`
+    )
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login/update-password`,
+  })
+
+  if (error) {
+    return redirect(`/login?error=true&message=${encodeURIComponent(error.message)}&view=login`)
+  }
+
+  return redirect(
+    `/login?success=true&message=${encodeURIComponent('Email de recuperacao enviado. Verifique sua caixa de entrada.')}&view=login`
+  )
+}
+
+export async function updatePassword(formData: FormData) {
+  const supabase = await createClient()
+  const password = (formData.get('password') as string)?.trim()
+
+  if (!password || password.length < 6) {
+    return redirect('/login/update-password?error=true&message=A senha deve ter pelo menos 6 caracteres.')
+  }
+
+  const { error } = await supabase.auth.updateUser({ password })
+
+  if (error) {
+    return redirect(`/login/update-password?error=true&message=${encodeURIComponent(error.message)}`)
+  }
+
+  return redirect('/login?success=true&message=Senha atualizada com sucesso. Faca login.&view=login')
 }

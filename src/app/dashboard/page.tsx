@@ -18,7 +18,7 @@ import { ProductSetupNotice } from '@/components/products/ProductSetupNotice'
 import { getProductStatusClasses, getProductStatusLabel } from '@/lib/product-shared'
 import { getCustomerProfiles } from '@/lib/customers'
 import { getStoreOrders, type StoreOrder } from '@/lib/orders'
-import { getProductMetrics, getProductOverviewData } from '@/lib/products'
+import { getProductMetrics, getProductOverviewData, getLowStockProducts } from '@/lib/products'
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -298,11 +298,12 @@ function SalesTimelineCard({
 }
 
 export default async function DashboardPage() {
-  const [productMetrics, productOverview, ordersResult, customersResult] = await Promise.all([
+  const [productMetrics, productOverview, ordersResult, customersResult, lowStockProducts] = await Promise.all([
     getProductMetrics(),
     getProductOverviewData(),
     getStoreOrders(),
     getCustomerProfiles(),
+    getLowStockProducts(),
   ])
 
   const orders = ordersResult.orders
@@ -321,10 +322,6 @@ export default async function DashboardPage() {
   const deliveryBreakdown = buildBreakdown(orders.map((order) => getDeliveryLabel(order.delivery_method)))
   const topSellingProducts = getTopSellingProducts(orders)
   const recentOrders = orders.slice(0, 5)
-  const lowStockProducts = productOverview.topInventoryProducts
-    .filter((product) => product.stock <= 3)
-    .sort((a, b) => a.stock - b.stock || b.value - a.value)
-    .slice(0, 5)
 
   const hasAnySetupRequired =
     productMetrics.setupRequired || productOverview.setupRequired || ordersResult.setupRequired || customersResult.setupRequired
@@ -642,7 +639,7 @@ export default async function DashboardPage() {
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-900">{product.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">{formatMoney(product.price)} por unidade</p>
+                      <p className="mt-1 text-xs text-slate-500">Status: {product.status}</p>
                     </div>
                     <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
                       {product.stock} un.

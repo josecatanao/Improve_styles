@@ -22,8 +22,18 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  if (user.user_metadata.account_type === 'customer') {
-    redirect('/')
+  const isAdminByMetadata = user.user_metadata?.account_type === 'admin'
+
+  if (!isAdminByMetadata) {
+    const { data: staffData } = await supabase
+      .from('staff_members')
+      .select('id, role')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (!staffData) {
+      redirect('/')
+    }
   }
 
   const [settings, recentOrders] = await Promise.all([

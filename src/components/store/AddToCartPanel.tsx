@@ -3,9 +3,23 @@
 import Link from 'next/link'
 import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Rocket } from 'lucide-react'
+import {
+  AlertTriangle,
+  Check,
+  CreditCard,
+  Loader2,
+  MapPin,
+  RefreshCw,
+  Rocket,
+  Share2,
+  ShieldCheck,
+  Star,
+  Truck,
+} from 'lucide-react'
 import type { ProductDetail } from '@/lib/product-shared'
 import { useCart } from '@/components/store/CartProvider'
+import { useToast } from '@/components/ui/feedback-provider'
+import { calculateProductShipping } from '@/app/produto/actions'
 import {
   formatMoney,
   getExactVariant,
@@ -38,20 +52,40 @@ function getDiscountPercentage(compareAtPrice: number, price: number) {
 export function AddToCartPanel({
   product,
   isAuthenticated,
+  selectedColor,
+  onColorChange,
   onSelectionChange,
 }: {
   product: ProductDetail
   isAuthenticated: boolean
+  selectedColor: string | null
+  onColorChange: (colorName: string) => void
   onSelectionChange?: (selection: SelectionSnapshot) => void
 }) {
   const router = useRouter()
   const { addItem } = useCart()
+  const toast = useToast()
   const hasVariants = hasRealVariants(product)
   const initialSelection = useMemo(() => getFirstAvailableVariantSelection(product), [product])
 
-  const [selectedColor, setSelectedColor] = useState<string | null>(initialSelection.colorName)
   const [selectedSize, setSelectedSize] = useState<string | null>(initialSelection.size)
   const [quantity, setQuantity] = useState(1)
+  const [added, setAdded] = useState(false)
+  const [cep, setCep] = useState('')
+  const [shippingResult, setShippingResult] = useState<{
+    local: {
+      price: number
+      days: number
+      zoneName: string
+      freeShippingThreshold: number | null
+    } | null
+    correios: {
+      pac: { price: number; minDays: number; maxDays: number }
+      sedex: { price: number; minDays: number; maxDays: number }
+    } | null
+    error: string | null
+  } | null>(null)
+  const [calculatingShipping, setCalculatingShipping] = useState(false)
 
   const colorOptions = useMemo(() => getVariantColorOptions(product), [product])
   const sizeOptions = useMemo(() => getVariantSizeOptions(product, selectedColor), [product, selectedColor])
@@ -81,6 +115,8 @@ export function AddToCartPanel({
   const canPurchase = availableStock > 0
   const discountPercentage = getDiscountPercentage(displayComparePrice, displayPrice)
 
+  const shareUrl = `https://wa.me/?text=${encodeURIComponent(`Olha esse produto: ${product.name} - ${formatMoney(displayPrice)} - ${typeof window !== 'undefined' ? window.location.href : ''}`)}`
+
   const emitSelectionChange = useEffectEvent(() => {
     onSelectionChange?.({
       availableStock,
@@ -109,7 +145,7 @@ export function AddToCartPanel({
   ])
 
   function handleColorSelection(colorName: string) {
-    setSelectedColor(colorName)
+    onColorChange(colorName)
     setSelectedSize(null)
     setQuantity(1)
   }
@@ -141,6 +177,10 @@ export function AddToCartPanel({
       colorHex: selectedVariant?.color_hex ?? colorOptions.find((item) => item.name === effectiveColorName)?.hex ?? null,
       sku: selectedVariant?.sku ?? product.sku ?? null,
     })
+
+    setAdded(true)
+    toast({ title: 'Produto adicionado ao carrinho!', variant: 'success' })
+    setTimeout(() => setAdded(false), 1500)
   }
 
   function getColorPreview(colorName: string, colorHex: string) {
@@ -168,6 +208,30 @@ export function AddToCartPanel({
 
   function decreaseQuantity() {
     setQuantity((current) => Math.max(1, current - 1))
+  }
+
+  async function handleCalculateShipping() {
+    const cleanCep = cep.replace(/\D/g, '')
+    if (cleanCep.length !== 8) {
+      setShippingResult({ local: null, correios: null, error: 'CEP inválido' })
+      return
+    }
+
+    setCalculatingShipping(true)
+    setShippingResult(null)
+
+    const productWeight = product.weight ?? null
+    const productDimensions =
+      product.width != null && product.height != null && product.length != null
+        ? { width: product.width, height: product.height, length: product.length }
+        : null
+
+    try {
+      const result = await calculateProductShipping(cleanCep, productWeight, productDimensions)
+      setShippingResult(result)
+    } finally {
+      setCalculatingShipping(false)
+    }
   }
 
   return (
@@ -222,6 +286,55 @@ export function AddToCartPanel({
               </span>
             </span>
           </div>
+
+          {product.average_rating != null ? (
+            <div className="mt-3 flex items-center gap-2 text-sm">
+              <div className="flex items-center">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-3.5 w-3.5 ${
+                      i < Math.round(product.average_rating ?? 0)
+                        ? 'fill-amber-400 text-amber-400'
+                        : 'fill-slate-200 text-slate-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="font-medium text-slate-700">{product.average_rating.toFixed(1)}</span>
+              <span className="text-slate-400">({product.review_count ?? 0})</span>
+              <button
+                type="button"
+                onClick={() => {
+                  document.getElementById('product-reviews')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="text-xs text-slate-500 underline transition-colors hover:text-slate-700"
+              >
+                Ver avaliacoes
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+          {displayComparePrice > displayPrice ? (
+            <span className="inline-flex items-center gap-1">
+              <Truck className="h-3.5 w-3.5" />
+              Frete gratis
+            </span>
+          ) : null}
+          <span className="inline-flex items-center gap-1">
+            <CreditCard className="h-3.5 w-3.5" />
+            Ate 12x sem juros
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <RefreshCw className="h-3.5 w-3.5" />
+            Troca gratis
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Garantia
+          </span>
         </div>
 
         {!isAuthenticated ? (
@@ -248,6 +361,7 @@ export function AddToCartPanel({
                     type="button"
                     onClick={() => handleColorSelection(color.name)}
                     disabled={!color.hasStock}
+                    aria-label={`Cor: ${color.name}`}
                     className={`relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-none border bg-white transition-all sm:h-[68px] sm:w-[68px] ${
                       isSelected
                         ? 'border-[color:var(--store-button-bg)] ring-2 ring-black/5'
@@ -303,6 +417,13 @@ export function AddToCartPanel({
           </div>
         ) : null}
 
+        {availableStock > 0 && availableStock <= 3 ? (
+          <div className="flex items-center gap-2 rounded-none border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            Apenas {availableStock} unidade{availableStock > 1 ? 's' : ''} em estoque! Garanta o seu.
+          </div>
+        ) : null}
+
         <div className="space-y-3">
           <p className="text-sm font-semibold text-slate-950">Quantidade</p>
           <div className="inline-flex items-center rounded-none border border-slate-200 bg-slate-50">
@@ -326,6 +447,64 @@ export function AddToCartPanel({
           </div>
         </div>
 
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-slate-950">Calcular frete</p>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={9}
+                placeholder="Digite seu CEP"
+                value={cep}
+                onChange={(e) => {
+                  setCep(e.target.value.replace(/\D/g, '').slice(0, 8))
+                  setShippingResult(null)
+                }}
+                className="h-10 w-full rounded-none border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 sm:h-11"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleCalculateShipping}
+              disabled={calculatingShipping || cep.replace(/\D/g, '').length !== 8}
+              className="inline-flex h-10 items-center justify-center rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 sm:h-11"
+            >
+              {calculatingShipping ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Calcular'}
+            </button>
+          </div>
+          {shippingResult ? (
+            <div className="rounded-none border border-slate-200 bg-slate-50 px-3 py-2">
+              {shippingResult.error ? (
+                <p className="text-sm text-red-600">{shippingResult.error}</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {shippingResult.local ? (
+                    <p className="text-sm text-slate-700">
+                      {shippingResult.local.price != null && shippingResult.local.price > 0
+                        ? `Frete local: ${formatMoney(shippingResult.local.price)}`
+                        : 'Frete gratis'}
+                      {' — '}
+                      {shippingResult.local.zoneName} — ate {shippingResult.local.days} dia{shippingResult.local.days > 1 ? 's' : ''} uteis
+                    </p>
+                  ) : null}
+                  {shippingResult.correios ? (
+                    <>
+                      <p className="text-sm text-slate-700">
+                        PAC: {formatMoney(shippingResult.correios.pac.price)} — {shippingResult.correios.pac.minDays} a {shippingResult.correios.pac.maxDays} dias uteis
+                      </p>
+                      <p className="text-sm text-slate-700">
+                        SEDEX: {formatMoney(shippingResult.correios.sedex.price)} — {shippingResult.correios.sedex.minDays} a {shippingResult.correios.sedex.maxDays} dias uteis
+                      </p>
+                    </>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+
         <div className="grid gap-3 pt-1">
           {isAuthenticated ? (
             <button
@@ -336,7 +515,7 @@ export function AddToCartPanel({
                 }
 
                 handleAddToCart()
-                router.push('/carrinho')
+                router.push('/checkout')
               }}
               disabled={!canPurchase}
               className="inline-flex h-12 items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
@@ -356,10 +535,33 @@ export function AddToCartPanel({
             type="button"
             onClick={handleAddToCart}
             disabled={!isAuthenticated ? false : !canPurchase}
-            className="inline-flex h-12 items-center justify-center rounded-none border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+            className={`inline-flex h-12 items-center justify-center rounded-none border px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${
+              added
+                ? 'border-emerald-600 bg-emerald-600 text-white'
+                : 'border-slate-200 text-slate-700 hover:bg-slate-50 disabled:text-slate-400'
+            }`}
           >
-            {isAuthenticated ? 'Adicionar ao carrinho' : 'Fazer login'}
+            {added ? (
+              <>
+                <Check className="mr-2 h-5 w-5" />
+                Adicionado!
+              </>
+            ) : isAuthenticated ? (
+              'Adicionar ao carrinho'
+            ) : (
+              'Fazer login'
+            )}
           </button>
+
+          <a
+            href={shareUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50"
+          >
+            <Share2 className="h-4 w-4" />
+            Compartilhar no WhatsApp
+          </a>
         </div>
       </div>
     </div>

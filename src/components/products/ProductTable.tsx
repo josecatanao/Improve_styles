@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { startTransition, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LoaderCircle, Pencil, Trash2 } from 'lucide-react'
+import { LoaderCircle, Pencil, Trash2, TriangleAlert } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { createClient } from '@/utils/supabase/client'
 import { useConfirm, useToast } from '@/components/ui/feedback-provider'
@@ -293,9 +293,12 @@ export function ProductTable({
                       </div>
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600">
-                      <p className="font-medium text-slate-900">{product.stock} un.</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {product.stock <= 3 ? 'Estoque baixo' : 'Estoque regular'}
+                      <p className={`flex items-center gap-1 font-medium ${product.stock < 10 ? 'text-amber-600' : 'text-slate-900'}`}>
+                        {product.stock < 10 ? <TriangleAlert className="h-4 w-4 shrink-0" /> : null}
+                        {product.stock} un.
+                      </p>
+                      <p className={`mt-1 text-xs ${product.stock <= 3 ? 'font-semibold text-amber-600' : product.stock < 10 ? 'text-amber-600' : 'text-slate-500'}`}>
+                        {product.stock <= 3 ? 'Estoque critico' : product.stock < 10 ? 'Estoque baixo' : 'Estoque regular'}
                       </p>
                     </td>
                     <td className="px-4 py-4 text-center">

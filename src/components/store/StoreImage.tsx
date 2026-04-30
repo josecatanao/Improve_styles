@@ -26,8 +26,6 @@ export function StoreImage({
     <img
       src={src}
       alt={alt}
-      loading="lazy"
-      decoding="async"
       className={className}
       onError={() => setFailedSrcs((current) => ({ ...current, [src]: true }))}
     />

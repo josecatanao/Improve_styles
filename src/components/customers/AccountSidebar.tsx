@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { User, MapPin, ShoppingBag, Shield, LogOut } from 'lucide-react'
+import { User, MapPin, ShoppingBag, Shield, Heart, LogOut } from 'lucide-react'
 import { logout } from '@/app/login/actions'
 
 const navigation = [
   { name: 'Dados pessoais', href: '/conta', icon: User },
   { name: 'Endereços', href: '/conta/enderecos', icon: MapPin },
   { name: 'Meus pedidos', href: '/conta/pedidos', icon: ShoppingBag },
+  { name: 'Favoritos', href: '/conta/favoritos', icon: Heart },
   { name: 'Segurança', href: '/conta/seguranca', icon: Shield },
 ]
 

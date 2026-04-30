@@ -17,6 +17,8 @@ import {
   Settings,
   ShoppingBag,
   Tags,
+  TicketPercent,
+  Truck,
   User as UserIcon,
   Users,
 } from 'lucide-react'
@@ -26,6 +28,7 @@ const productNavigation = [
   { name: 'Visao geral', href: '/dashboard/produtos', icon: Grid2X2 },
   { name: 'Catalogo', href: '/dashboard/produtos/catalogo', icon: FolderKanban },
   { name: 'Categorias', href: '/dashboard/produtos/categorias', icon: Tags },
+  { name: 'Cupons', href: '/dashboard/cupons', icon: TicketPercent },
   { name: 'Cadastrar produto', href: '/dashboard/produtos/novo', icon: PlusCircle },
 ]
 
@@ -38,6 +41,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Pedidos', href: '/dashboard/pedidos', icon: ShoppingBag },
   { name: 'Marketing', href: '/dashboard/marketing', icon: Grid2X2 },
+  { name: 'Entrega', href: '/dashboard/entrega', icon: Truck },
   { name: 'Clientes', href: '/dashboard/clientes', icon: UserIcon },
   { name: 'Usuários', href: '/dashboard/usuarios', icon: Users },
 ]

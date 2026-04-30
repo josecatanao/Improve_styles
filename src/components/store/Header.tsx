@@ -61,7 +61,7 @@ export function Header({
             >
               <Menu className="h-5 w-5" />
             </SheetTrigger>
-            <SheetContent side="left" className="overflow-y-auto bg-[var(--store-header-bg)] p-0 text-[var(--store-header-fg)]">
+            <SheetContent side="left" className="overflow-y-auto bg-[var(--store-header-bg,#ffffff)] p-0 text-[var(--store-header-fg,#0f172a)]">
               <div className="border-b border-[color:var(--store-header-border)] px-5 py-4">
                 <Link href="/" className="flex items-center gap-2.5">
                   {branding?.logoUrl ? (
@@ -159,13 +159,13 @@ export function Header({
           <StoreSearchBox key={`desktop:${query}`} query={query} suggestions={searchSuggestions} />
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-3">
-            <button
-              type="button"
+            <Link
+              href="/conta/favoritos"
               className="hidden h-11 items-center gap-2 rounded-none border border-transparent px-3 text-sm font-medium text-[var(--store-header-fg)] transition-colors hover:bg-black/5 md:inline-flex"
             >
               <Heart className="h-4 w-4" />
               Favoritos
-            </button>
+            </Link>
 
             <CartSheet />
           </div>

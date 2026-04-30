@@ -94,6 +94,38 @@ export default async function ProductDetailPage({
           </p>
         </section>
 
+        {product.weight != null || product.width != null || product.height != null || product.length != null ? (
+          <section className="rounded-none border border-slate-200 bg-white p-6">
+            <h2 className="text-xl font-semibold text-slate-950">Especificacoes tecnicas</h2>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {product.weight != null ? (
+                <div className="rounded-none border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Peso</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">{product.weight} g</p>
+                </div>
+              ) : null}
+              {product.width != null ? (
+                <div className="rounded-none border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Largura</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">{product.width} cm</p>
+                </div>
+              ) : null}
+              {product.height != null ? (
+                <div className="rounded-none border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Altura</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">{product.height} cm</p>
+                </div>
+              ) : null}
+              {product.length != null ? (
+                <div className="rounded-none border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Comprimento</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">{product.length} cm</p>
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
         <ProductReviews productId={product.id} reviews={reviews} isLoggedIn={Boolean(user)} />
 
         <section className="space-y-4">

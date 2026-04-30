@@ -27,14 +27,23 @@ export type StoreOrder = {
   installments: number
   delivery_lat: number | null
   delivery_lng: number | null
+  shipping_cost: number | null
+  shipping_zone_name: string | null
+  shipping_zip: string | null
   created_at: string
   updated_at: string
   store_order_items: StoreOrderItem[]
 }
 
-export async function getStoreOrders() {
+export async function getStoreOrders(page = 1, limit = 20) {
   const supabase = createAdminClient()
-  
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  const { count, error: countError } = await supabase
+    .from('store_orders')
+    .select('*', { count: 'exact', head: true })
+
   const { data, error } = await supabase
     .from('store_orders')
     .select(`
@@ -51,10 +60,12 @@ export async function getStoreOrders() {
       )
     `)
     .order('created_at', { ascending: false })
+    .range(from, to)
 
-  if (error?.code === '42P01') {
+  if (countError?.code === '42P01' || error?.code === '42P01') {
     return {
       orders: [],
+      total: 0,
       setupRequired: true,
       errorMessage: null,
     }
@@ -63,6 +74,7 @@ export async function getStoreOrders() {
   if (error || !data) {
     return {
       orders: [],
+      total: 0,
       setupRequired: false,
       errorMessage: error?.message ?? 'Nao foi possivel carregar os pedidos.',
     }
@@ -73,6 +85,7 @@ export async function getStoreOrders() {
       ...order,
       store_order_items: order.store_order_items ?? [],
     })),
+    total: count ?? 0,
     setupRequired: false,
     errorMessage: null,
   }

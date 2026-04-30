@@ -56,7 +56,7 @@ export function ProductReviews({
   }
 
   return (
-    <section className="mt-16 rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-6 sm:p-10 shadow-sm">
+    <section id="product-reviews" className="mt-16 rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-6 sm:p-10 shadow-sm">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-8">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-950 flex items-center gap-2">

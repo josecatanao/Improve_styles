@@ -51,6 +51,8 @@ type ProductFormState = {
   compare_at_price: string
   status: ProductStatus
   is_featured: boolean
+  collection: string
+  audience: string
 }
 
 type VariantRow = {
@@ -117,6 +119,8 @@ const initialState: ProductFormState = {
   compare_at_price: '',
   status: 'draft',
   is_featured: false,
+  collection: '',
+  audience: '',
 }
 
 const stepItems = [
@@ -576,6 +580,8 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
           compare_at_price: String(product.compare_at_price ?? ''),
           status: product.status ?? 'draft',
           is_featured: product.is_featured ?? false,
+          collection: product.collection ?? '',
+          audience: product.audience ?? '',
         }
       : initialState
   )
@@ -1049,8 +1055,8 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         status: form.status,
         category: form.category.trim() || null,
         brand: form.brand.trim() || null,
-        collection: null,
-        audience: null,
+        collection: form.collection.trim() || null,
+        audience: form.audience.trim() || null,
         tags: [],
         is_featured: form.is_featured,
         is_new: false,
@@ -1388,6 +1394,29 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                     onDraftChange={setBrandDraft}
                     onSelect={(value) => setForm((current) => ({ ...current, brand: value }))}
                   />
+
+                  <FieldGroup label="Colecao" hint="Nome da colecao a que este produto pertence.">
+                    <Input
+                      value={form.collection}
+                      onChange={(event) => setForm((current) => ({ ...current, collection: event.target.value }))}
+                      placeholder="Ex.: Verao 2025"
+                      className="h-11"
+                    />
+                  </FieldGroup>
+
+                  <FieldGroup label="Publico" hint="Segmento de publico-alvo. Deixe em branco para nenhum.">
+                    <select
+                      value={form.audience}
+                      onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))}
+                      className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:border-slate-600 dark:focus-visible:ring-slate-800"
+                    >
+                      <option value="">Nenhum</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Feminino">Feminino</option>
+                      <option value="Infantil">Infantil</option>
+                      <option value="Unissex">Unissex</option>
+                    </select>
+                  </FieldGroup>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FieldGroup label="Preco" hint="Valor de venda padrao.">

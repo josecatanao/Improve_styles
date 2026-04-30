@@ -202,6 +202,20 @@ async function attachReviewStats(products: ProductListItem[], supabase: Awaited<
   })
 }
 
+export async function getLowStockProducts() {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('products')
+    .select('id, name, stock, status')
+    .eq('status', 'active')
+    .lt('stock', 10)
+    .gt('stock', 0)
+    .order('stock', { ascending: true })
+    .limit(20)
+
+  return (data ?? []) as Array<{ id: string; name: string; stock: number; status: string }>
+}
+
 export async function getProductMetrics(): Promise<ProductDashboardMetrics> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -261,7 +275,7 @@ export async function getStoreSearchIndex(): Promise<StoreSearchSuggestion[]> {
     .eq('status', 'active')
     .eq('is_active', true)
     .order('created_at', { ascending: false })
-    .limit(120)
+    .limit(500)
 
   if (isMissingTable(error) || error || !data) {
     return []
@@ -402,8 +416,15 @@ export async function getProducts(options: {
   }
 }
 
-export async function getProductOverviewData(): Promise<ProductOverviewData> {
+export async function getProductOverviewData(page = 1, limit = 20): Promise<ProductOverviewData & { total: number }> {
   const supabase = await createClient()
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  const { count, error: countError } = await supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+
   const { data, error } = await supabase
     .from('products')
     .select(
@@ -430,9 +451,11 @@ export async function getProductOverviewData(): Promise<ProductOverviewData> {
       `
     )
     .order('created_at', { ascending: false })
+    .range(from, to)
 
-  if (isMissingTable(error)) {
+  if (isMissingTable(error) || isMissingTable(countError)) {
     return {
+      total: 0,
       statusBreakdown: [],
       categoryBreakdown: [],
       brandBreakdown: [],
@@ -446,6 +469,7 @@ export async function getProductOverviewData(): Promise<ProductOverviewData> {
 
   if (error || !data) {
     return {
+      total: 0,
       statusBreakdown: [],
       categoryBreakdown: [],
       brandBreakdown: [],
@@ -502,6 +526,7 @@ export async function getProductOverviewData(): Promise<ProductOverviewData> {
       .map(([label, value]) => ({ label, value }))
 
   return {
+    total: count ?? 0,
     statusBreakdown: Array.from(statusMap.entries())
       .map(([key, value]) => ({ label: statusLabels[key] ?? key, value }))
       .sort((a, b) => b.value - a.value),
@@ -528,11 +553,13 @@ export async function getStorefrontData(options?: {
   query?: string
   category?: string
   sort?: ExtendedStoreSortOption
+  limit?: number
 }): Promise<StorefrontResult> {
   const supabase = await createClient()
   const query = options?.query?.trim()
   const category = options?.category?.trim()
   const sort = options?.sort ?? 'popular'
+  const limit = options?.limit ?? 50
 
   const { data, error } = await supabase
     .from('products')
@@ -566,6 +593,7 @@ export async function getStorefrontData(options?: {
     .eq('status', 'active')
     .eq('is_active', true)
     .order('created_at', { ascending: false })
+    .limit(limit)
 
   if (isMissingTable(error)) {
     return {

@@ -46,22 +46,40 @@ export type AccountOrder = {
 }
 
 export async function getAccountProfile(userId: string) {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('customer_profiles')
-    .select(
-      'id, email, full_name, whatsapp, photo_url, delivery_address, delivery_house_number, delivery_complement, delivery_neighborhood, delivery_zip_code, delivery_city, delivery_state, delivery_reference, delivery_gps_captured_at, delivery_lat, delivery_lng'
-    )
-    .eq('id', userId)
-    .single()
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('customer_profiles')
+      .select(
+        'id, email, full_name, whatsapp, photo_url, delivery_address, delivery_house_number, delivery_complement, delivery_neighborhood, delivery_zip_code, delivery_city, delivery_state, delivery_reference, delivery_gps_captured_at, delivery_lat, delivery_lng'
+      )
+      .eq('id', userId)
+      .single()
 
-  return (data ?? null) as AccountProfile | null
+    if (error) {
+      console.error('[getAccountProfile]', error.message)
+    }
+
+    return (data ?? null) as AccountProfile | null
+  } catch (err) {
+    console.error('[getAccountProfile]', err instanceof Error ? err.message : err)
+    return null
+  }
 }
 
-export async function getCustomerOrders(userId: string) {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('store_orders')
+export async function getCustomerOrders(userId: string, page = 1, limit = 20) {
+  try {
+    const supabase = await createClient()
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    const { count, error: countError } = await supabase
+      .from('store_orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('customer_id', userId)
+
+    const { data, error } = await supabase
+      .from('store_orders')
     .select(
       `
         id,
@@ -89,6 +107,7 @@ export async function getCustomerOrders(userId: string) {
     )
     .eq('customer_id', userId)
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   const orders = ((data ?? []) as AccountOrder[]).map((order) => ({
     ...order,
@@ -116,39 +135,49 @@ export async function getCustomerOrders(userId: string) {
     )
   )
 
-  if (missingImageProductIds.length === 0) {
-    return orders
+  if (missingImageProductIds.length > 0) {
+    const { data: productRows } = await supabase
+      .from('products')
+      .select(
+        `
+          id,
+          product_images (
+            public_url,
+            sort_order
+          )
+        `
+      )
+      .in('id', missingImageProductIds)
+
+    const productImageMap = new Map<string, string | null>(
+      ((productRows as Array<{ id: string; product_images?: Array<{ public_url: string | null; sort_order?: number | null }> }> | null) ?? []).map(
+        (product) => [
+          product.id,
+          (product.product_images ?? [])
+            .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+            .find((image) => image.public_url)?.public_url ?? null,
+        ]
+      )
+    )
+
+    return {
+      orders: orders.map((order) => ({
+        ...order,
+        store_order_items: order.store_order_items.map((item) => ({
+          ...item,
+          image_url: item.image_url ?? productImageMap.get(item.product_id) ?? null,
+        })),
+      })),
+      total: count ?? 0,
+    }
   }
 
-  const { data: productRows } = await supabase
-    .from('products')
-    .select(
-      `
-        id,
-        product_images (
-          public_url,
-          sort_order
-        )
-      `
-    )
-    .in('id', missingImageProductIds)
-
-  const productImageMap = new Map<string, string | null>(
-    ((productRows as Array<{ id: string; product_images?: Array<{ public_url: string | null; sort_order?: number | null }> }> | null) ?? []).map(
-      (product) => [
-        product.id,
-        (product.product_images ?? [])
-          .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
-          .find((image) => image.public_url)?.public_url ?? null,
-      ]
-    )
-  )
-
-  return orders.map((order) => ({
-    ...order,
-    store_order_items: order.store_order_items.map((item) => ({
-      ...item,
-      image_url: item.image_url ?? productImageMap.get(item.product_id) ?? null,
-    })),
-  }))
+  return {
+    orders,
+    total: count ?? 0,
+  }
+  } catch (err) {
+    console.error('[getCustomerOrders]', err instanceof Error ? err.message : err)
+    return { orders: [], total: 0 }
+  }
 }

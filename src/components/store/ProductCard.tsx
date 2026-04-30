@@ -1,7 +1,11 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
-import { Heart, ShoppingCart, Star } from 'lucide-react'
+import { Check, Heart, ShoppingCart, Star } from 'lucide-react'
 import type { ProductListItem } from '@/lib/product-shared'
 import { StoreImage } from '@/components/store/StoreImage'
+import { useCart } from '@/components/store/CartProvider'
 import { formatMoney, getProductDisplayBadge, getProductPrimaryImage, normalizeStoreCategoryLabel } from '@/lib/storefront'
 
 function getBadgeStyles(product: ProductListItem, badge: string | null) {
@@ -44,14 +48,17 @@ function getBadgeLabel(product: ProductListItem, badge: string | null) {
   return badge
 }
 
-function getInstallments(price: number) {
-  if (price >= 120) return 6
-  if (price >= 80) return 4
-  return 5
+function getInstallments(price: number, maxInstallments = 12, minInstallmentValue = 50) {
+  if (price <= 0) return 1
+  const maxByPrice = Math.floor(price / minInstallmentValue)
+  return Math.min(maxInstallments, Math.max(1, maxByPrice))
 }
 
 export function ProductCard({ product }: { product: ProductListItem }) {
+  const { isInWishlist, addToWishlist, removeFromWishlist, addItem } = useCart()
+  const [added, setAdded] = useState(false)
   const badge = getProductDisplayBadge(product)
+  const inWishlist = isInWishlist(product.id)
   const image = getProductPrimaryImage(product)
   const hasDiscount = Number(product.compare_at_price ?? 0) > Number(product.price ?? 0)
   const swatches = (product.colors ?? []).slice(0, 4)
@@ -85,12 +92,24 @@ export function ProductCard({ product }: { product: ProductListItem }) {
             </span>
           ) : null}
 
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-none border border-slate-200/80 bg-white/95 text-slate-500 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.6)] transition-colors group-hover:text-slate-900 sm:right-4 sm:top-4 sm:h-9 sm:w-9"
+          <button
+            type="button"
+            aria-label={inWishlist ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (inWishlist) {
+                removeFromWishlist(product.id)
+              } else {
+                addToWishlist(product.id)
+              }
+            }}
+            className={`absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-none border border-slate-200/80 bg-white/95 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.6)] transition-colors sm:right-4 sm:top-4 sm:h-9 sm:w-9 ${
+              inWishlist ? 'text-red-500 hover:text-red-600' : 'text-slate-500 hover:text-slate-900'
+            }`}
           >
-            <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          </span>
+            <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${inWishlist ? 'fill-red-500' : ''}`} />
+          </button>
         </div>
 
         <div className="flex flex-1 flex-col gap-1 px-0.5 pb-0.5 pt-1 sm:gap-1.5 sm:px-1 sm:pb-1 sm:pt-1.5">
@@ -140,12 +159,37 @@ export function ProductCard({ product }: { product: ProductListItem }) {
               </p>
             </div>
 
-            <span
-              aria-hidden="true"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-[var(--store-cart-bg)] text-[var(--store-cart-fg)] shadow-[0_18px_28px_-18px_rgba(11,47,111,0.75)] transition-transform duration-300 group-hover:scale-[1.04] sm:h-12 sm:w-12"
+            <button
+              type="button"
+              aria-label={`Adicionar ${product.name} ao carrinho`}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                addItem({
+                  id: `${product.id}-${swatches[0]?.hex ?? 'default'}-default`,
+                  productId: product.id,
+                  name: product.name,
+                  price: displayPrice,
+                  quantity: 1,
+                  image,
+                  colorName: swatches[0]?.name ?? null,
+                  colorHex: swatches[0]?.hex ?? null,
+                })
+                setAdded(true)
+                setTimeout(() => setAdded(false), 1500)
+              }}
+              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none shadow-[0_18px_28px_-18px_rgba(11,47,111,0.75)] transition-all duration-300 sm:h-12 sm:w-12 ${
+                added
+                  ? 'scale-110 bg-emerald-500 text-white'
+                  : 'bg-[var(--store-cart-bg)] text-[var(--store-cart-fg)] group-hover:scale-[1.04]'
+              }`}
             >
-              <ShoppingCart className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
-            </span>
+              {added ? (
+                <Check className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+              ) : (
+                <ShoppingCart className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+              )}
+            </button>
           </div>
 
           <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs">

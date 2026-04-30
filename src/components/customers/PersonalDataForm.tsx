@@ -78,7 +78,6 @@ export function PersonalDataForm({ initialProfile, email }: { initialProfile: Ac
 
       setSaveMessage({ type: 'success', text: 'Foto atualizada com sucesso!' })
     } catch (error) {
-      console.error(error)
       setSaveMessage({ type: 'error', text: 'Nao foi possivel enviar a foto.' })
     } finally {
       setIsUploading(false)

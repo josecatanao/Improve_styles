@@ -7,9 +7,13 @@ import type { ProductImageRecord } from '@/lib/product-shared'
 export function ProductGallery({
   images,
   productName,
+  selectedColor,
+  colorHex,
 }: {
   images: ProductImageRecord[]
   productName: string
+  selectedColor?: string | null
+  colorHex?: string | null
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isZoomOpen, setIsZoomOpen] = useState(false)
@@ -20,26 +24,35 @@ export function ProductGallery({
         : [{ public_url: null, alt_text: productName, assigned_color_hex: null, assigned_color_name: null }],
     [images, productName]
   )
-  const activeIndex = Math.min(selectedIndex, normalizedImages.length - 1)
-  const activeImage = normalizedImages[activeIndex] ?? normalizedImages[0]
+  const filteredImages = useMemo(() => {
+    if (!selectedColor) return normalizedImages
+    return normalizedImages.filter(img =>
+      !img.public_url ||
+      img.assigned_color_name === selectedColor ||
+      img.assigned_color_hex === colorHex ||
+      (!img.assigned_color_name && !img.assigned_color_hex)
+    )
+  }, [normalizedImages, selectedColor, colorHex])
+  const activeIndex = Math.min(selectedIndex, filteredImages.length - 1)
+  const activeImage = filteredImages[activeIndex] ?? filteredImages[0]
 
   function selectImage(index: number) {
     setSelectedIndex(index)
   }
 
   function showPreviousImage() {
-    setSelectedIndex((current) => (current - 1 + normalizedImages.length) % normalizedImages.length)
+    setSelectedIndex((current) => (current - 1 + filteredImages.length) % filteredImages.length)
   }
 
   function showNextImage() {
-    setSelectedIndex((current) => (current + 1) % normalizedImages.length)
+    setSelectedIndex((current) => (current + 1) % filteredImages.length)
   }
 
   return (
     <>
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-[88px_minmax(0,1fr)]">
         <div className="hidden max-h-[760px] lg:flex lg:flex-col lg:gap-3 lg:overflow-y-auto lg:pr-1">
-        {normalizedImages.map((image, index) => (
+        {filteredImages.map((image, index) => (
           <button
             key={`${image.public_url ?? 'placeholder'}-${index}`}
             type="button"
@@ -57,7 +70,7 @@ export function ProductGallery({
         </div>
 
         <div className="space-y-3">
-          <div className="group relative hidden overflow-hidden rounded-none border border-slate-200 bg-white lg:block">
+          <div className="group relative hidden aspect-square overflow-hidden rounded-none border border-slate-200 bg-white lg:block">
             {activeImage?.public_url ? (
               <>
                 <button
@@ -67,11 +80,10 @@ export function ProductGallery({
                 >
                   <Search className="h-4 w-4" />
                 </button>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={activeImage.public_url ?? ''}
+                  src={activeImage.public_url}
                   alt={activeImage.alt_text || productName}
-                  className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-[1.06]"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.06]"
                 />
               </>
             ) : (
@@ -83,7 +95,7 @@ export function ProductGallery({
 
           <div className="lg:hidden">
             <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {normalizedImages.map((image, index) => (
+              {filteredImages.map((image, index) => (
                 <button
                   key={`${image.public_url ?? 'mobile'}-${index}`}
                   type="button"
@@ -122,7 +134,7 @@ export function ProductGallery({
 
             <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[96px_minmax(0,1fr)]">
               <div className="hidden gap-3 overflow-y-auto lg:flex lg:flex-col">
-                {normalizedImages.map((image, index) => (
+                {filteredImages.map((image, index) => (
                   <button
                     key={`zoom-${image.public_url ?? 'placeholder'}-${index}`}
                     type="button"
@@ -142,7 +154,7 @@ export function ProductGallery({
               </div>
 
               <div className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-none bg-white/6">
-                {normalizedImages.length > 1 ? (
+                {filteredImages.length > 1 ? (
                   <>
                     <button
                       type="button"
@@ -162,11 +174,10 @@ export function ProductGallery({
                 ) : null}
 
                 {activeImage?.public_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={activeImage.public_url}
                     alt={activeImage.alt_text || productName}
-                    className="max-h-full w-full object-contain"
+                    className="max-h-full max-w-full object-contain"
                   />
                 ) : (
                   <div className="flex h-full min-h-[320px] w-full items-center justify-center text-sm text-white/70">

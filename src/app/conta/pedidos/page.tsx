@@ -11,7 +11,7 @@ export default async function AccountOrdersPage() {
     redirect('/login?mode=customer&next=%2Fconta')
   }
 
-  const [orders, profile, settings] = await Promise.all([
+  const [ordersResult, profile, settings] = await Promise.all([
     getCustomerOrders(session.userId),
     getAccountProfile(session.userId),
     getPublicStoreSettings(),
@@ -19,7 +19,7 @@ export default async function AccountOrdersPage() {
 
   return (
     <OrdersOverview
-      orders={orders}
+      orders={ordersResult.orders}
       customer={{
         email: session.email,
         fullName: profile?.full_name ?? session.profile?.full_name ?? null,

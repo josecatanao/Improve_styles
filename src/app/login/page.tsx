@@ -8,6 +8,7 @@ export default async function LoginPage({
 }) {
   const resolvedParams = await searchParams
   const error = resolvedParams?.error
+  const success = resolvedParams?.success
   const message = resolvedParams?.message
   const mode = typeof resolvedParams?.mode === 'string' ? resolvedParams.mode : null
   const defaultNext = mode === 'customer' ? '/' : '/dashboard'
@@ -23,6 +24,7 @@ export default async function LoginPage({
           isStoreContext={isStoreContext}
           message={message}
           next={next}
+          success={success}
         />
     </AuthPageShell>
   )
