@@ -182,3 +182,18 @@ export async function updateStoreBannerLink(bannerId: string, linkUrl: string) {
   refresh()
   return { success: true, banner }
 }
+
+export async function reorderStoreBanners(orderedIds: string[]) {
+  const supabase = createAdminClient()
+
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase.from('store_banners').update({ order_index: index }).eq('id', id)
+    )
+  )
+
+  revalidatePath('/')
+  revalidatePath('/dashboard/marketing')
+  refresh()
+  return { success: true }
+}

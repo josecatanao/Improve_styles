@@ -49,6 +49,7 @@ const EMPTY_CART: CartItem[] = []
 const EMPTY_WISHLIST: string[] = []
 let cartSnapshot: CartItem[] = EMPTY_CART
 let wishlistSnapshot: string[] = EMPTY_WISHLIST
+let isHydrating = true
 
 function readWishlistFromLocalStorage() {
   try {
@@ -71,7 +72,7 @@ function readItemsFromLocalStorage() {
 }
 
 function readItemsFromStorage() {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || isHydrating) {
     return cartSnapshot
   }
 
@@ -85,7 +86,7 @@ function readItemsFromStorage() {
 }
 
 function readWishlistFromStorage() {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || isHydrating) {
     return wishlistSnapshot
   }
 
@@ -169,6 +170,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch { return null }
   })
   const { totalItems, totalPrice } = getItemTotals(items)
+
+  useEffect(() => {
+    isHydrating = false
+    window.dispatchEvent(new Event(WISHLIST_EVENT))
+    window.dispatchEvent(new Event(CART_EVENT))
+  }, [])
 
   useEffect(() => {
     if (appliedCoupon) {

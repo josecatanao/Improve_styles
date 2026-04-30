@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Headphones, Heart, Menu, UserRound } from 'lucide-react'
 import { logout } from '@/app/login/actions'
+import { StoreBrandMark } from '@/components/store/StoreBrandMark'
 import { CartSheet } from '@/components/store/CartSheet'
 import { StoreSearchBox } from '@/components/store/StoreSearchBox'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -63,17 +64,11 @@ export function Header({
             </SheetTrigger>
             <SheetContent side="left" className="overflow-y-auto bg-[var(--store-header-bg,#ffffff)] p-0 text-[var(--store-header-fg,#0f172a)]">
               <div className="border-b border-[color:var(--store-header-border)] px-5 py-4">
-                <Link href="/" className="flex items-center gap-2.5">
-                  {branding?.logoUrl ? (
-                    <span className="flex h-9 shrink-0 items-center justify-start overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={branding.logoUrl} alt="Logo da loja" className="block h-full w-auto max-w-[40px] object-contain object-left" />
-                    </span>
-                  ) : null}
-                  <span className="text-base font-bold tracking-tight text-[var(--store-header-fg)] sm:text-lg">
-                    {storeName}
-                  </span>
-                </Link>
+                <StoreBrandMark
+                  logoUrl={branding?.logoUrl}
+                  storeName={storeName}
+                  compact
+                />
               </div>
               <nav className="flex flex-col gap-1 px-4 py-4">
                 {primaryLinks.map((item) => (
@@ -144,17 +139,12 @@ export function Header({
             </SheetContent>
           </Sheet>
 
-          <Link href="/" className="flex min-w-0 flex-1 shrink items-center gap-2.5 lg:flex-none">
-            {branding?.logoUrl ? (
-              <span className="flex h-9 shrink-0 items-center justify-start overflow-hidden sm:h-10">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={branding.logoUrl} alt="Logo da loja" className="block h-full w-auto max-w-[40px] object-contain object-left sm:max-w-[44px]" />
-              </span>
-            ) : null}
-            <span className="truncate text-[0.95rem] font-bold tracking-tight text-[var(--store-header-fg)] sm:text-lg">
-              {storeName}
-            </span>
-          </Link>
+          <StoreBrandMark
+            logoUrl={branding?.logoUrl}
+            storeName={storeName}
+            compact
+            className="min-w-0 flex-1 shrink lg:flex-none"
+          />
 
           <StoreSearchBox key={`desktop:${query}`} query={query} suggestions={searchSuggestions} />
 

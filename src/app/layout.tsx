@@ -3,23 +3,42 @@ import './globals.css'
 import { CartProvider } from '@/components/store/CartProvider'
 import { FeedbackProvider } from '@/components/ui/feedback-provider'
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
+import { getPublicStoreSettings } from '@/lib/store-branding'
 
-export const metadata: Metadata = {
-  title: {
-    default: 'Improve Style',
-    template: '%s | Improve Style',
-  },
-  description: 'Loja online de moda e estilo. Encontre os melhores produtos com os melhores preços.',
-  openGraph: {
-    title: 'Improve Style',
-    description: 'Loja online de moda e estilo.',
-    type: 'website',
-    locale: 'pt_BR',
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicStoreSettings()
+  const storeName = settings.store_name || 'Improve Style'
+  const logoUrl = settings.store_logo_url?.trim() || null
+  const faviconUrl =
+    logoUrl && settings.updated_at
+      ? `${logoUrl}${logoUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(settings.updated_at)}`
+      : logoUrl
+
+  return {
+    title: {
+      default: storeName,
+      template: `%s | ${storeName}`,
+    },
+    description: 'Loja online de moda e estilo. Encontre os melhores produtos com os melhores precos.',
+    icons: faviconUrl
+      ? {
+          icon: faviconUrl,
+          shortcut: faviconUrl,
+          apple: faviconUrl,
+        }
+      : undefined,
+    openGraph: {
+      title: storeName,
+      description: 'Loja online de moda e estilo.',
+      type: 'website',
+      locale: 'pt_BR',
+      ...(logoUrl ? { images: [logoUrl] } : {}),
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  }
 }
 
 export default function RootLayout({

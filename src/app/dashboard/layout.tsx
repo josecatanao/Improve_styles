@@ -6,6 +6,21 @@ import { getPublicStoreSettings } from '@/lib/store-branding'
 import { buildStoreBrandStyle, normalizeStoreSettings } from '@/lib/store-settings'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicStoreSettings()
+  const normalized = normalizeStoreSettings(settings)
+  const logoUrl = normalized.store_logo_url?.trim() || null
+
+  return {
+    title: {
+      default: `${normalized.store_name} — Dashboard`,
+      template: `%s | ${normalized.store_name}`,
+    },
+    icons: logoUrl ? { icon: logoUrl, shortcut: logoUrl, apple: logoUrl } : undefined,
+  }
+}
 
 export default async function DashboardLayout({
   children,

@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, ChevronRight, ImagePlus, Info, Loader2, ShoppingCart, Upload, X } from 'lucide-react'
+import { AlertTriangle, Check, ChevronRight, ImagePlus, Info, Loader2, ShoppingCart, Upload, X } from 'lucide-react'
 import { saveStoreAppearance, uploadStoreLogoAction } from '@/app/dashboard/configuracoes/actions'
 import type { DashboardTheme, StoreSettings } from '@/lib/store-settings'
-import { getContrastingTextColor } from '@/lib/store-settings'
+import { getContrastingTextColor, getContrastRatio, getWcagStatus } from '@/lib/store-settings'
 import { useToast } from '@/components/ui/feedback-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input'
 type AppearanceFormState = {
   storeName: string
   storeLogoUrl: string
+  brandPrimaryColor: string
+  brandSecondaryColor: string
   storeHeaderBackgroundColor: string
   storeButtonBackgroundColor: string
   storeCardBackgroundColor: string
@@ -28,6 +30,8 @@ export function StoreAppearanceManager({
     StoreSettings,
     | 'store_name'
     | 'store_logo_url'
+    | 'brand_primary_color'
+    | 'brand_secondary_color'
     | 'store_header_background_color'
     | 'store_button_background_color'
     | 'store_card_background_color'
@@ -41,6 +45,8 @@ export function StoreAppearanceManager({
   const [form, setForm] = useState<AppearanceFormState>({
     storeName: initialSettings.store_name,
     storeLogoUrl: initialSettings.store_logo_url ?? '',
+    brandPrimaryColor: initialSettings.brand_primary_color,
+    brandSecondaryColor: initialSettings.brand_secondary_color,
     storeHeaderBackgroundColor: initialSettings.store_header_background_color,
     storeButtonBackgroundColor: initialSettings.store_button_background_color,
     storeCardBackgroundColor: initialSettings.store_card_background_color,
@@ -78,8 +84,6 @@ export function StoreAppearanceManager({
 
       await saveStoreAppearance({
         ...form,
-        brandPrimaryColor: '#0f172a',
-        brandSecondaryColor: '#e2e8f0',
         storeLogoUrl,
       })
       setForm((current) => ({ ...current, storeLogoUrl }))
@@ -146,6 +150,13 @@ export function StoreAppearanceManager({
       fileInputRef.current.value = ''
     }
   }
+
+  const brandOnWhiteRatio = getContrastRatio(form.brandPrimaryColor, '#ffffff')
+  const brandOnWhiteStatus = getWcagStatus(brandOnWhiteRatio)
+  const brandContrastFail = brandOnWhiteStatus === 'fail'
+
+  const buttonOnCardRatio = getContrastRatio(form.storeButtonBackgroundColor, form.storeCardBackgroundColor)
+  const buttonOnCardStatus = getWcagStatus(buttonOnCardRatio)
 
   return (
     <div className="space-y-6">
@@ -243,21 +254,49 @@ export function StoreAppearanceManager({
             {activeStep === 'components' ? (
               <SectionCard
                 title="Componentes da loja"
-                description="Personalize topo, cards e botoes da vitrine."
+                description="Personalize cores da marca, topo, cards e botoes da vitrine."
               >
                 <div className="grid gap-4 md:grid-cols-2">
-                  <FieldGroup label="Fundo do menu" infoText="Altera o fundo do cabeçalho superior da loja, onde ficam logo, menu e ações principais.">
+                  <FieldGroup label="Cor primaria da marca" infoText="Cor principal da sua identidade visual. Aparece em botoes primarios, destaques e links da vitrine.">
+                    <ColorField
+                      value={form.brandPrimaryColor}
+                      onChange={(value) => setForm((current) => ({ ...current, brandPrimaryColor: value }))}
+                    />
+                    {brandContrastFail ? (
+                      <p className="flex items-center gap-1.5 text-xs text-amber-600">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Contraste baixo com texto branco ({brandOnWhiteRatio.toFixed(1)}:1). Pode dificultar a leitura.
+                      </p>
+                    ) : null}
+                  </FieldGroup>
+
+                  <FieldGroup label="Cor secundaria da marca" infoText="Cor de apoio. Aparece em elementos secundarios, tags e superficies suaves da vitrine.">
+                    <ColorField
+                      value={form.brandSecondaryColor}
+                      onChange={(value) => setForm((current) => ({ ...current, brandSecondaryColor: value }))}
+                    />
+                  </FieldGroup>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FieldGroup label="Fundo do menu" infoText="Altera o fundo do cabecalho superior da loja, onde ficam logo, menu e acoes principais.">
                     <ColorField
                       value={form.storeHeaderBackgroundColor}
                       onChange={(value) => setForm((current) => ({ ...current, storeHeaderBackgroundColor: value }))}
                     />
                   </FieldGroup>
 
-                  <FieldGroup label="Botão principal" infoText="Muda os botões principais de ação da vitrine, como comprar e buscar.">
+                  <FieldGroup label="Botao principal" infoText="Muda os botoes principais de acao da vitrine, como comprar e buscar.">
                     <ColorField
                       value={form.storeButtonBackgroundColor}
                       onChange={(value) => setForm((current) => ({ ...current, storeButtonBackgroundColor: value }))}
                     />
+                    {buttonOnCardStatus === 'fail' ? (
+                      <p className="flex items-center gap-1.5 text-xs text-amber-600">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Contraste baixo com o fundo do card ({buttonOnCardRatio.toFixed(1)}:1).
+                      </p>
+                    ) : null}
                   </FieldGroup>
                 </div>
 
@@ -269,14 +308,14 @@ export function StoreAppearanceManager({
                     />
                   </FieldGroup>
 
-                  <FieldGroup label="Borda dos cards" infoText="Controla a cor das bordas dos cards e caixas de conteúdo da loja.">
+                  <FieldGroup label="Borda dos cards" infoText="Controla a cor das bordas dos cards e caixas de conteudo da loja.">
                     <ColorField
                       value={form.storeCardBorderColor}
                       onChange={(value) => setForm((current) => ({ ...current, storeCardBorderColor: value }))}
                     />
                   </FieldGroup>
 
-                  <FieldGroup label="Botão do carrinho" infoText="Muda o botão do carrinho e os destaques ligados ao acesso rápido ao carrinho.">
+                  <FieldGroup label="Botao do carrinho" infoText="Muda o botao do carrinho e os destaques ligados ao acesso rapido ao carrinho.">
                     <ColorField
                       value={form.storeCartButtonColor}
                       onChange={(value) => setForm((current) => ({ ...current, storeCartButtonColor: value }))}
@@ -294,6 +333,8 @@ export function StoreAppearanceManager({
                 <div className="grid gap-4 md:grid-cols-2">
                   <SummaryItem label="Nome da loja" value={form.storeName || 'Nao definido'} />
                   <SummaryItem label="Logo" value={previewLogoUrl ? 'Configurada' : 'Sem logo'} />
+                  <SummaryItem label="Cor primaria" value={form.brandPrimaryColor} swatch={form.brandPrimaryColor} />
+                  <SummaryItem label="Cor secundaria" value={form.brandSecondaryColor} swatch={form.brandSecondaryColor} />
                   <SummaryItem label="Menu" value={form.storeHeaderBackgroundColor} swatch={form.storeHeaderBackgroundColor} />
                   <SummaryItem label="Botao principal" value={form.storeButtonBackgroundColor} swatch={form.storeButtonBackgroundColor} />
                   <SummaryItem label="Card" value={form.storeCardBackgroundColor} swatch={form.storeCardBackgroundColor} />
@@ -302,6 +343,15 @@ export function StoreAppearanceManager({
               </SectionCard>
             ) : null}
 
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving || !schemaReady}
+              className="h-11 w-full rounded-xl bg-[#2563eb] px-5 text-white hover:bg-[#1d4ed8]"
+            >
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+              Salvar alteracoes
+            </Button>
           </div>
 
           <aside className="xl:sticky xl:top-6 xl:self-start">
@@ -338,7 +388,7 @@ export function StoreAppearanceManager({
 
                     <div className="rounded-[1.25rem] border border-blue-100 bg-blue-50 px-4 py-3">
                       <p className="text-sm font-medium text-blue-900">Essa etapa altera a assinatura visual da loja.</p>
-                      <p className="mt-1 text-xs text-blue-700">Nome e logo aparecem no cabeçalho, carrinho e rodapé.</p>
+                      <p className="mt-1 text-xs text-blue-700">Nome e logo aparecem no cabecalho, carrinho e rodape.</p>
                     </div>
                   </div>
                 ) : null}
@@ -349,9 +399,9 @@ export function StoreAppearanceManager({
                       <p className="text-sm font-medium text-slate-900">Como ler este preview</p>
                       <div className="mt-2 grid gap-2 text-xs text-slate-500">
                         <p><span className="font-semibold text-slate-700">1.</span> Faixa superior: fundo do menu.</p>
-                        <p><span className="font-semibold text-slate-700">2.</span> Botão “Carrinho”: cor do botão do carrinho.</p>
+                        <p><span className="font-semibold text-slate-700">2.</span> Botao &quot;Carrinho&quot;: cor do botao do carrinho.</p>
                         <p><span className="font-semibold text-slate-700">3.</span> Card do produto: fundo e borda dos cards.</p>
-                        <p><span className="font-semibold text-slate-700">4.</span> Botão “Comprar”: botão principal da loja.</p>
+                        <p><span className="font-semibold text-slate-700">4.</span> Botao &quot;Comprar&quot;: botao principal da loja.</p>
                       </div>
                     </div>
 
@@ -440,6 +490,8 @@ export function StoreAppearanceManager({
                       <div className="mt-4 grid gap-3">
                         <ReviewLine label="Nome da loja" value={form.storeName || 'Nao definido'} />
                         <ReviewLine label="Logo" value={previewLogoUrl ? 'Configurada' : 'Sem logo'} />
+                        <ReviewLine label="Cor primaria" value={form.brandPrimaryColor} />
+                        <ReviewLine label="Cor secundaria" value={form.brandSecondaryColor} />
                         <ReviewLine label="Componentes" value={`${form.storeHeaderBackgroundColor} • ${form.storeButtonBackgroundColor} • ${form.storeCardBackgroundColor}`} />
                       </div>
                     </div>
@@ -560,30 +612,6 @@ function StepPill({
       {title}
       <ChevronRight className={`h-4 w-4 ${active ? 'text-blue-400' : 'text-slate-300'}`} />
     </button>
-  )
-}
-
-function MiniThemeCard({
-  title,
-  accent,
-}: {
-  title: string
-  accent: string
-}) {
-  return (
-    <div className="rounded-[1.25rem] border border-slate-200 bg-white p-3">
-      <div className="space-y-2">
-        <div className="flex gap-1.5">
-          <span className="h-8 flex-1 rounded-lg" style={{ backgroundColor: accent }} />
-          <span className="h-8 w-10 rounded-lg bg-slate-100" />
-        </div>
-        <div className="flex gap-1.5">
-          <span className="h-2 w-12 rounded-full bg-slate-200" />
-          <span className="h-2 w-8 rounded-full bg-slate-100" />
-        </div>
-      </div>
-      <p className="mt-3 text-sm font-medium text-slate-700">{title}</p>
-    </div>
   )
 }
 

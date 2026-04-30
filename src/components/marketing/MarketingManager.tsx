@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { Trash2, GripVertical, Plus, ImagePlus, Loader2, Megaphone, LayoutList, CheckCircle2, ArrowUp, ArrowDown, Link2 } from 'lucide-react'
-import { saveStoreSettings, removeStoreBanner, toggleStoreBanner, updateStoreBannerLink, uploadStoreBannerAction } from '@/app/dashboard/marketing/actions'
+import { Trash2, Plus, ImagePlus, Loader2, Megaphone, LayoutList, CheckCircle2, ArrowUp, ArrowDown, Link2, GripVertical, Info } from 'lucide-react'
+import { removeStoreBanner, toggleStoreBanner, updateStoreBannerLink, uploadStoreBannerAction, reorderStoreBanners } from '@/app/dashboard/marketing/actions'
 import { useToast } from '@/components/ui/feedback-provider'
 
 const SECTION_CONTENT: Record<string, { title: string; description: string }> = {
@@ -78,32 +78,100 @@ export function MarketingManager({
   const [annLink, setAnnLink] = useState(initialSettings.announcement_link || '')
   const [annBackgroundColor, setAnnBackgroundColor] = useState(initialSettings.announcement_background_color || '#3483fa')
   const [banners, setBanners] = useState<StoreBanner[]>(initialBanners)
-  
-  const [isSavingSettings, setIsSavingSettings] = useState(false)
+
+  const [isSavingLayout, setIsSavingLayout] = useState(false)
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [isUpdatingBannerId, setIsUpdatingBannerId] = useState<string | null>(null)
   const [isRemovingBannerId, setIsRemovingBannerId] = useState<string | null>(null)
   const [isSavingBannerLinkId, setIsSavingBannerLinkId] = useState<string | null>(null)
+  const [confirmDeleteBannerId, setConfirmDeleteBannerId] = useState<string | null>(null)
+  const [draggedLayoutItem, setDraggedLayoutItem] = useState<string | null>(null)
+  const [draggedBannerId, setDraggedBannerId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const saveBannerOrderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  async function handleSaveSettings() {
-    setIsSavingSettings(true)
+  async function handleSaveAnnouncement() {
+    setIsSavingAnnouncement(true)
     try {
-      await saveStoreSettings(layout, annActive, annText, annLink, annBackgroundColor)
+      const supabase = (await import('@/utils/supabase/client')).createClient()
+
+      const { data: existing } = await supabase
+        .from('store_settings')
+        .select('id')
+        .limit(1)
+        .maybeSingle()
+
+      if (existing) {
+        await supabase.from('store_settings').update({
+          announcement_active: annActive,
+          announcement_text: annText || null,
+          announcement_link: annLink || null,
+          announcement_background_color: annBackgroundColor || '#3483fa',
+          updated_at: new Date().toISOString(),
+        }).eq('id', existing.id)
+      } else {
+        await supabase.from('store_settings').insert({
+          announcement_active: annActive,
+          announcement_text: annText || null,
+          announcement_link: annLink || null,
+          announcement_background_color: annBackgroundColor || '#3483fa',
+        })
+      }
+
       router.refresh()
       showToast({
         variant: 'success',
-        title: 'Configuracoes atualizadas',
-        description: 'A barra de anuncios e a ordem das secoes foram salvas.',
+        title: 'Anuncio salvo',
+        description: 'A barra de anuncios foi atualizada.',
       })
     } catch (error) {
       showToast({
         variant: 'error',
-        title: 'Erro ao salvar configuracoes',
+        title: 'Erro ao salvar anuncio',
         description: getErrorMessage(error),
       })
     } finally {
-      setIsSavingSettings(false)
+      setIsSavingAnnouncement(false)
+    }
+  }
+
+  async function handleSaveLayout() {
+    setIsSavingLayout(true)
+    try {
+      const supabase = (await import('@/utils/supabase/client')).createClient()
+
+      const { data: existing } = await supabase
+        .from('store_settings')
+        .select('id')
+        .limit(1)
+        .maybeSingle()
+
+      if (existing) {
+        await supabase.from('store_settings').update({
+          homepage_layout: layout,
+          updated_at: new Date().toISOString(),
+        }).eq('id', existing.id)
+      } else {
+        await supabase.from('store_settings').insert({
+          homepage_layout: layout,
+        })
+      }
+
+      router.refresh()
+      showToast({
+        variant: 'success',
+        title: 'Ordem salva',
+        description: 'A ordem das secoes da pagina inicial foi atualizada.',
+      })
+    } catch (error) {
+      showToast({
+        variant: 'error',
+        title: 'Erro ao salvar ordem',
+        description: getErrorMessage(error),
+      })
+    } finally {
+      setIsSavingLayout(false)
     }
   }
 
@@ -120,45 +188,100 @@ export function MarketingManager({
     setLayout(newLayout)
   }
 
+  function onDragStartLayout(itemId: string, event: React.DragEvent) {
+    setDraggedLayoutItem(itemId)
+    event.dataTransfer.effectAllowed = 'move'
+  }
+
+  function onDragOverLayout(event: React.DragEvent) {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+  }
+
+  function onDropLayout(targetId: string) {
+    if (!draggedLayoutItem || draggedLayoutItem === targetId) {
+      setDraggedLayoutItem(null)
+      return
+    }
+
+    setLayout((current) => {
+      const fromIndex = current.indexOf(draggedLayoutItem)
+      const toIndex = current.indexOf(targetId)
+      if (fromIndex === -1 || toIndex === -1) return current
+
+      const next = [...current]
+      const [moved] = next.splice(fromIndex, 1)
+      next.splice(toIndex, 0, moved)
+      return next
+    })
+    setDraggedLayoutItem(null)
+  }
+
   async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
 
     setIsUploading(true)
+    const failedFiles: string[] = []
+
     try {
-      if (!file.type.startsWith('image/')) {
-        throw new Error('Selecione um arquivo de imagem para o banner.')
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+
+        if (!file.type.startsWith('image/')) {
+          failedFiles.push(`${file.name} (tipo invalido)`)
+          continue
+        }
+
+        try {
+          const optimized = await imageCompression(file, {
+            maxSizeMB: 0.8,
+            maxWidthOrHeight: 2200,
+            useWebWorker: true,
+          })
+
+          const formData = new FormData()
+          formData.append('file', optimized, optimized.name || file.name)
+          formData.append('orderIndex', String(banners.length + i))
+
+          const result = await uploadStoreBannerAction(formData)
+          if (result.banner) {
+            setBanners((current) => [...current, result.banner])
+          }
+        } catch {
+          failedFiles.push(file.name)
+        }
       }
 
-      const optimized = await imageCompression(file, {
-        maxSizeMB: 0.8,
-        maxWidthOrHeight: 2200,
-        useWebWorker: true,
-      })
-
-      const formData = new FormData()
-      formData.append('file', optimized, optimized.name || file.name)
-      formData.append('orderIndex', String(banners.length))
-
-      const result = await uploadStoreBannerAction(formData)
-      if (result.banner) {
-        setBanners((current) => [...current, result.banner])
-      }
       router.refresh()
-      showToast({
-        variant: 'success',
-        title: 'Banner adicionado',
-        description: 'O novo banner principal foi salvo na vitrine.',
-      })
+
+      if (failedFiles.length > 0 && failedFiles.length < files.length) {
+        showToast({
+          variant: 'success',
+          title: 'Banners adicionados parcialmente',
+          description: `${files.length - failedFiles.length} de ${files.length} banners foram salvos. Falhas: ${failedFiles.join(', ')}`,
+        })
+      } else if (failedFiles.length === files.length) {
+        showToast({
+          variant: 'error',
+          title: 'Falha no upload dos banners',
+          description: 'Nenhum banner pode ser enviado.',
+        })
+      } else {
+        showToast({
+          variant: 'success',
+          title: 'Banners adicionados',
+          description: `${files.length} banner(s) salvo(s) na vitrine.`,
+        })
+      }
     } catch (error) {
       showToast({
         variant: 'error',
-        title: 'Falha no upload do banner',
+        title: 'Falha no upload dos banners',
         description: getErrorMessage(error),
       })
     } finally {
       setIsUploading(false)
-      // Reset input
       if (e.target) {
         e.target.value = ''
       }
@@ -208,6 +331,7 @@ export function MarketingManager({
       })
     } finally {
       setIsRemovingBannerId(null)
+      setConfirmDeleteBannerId(null)
     }
   }
 
@@ -237,9 +361,53 @@ export function MarketingManager({
     }
   }
 
+  function onDragStartBanner(bannerId: string, event: React.DragEvent) {
+    setDraggedBannerId(bannerId)
+    event.dataTransfer.effectAllowed = 'move'
+  }
+
+  function onDragOverBanner(event: React.DragEvent) {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+  }
+
+  async function onDropBanner(targetId: string) {
+    if (!draggedBannerId || draggedBannerId === targetId) {
+      setDraggedBannerId(null)
+      return
+    }
+
+    setBanners((current) => {
+      const fromIndex = current.findIndex((b) => b.id === draggedBannerId)
+      const toIndex = current.findIndex((b) => b.id === targetId)
+      if (fromIndex === -1 || toIndex === -1) return current
+
+      const next = [...current]
+      const [moved] = next.splice(fromIndex, 1)
+      next.splice(toIndex, 0, moved)
+      return next
+    })
+
+    setDraggedBannerId(null)
+
+    if (saveBannerOrderTimeoutRef.current) {
+      clearTimeout(saveBannerOrderTimeoutRef.current)
+    }
+
+    saveBannerOrderTimeoutRef.current = setTimeout(async () => {
+      try {
+        const orderedIds = banners.map((b) => b.id)
+        await reorderStoreBanners(orderedIds)
+        router.refresh()
+      } catch {
+        // silent failure on reorder
+      }
+    }, 600)
+  }
+
   return (
     <div className="space-y-6">
-      
+
       {/* Menu de Abas */}
       <div className="flex space-x-2 border-b border-slate-200">
         <button
@@ -292,7 +460,7 @@ export function MarketingManager({
                 <span className="text-sm font-medium text-slate-700">Ativar Barra de Anuncios no site</span>
                 <Switch checked={annActive} onCheckedChange={setAnnActive} />
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">Texto principal da barra</label>
                 <Input
@@ -337,8 +505,8 @@ export function MarketingManager({
                   {annText || 'Pre-visualizacao da barra de anuncios'}
                 </div>
               </div>
-              <Button onClick={handleSaveSettings} disabled={isSavingSettings} className="w-full bg-[#3483fa] hover:bg-[#2968c8]">
-                {isSavingSettings ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              <Button onClick={handleSaveAnnouncement} disabled={isSavingAnnouncement} className="w-full bg-[#3483fa] hover:bg-[#2968c8]">
+                {isSavingAnnouncement ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                 Salvar Barra de Anuncios
               </Button>
             </CardContent>
@@ -351,14 +519,26 @@ export function MarketingManager({
             <CardHeader>
               <CardTitle className="text-xl">Ordem das Secoes da Pagina Inicial</CardTitle>
               <CardDescription>
-                Escolha a sequencia dos blocos que seus clientes vao ver ao entrar na sua loja. Use as setinhas para reordenar.
+                Arraste para reordenar ou use as setinhas. A ordem que voce definir sera como os clientes verao sua vitrine.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 {layout.map((item, index) => (
-                  <div key={item} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                    <GripVertical className="h-4 w-4 text-slate-400" />
+                  <div
+                    key={item}
+                    draggable
+                    onDragStart={(e) => onDragStartLayout(item, e)}
+                    onDragOver={onDragOverLayout}
+                    onDrop={() => onDropLayout(item)}
+                    onDragEnd={() => setDraggedLayoutItem(null)}
+                    className={`flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-shadow ${
+                      draggedLayoutItem === item ? 'shadow-lg shadow-slate-300/60' : ''
+                    }`}
+                  >
+                    <div className="cursor-grab text-slate-400 active:cursor-grabbing">
+                      <GripVertical className="h-4 w-4" />
+                    </div>
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-slate-800">
                         {availableSections.find((section) => section.id === item)?.label || SECTION_CONTENT[item]?.title || item}
@@ -374,6 +554,7 @@ export function MarketingManager({
                         disabled={index === 0}
                         onClick={() => moveLayoutItem(index, 'up')}
                         className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 disabled:opacity-30"
+                        aria-label="Mover para cima"
                       >
                         <ArrowUp className="h-3 w-3" />
                       </button>
@@ -381,6 +562,7 @@ export function MarketingManager({
                         disabled={index === layout.length - 1}
                         onClick={() => moveLayoutItem(index, 'down')}
                         className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 disabled:opacity-30"
+                        aria-label="Mover para baixo"
                       >
                         <ArrowDown className="h-3 w-3" />
                       </button>
@@ -388,8 +570,8 @@ export function MarketingManager({
                   </div>
                 ))}
               </div>
-              <Button onClick={handleSaveSettings} disabled={isSavingSettings} className="mt-4 w-full bg-[#3483fa] hover:bg-[#2968c8]">
-                {isSavingSettings ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              <Button onClick={handleSaveLayout} disabled={isSavingLayout} className="mt-4 w-full bg-[#3483fa] hover:bg-[#2968c8]">
+                {isSavingLayout ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                 Salvar Ordem
               </Button>
             </CardContent>
@@ -405,11 +587,15 @@ export function MarketingManager({
                 <CardDescription>
                   Sao as imagens grandes do carrossel principal (logo abaixo do cabecalho).
                 </CardDescription>
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+                  <Info className="h-3 w-3" />
+                  Tamanho recomendado: 1200x400px. Formatos aceitos: JPG, PNG, WebP.
+                </p>
               </div>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleBannerUpload} />
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleBannerUpload} />
               <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
                 {isUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                Adicionar Banner
+                Adicionar Banner{isUploading ? 's' : ''}
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -419,12 +605,26 @@ export function MarketingManager({
                 </div>
               ) : (
                 banners.map((banner) => (
-                  <div key={banner.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div
+                    key={banner.id}
+                    draggable
+                    onDragStart={(e) => onDragStartBanner(banner.id, e)}
+                    onDragOver={onDragOverBanner}
+                    onDrop={() => onDropBanner(banner.id)}
+                    onDragEnd={() => setDraggedBannerId(null)}
+                    className={`overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow ${
+                      draggedBannerId === banner.id ? 'shadow-lg shadow-slate-300/60' : ''
+                    }`}
+                  >
                     <div className="aspect-[3/1] w-full bg-slate-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={banner.image_url} alt="Banner" className="h-full w-full object-cover" />
                     </div>
                     <div className="space-y-4 border-t border-slate-100 bg-slate-50 p-3">
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <GripVertical className="h-3.5 w-3.5" />
+                        Arraste para reordenar
+                      </div>
                       <div className="space-y-2">
                         <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                           <Link2 className="h-4 w-4" />
@@ -465,22 +665,44 @@ export function MarketingManager({
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Switch 
-                            checked={banner.is_active} 
+                          <Switch
+                            checked={banner.is_active}
                             disabled={isUpdatingBannerId === banner.id || isRemovingBannerId === banner.id}
-                            onCheckedChange={(checked) => handleToggleBanner(banner.id, checked)} 
+                            onCheckedChange={(checked) => handleToggleBanner(banner.id, checked)}
                           />
                           <span>{banner.is_active ? 'Visivel no site' : 'Oculto'}</span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={isRemovingBannerId === banner.id || isUpdatingBannerId === banner.id}
-                          onClick={() => handleRemoveBanner(banner.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          {isRemovingBannerId === banner.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                        </Button>
+
+                        {confirmDeleteBannerId === banner.id ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-red-600">Remover?</span>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={isRemovingBannerId === banner.id}
+                              onClick={() => handleRemoveBanner(banner.id)}
+                            >
+                              {isRemovingBannerId === banner.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Sim'}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setConfirmDeleteBannerId(null)}
+                            >
+                              Nao
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={isRemovingBannerId === banner.id || isUpdatingBannerId === banner.id}
+                            onClick={() => setConfirmDeleteBannerId(banner.id)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            {isRemovingBannerId === banner.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -55,10 +55,10 @@ function getInstallments(price: number, maxInstallments = 12, minInstallmentValu
 }
 
 export function ProductCard({ product }: { product: ProductListItem }) {
-  const { isInWishlist, addToWishlist, removeFromWishlist, addItem } = useCart()
+  const { isInWishlist, addToWishlist, removeFromWishlist, addItem, isReady } = useCart()
   const [added, setAdded] = useState(false)
   const badge = getProductDisplayBadge(product)
-  const inWishlist = isInWishlist(product.id)
+  const inWishlist = isReady ? isInWishlist(product.id) : false
   const image = getProductPrimaryImage(product)
   const hasDiscount = Number(product.compare_at_price ?? 0) > Number(product.price ?? 0)
   const swatches = (product.colors ?? []).slice(0, 4)

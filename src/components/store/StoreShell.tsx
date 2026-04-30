@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
 import { Header } from '@/components/store/Header'
+import { StoreBrandMark } from '@/components/store/StoreBrandMark'
 import { getPublicStoreSettings } from '@/lib/store-branding'
 import { getStoreCustomerSession } from '@/lib/customer-session'
 import { getStoreSearchIndex } from '@/lib/products'
@@ -109,17 +110,11 @@ export async function StoreShell({
         <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
           <div className="grid gap-7 sm:gap-8 lg:mt-2 lg:grid-cols-[1.1fr_repeat(3,minmax(0,1fr))]">
             <div id="institucional">
-              <Link href="/" className="flex items-center gap-2.5">
-                {resolvedBranding.logoUrl ? (
-                  <span className="flex h-10 shrink-0 items-center justify-start overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={resolvedBranding.logoUrl} alt="Logo da loja" className="block h-full w-auto max-w-[44px] object-contain object-left" />
-                  </span>
-                ) : null}
-                <span className="text-base font-bold tracking-tight text-slate-950 sm:text-lg">
-                  {storeName}
-                </span>
-              </Link>
+              <StoreBrandMark
+                logoUrl={resolvedBranding.logoUrl}
+                storeName={storeName}
+                tagline="Identidade oficial da vitrine"
+              />
               <p className="mt-4 max-w-sm text-sm leading-7 text-slate-500">
                 Catalogo online com vitrine organizada, produtos reais e experiencia de compra objetiva.
               </p>

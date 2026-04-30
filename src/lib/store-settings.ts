@@ -18,6 +18,7 @@ export type StoreSettings = {
   store_card_border_color: string
   store_cart_button_color: string
   dashboard_theme: DashboardTheme
+  updated_at?: string | null
 }
 
 const DEFAULT_PRIMARY_COLOR = '#0f172a'
@@ -39,6 +40,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   store_card_border_color: '#e2e8f0',
   store_cart_button_color: '#ffffff',
   dashboard_theme: 'light',
+  updated_at: null,
 }
 
 type StoreSettingsInput = Partial<StoreSettings> | null | undefined
@@ -89,6 +91,7 @@ export function normalizeStoreSettings(input: StoreSettingsInput): StoreSettings
       DEFAULT_STORE_SETTINGS.store_cart_button_color
     ),
     dashboard_theme: normalizeDashboardTheme(input?.dashboard_theme),
+    updated_at: input?.updated_at ?? null,
   }
 }
 
@@ -160,6 +163,41 @@ export function buildStorefrontThemeStyle(
     '--store-cart-bg': settings.store_cart_button_color,
     '--store-cart-fg': cartForeground,
   } as CSSProperties
+}
+
+function hexToLinearRgb(hex: string) {
+  const r = Number.parseInt(hex.slice(0, 2), 16) / 255
+  const g = Number.parseInt(hex.slice(2, 4), 16) / 255
+  const b = Number.parseInt(hex.slice(4, 6), 16) / 255
+
+  const linearize = (c: number) =>
+    c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+
+  return {
+    r: linearize(r),
+    g: linearize(g),
+    b: linearize(b),
+  }
+}
+
+function relativeLuminance(hex: string) {
+  const { r, g, b } = hexToLinearRgb(hex)
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+export function getContrastRatio(bgHex: string, fgHex: string) {
+  const bg = relativeLuminance(bgHex)
+  const fg = relativeLuminance(fgHex)
+  const lighter = Math.max(bg, fg)
+  const darker = Math.min(bg, fg)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+export function getWcagStatus(ratio: number): 'pass' | 'pass-large' | 'fail' {
+  if (ratio >= 7) return 'pass'
+  if (ratio >= 4.5) return 'pass'
+  if (ratio >= 3) return 'pass-large'
+  return 'fail'
 }
 
 export function isMissingStoreSettingsColumnError(error: { code?: string; message: string } | null) {
