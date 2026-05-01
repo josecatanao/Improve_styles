@@ -68,7 +68,6 @@ export default async function ProductDetailPage({
   const deliverySettings = {
     delivery_enabled: settings.delivery_enabled,
     pickup_enabled: settings.pickup_enabled,
-    allow_shipping_other_states: settings.allow_shipping_other_states,
   }
 
   return (

@@ -23,10 +23,6 @@ export type ShippingCalculation = {
     freeShippingThreshold: number | null
     isFree: boolean
   } | null
-  correios: {
-    pac: { price: number; minDays: number; maxDays: number }
-    sedex: { price: number; minDays: number; maxDays: number }
-  } | null
   error: string | null
 }
 
@@ -34,34 +30,15 @@ function cleanCep(value: string) {
   return value.replace(/\D/g, '')
 }
 
-function calculateCorreiosByWeight(weight: number | null) {
-  const w = weight && weight > 0 ? weight : 0.3
-
-  let pac: number
-  let sedex: number
-
-  if (w <= 0.3) { pac = 15; sedex = 25 }
-  else if (w <= 1) { pac = 20; sedex = 30 }
-  else if (w <= 5) { pac = 30; sedex = 45 }
-  else if (w <= 10) { pac = 45; sedex = 65 }
-  else { pac = 60; sedex = 90 }
-
-  return {
-    pac: { price: pac, minDays: 7, maxDays: 15 },
-    sedex: { price: sedex, minDays: 2, maxDays: 5 },
-  }
-}
-
 export async function calculateShipping(
   cep: string,
   options?: {
-    productWeight?: number | null
     orderTotal?: number
   }
 ): Promise<ShippingCalculation> {
   const cleanedCep = cleanCep(cep)
   if (cleanedCep.length !== 8) {
-    return { local: null, correios: null, error: 'CEP invalido' }
+    return { local: null, error: 'CEP invalido' }
   }
 
   const orderTotal = options?.orderTotal ?? 0
@@ -74,10 +51,7 @@ export async function calculateShipping(
       .eq('is_active', true)
 
     if (error) {
-      if (error.code === '42P01') {
-        return { local: null, correios: calculateCorreiosByWeight(options?.productWeight ?? null), error: null }
-      }
-      return { local: null, correios: calculateCorreiosByWeight(options?.productWeight ?? null), error: null }
+      return { local: null, error: null }
     }
 
     const zones = data || []
@@ -101,18 +75,16 @@ export async function calculateShipping(
           freeShippingThreshold: threshold,
           isFree,
         },
-        correios: null,
         error: null,
       }
     }
 
     return {
       local: null,
-      correios: calculateCorreiosByWeight(options?.productWeight ?? null),
       error: null,
     }
   } catch {
-    return { local: null, correios: calculateCorreiosByWeight(options?.productWeight ?? null), error: null }
+    return { local: null, error: null }
   }
 }
 

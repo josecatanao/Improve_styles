@@ -20,7 +20,6 @@ export type StoreSettings = {
   dashboard_theme: DashboardTheme
   delivery_enabled: boolean
   pickup_enabled: boolean
-  allow_shipping_other_states: boolean
   updated_at?: string | null
 }
 
@@ -45,7 +44,6 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   dashboard_theme: 'light',
   delivery_enabled: true,
   pickup_enabled: true,
-  allow_shipping_other_states: true,
   updated_at: null,
 }
 
@@ -99,7 +97,6 @@ export function normalizeStoreSettings(input: StoreSettingsInput): StoreSettings
     dashboard_theme: normalizeDashboardTheme(input?.dashboard_theme),
     delivery_enabled: input?.delivery_enabled !== undefined ? Boolean(input.delivery_enabled) : true,
     pickup_enabled: input?.pickup_enabled !== undefined ? Boolean(input.pickup_enabled) : true,
-    allow_shipping_other_states: input?.allow_shipping_other_states !== undefined ? Boolean(input.allow_shipping_other_states) : true,
     updated_at: input?.updated_at ?? null,
   }
 }
@@ -229,7 +226,6 @@ export function isMissingStoreSettingsColumnError(error: { code?: string; messag
     error.message.includes("Could not find the 'store_cart_button_color' column") ||
     error.message.includes("Could not find the 'dashboard_theme' column") ||
     error.message.includes("Could not find the 'delivery_enabled' column") ||
-    error.message.includes("Could not find the 'pickup_enabled' column") ||
-    error.message.includes("Could not find the 'allow_shipping_other_states' column")
+    error.message.includes("Could not find the 'pickup_enabled' column")
   )
 }

@@ -14,14 +14,12 @@ export function DeliverySettingsManager({
   initialSettings: {
     delivery_enabled: boolean
     pickup_enabled: boolean
-    allow_shipping_other_states: boolean
   }
   schemaReady: boolean
 }) {
   const showToast = useToast()
   const [deliveryEnabled, setDeliveryEnabled] = useState(initialSettings.delivery_enabled)
   const [pickupEnabled, setPickupEnabled] = useState(initialSettings.pickup_enabled)
-  const [allowOtherStates, setAllowOtherStates] = useState(initialSettings.allow_shipping_other_states)
   const [isSaving, setIsSaving] = useState(false)
 
   const canSave = deliveryEnabled || pickupEnabled
@@ -42,7 +40,6 @@ export function DeliverySettingsManager({
       await saveDeliverySettings({
         deliveryEnabled,
         pickupEnabled,
-        allowShippingOtherStates: allowOtherStates,
       })
 
       showToast({
@@ -120,27 +117,6 @@ export function DeliverySettingsManager({
               checked={pickupEnabled}
               onCheckedChange={setPickupEnabled}
               disabled={!schemaReady}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100">
-                <Truck className="h-5 w-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-900">Envio para outros estados</p>
-                <p className="text-xs text-slate-500">
-                  {deliveryEnabled
-                    ? 'Permite frete via Correios para CEPs fora das zonas locais.'
-                    : 'Disponivel apenas com Delivery ativo.'}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={deliveryEnabled && allowOtherStates}
-              onCheckedChange={setAllowOtherStates}
-              disabled={!schemaReady || !deliveryEnabled}
             />
           </div>
 

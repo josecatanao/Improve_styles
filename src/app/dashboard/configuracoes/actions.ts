@@ -140,7 +140,6 @@ export async function saveDashboardAppearance(input: {
 export async function saveDeliverySettings(input: {
   deliveryEnabled: boolean
   pickupEnabled: boolean
-  allowShippingOtherStates: boolean
 }) {
   const supabase = createAdminClient()
 
@@ -157,7 +156,6 @@ export async function saveDeliverySettings(input: {
       .update({
         delivery_enabled: input.deliveryEnabled,
         pickup_enabled: input.pickupEnabled,
-        allow_shipping_other_states: input.allowShippingOtherStates,
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
@@ -166,7 +164,6 @@ export async function saveDeliverySettings(input: {
     const { error } = await supabase.from('store_settings').insert({
       delivery_enabled: input.deliveryEnabled,
       pickup_enabled: input.pickupEnabled,
-      allow_shipping_other_states: input.allowShippingOtherStates,
     })
     ensureSuccess(error, 'Erro ao criar configuracoes de entrega')
   }

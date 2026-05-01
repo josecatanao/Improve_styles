@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import type { ProductDetail } from '@/lib/product-shared'
 import { useCart, buildCartItemId } from '@/components/store/CartProvider'
+import { setDirectCheckoutItem } from '@/lib/direct-checkout'
 import { useToast } from '@/components/ui/feedback-provider'
 import { calculateShipping, type ShippingCalculation } from '@/lib/shipping'
 import { validateCoupon } from '@/app/checkout/actions'
@@ -68,7 +69,7 @@ export function AddToCartPanel({
   selectedColor: string | null
   onColorChange: (colorName: string) => void
   onSelectionChange?: (selection: SelectionSnapshot) => void
-  deliverySettings: { delivery_enabled: boolean; allow_shipping_other_states: boolean }
+  deliverySettings: { delivery_enabled: boolean }
 }) {
   const router = useRouter()
   const { addItem, appliedCoupon, applyCoupon, removeCoupon } = useCart()
@@ -231,22 +232,16 @@ export function AddToCartPanel({
   async function handleCalculateShipping() {
     const cleanCep = cep.replace(/\D/g, '')
     if (cleanCep.length !== 8) {
-      setShippingResult({ local: null, correios: null, error: 'CEP inválido' })
+      setShippingResult({ local: null, error: 'CEP inválido' })
       return
     }
 
     setCalculatingShipping(true)
     setShippingResult(null)
 
-    const productWeight = product.weight ?? null
-
     try {
-      const result = await calculateShipping(cleanCep, { productWeight, orderTotal: 0 })
-      if (!deliverySettings.allow_shipping_other_states && result.correios && !result.local) {
-        setShippingResult({ local: null, correios: null, error: null })
-      } else {
-        setShippingResult(result)
-      }
+      const result = await calculateShipping(cleanCep, { orderTotal: 0 })
+      setShippingResult(result)
     } finally {
       setCalculatingShipping(false)
     }
@@ -574,16 +569,6 @@ export function AddToCartPanel({
                       {shippingResult.local.zoneName} — ate {shippingResult.local.days} dia{shippingResult.local.days > 1 ? 's' : ''} uteis
                     </p>
                   ) : null}
-                  {shippingResult.correios ? (
-                    <>
-                      <p className="text-sm text-slate-700">
-                        PAC: {formatMoney(shippingResult.correios.pac.price)} — {shippingResult.correios.pac.minDays} a {shippingResult.correios.pac.maxDays} dias uteis
-                      </p>
-                      <p className="text-sm text-slate-700">
-                        SEDEX: {formatMoney(shippingResult.correios.sedex.price)} — {shippingResult.correios.sedex.minDays} a {shippingResult.correios.sedex.maxDays} dias uteis
-                      </p>
-                    </>
-                  ) : null}
                 </div>
               )}
             </div>
@@ -640,7 +625,22 @@ export function AddToCartPanel({
                   return
                 }
 
-                handleAddToCart()
+                const colorHex = selectedVariant?.color_hex ?? colorOptions.find((item) => item.name === effectiveColorName)?.hex ?? null
+
+                setDirectCheckoutItem({
+                  id: buildCartItemId(product.id, colorHex, hasVariants ? effectiveSize : null),
+                  productId: product.id,
+                  name: product.name,
+                  category: product.category ?? null,
+                  price: displayPrice,
+                  quantity,
+                  image,
+                  size: hasVariants ? effectiveSize : null,
+                  colorName: hasVariants ? effectiveColorName : null,
+                  colorHex,
+                  sku: selectedVariant?.sku ?? product.sku ?? null,
+                })
+
                 router.push(`/checkout${couponAppliesToSelection && appliedCoupon ? `?coupon=${encodeURIComponent(appliedCoupon.code)}` : ''}`)
               }}
               disabled={!canPurchase}

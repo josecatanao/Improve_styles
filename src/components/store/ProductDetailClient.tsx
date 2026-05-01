@@ -18,7 +18,7 @@ export function ProductDetailClient({
 }: {
   product: ProductDetail
   isAuthenticated: boolean
-  deliverySettings: { delivery_enabled: boolean; pickup_enabled: boolean; allow_shipping_other_states: boolean }
+  deliverySettings: { delivery_enabled: boolean; pickup_enabled: boolean }
 }) {
   const { addItem } = useCart()
   const hasVariants = hasRealVariants(product)
