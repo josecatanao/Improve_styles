@@ -46,16 +46,13 @@ export function PersonalDataForm({ initialProfile, email }: { initialProfile: Ac
       if (!authData?.user) throw new Error('Sessao expirada.')
 
       const fileExt = file.name.split('.').pop()
-      const fileName = `${authData.user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`
-      const filePath = `avatars/${fileName}`
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
+      const filePath = `${authData.user.id}/${fileName}`
 
-      // We use product-images or avatars. If avatars doesn't exist, product-images works.
-      // We will try avatars first, if it fails, fallback to product-images
       let uploadResult = await supabase.storage.from('avatars').upload(filePath, file)
-      
+
       let bucketUrl = 'avatars'
       if (uploadResult.error) {
-        // Fallback
         uploadResult = await supabase.storage.from('product-images').upload(filePath, file)
         bucketUrl = 'product-images'
       }

@@ -713,14 +713,25 @@ export async function getStoreCategoryBySlug(slug: string, options?: {
   query?: string
   sort?: ExtendedStoreSortOption
 }): Promise<CategoryStorefrontResult> {
-  const storefront = await getStorefrontData({
-    query: options?.query,
-    sort: options?.sort,
-  })
+  const supabase = await createClient()
+  const [storefront, categoryResult] = await Promise.all([
+    getStorefrontData({
+      query: options?.query,
+      sort: options?.sort,
+    }),
+    supabase
+      .from('store_categories')
+      .select('name')
+      .eq('slug', slug)
+      .eq('is_active', true)
+      .maybeSingle(),
+  ])
+
+  const managedCategoryName = categoryResult.data?.name || null
 
   if (storefront.setupRequired || storefront.errorMessage) {
     return {
-      category: null,
+      category: managedCategoryName,
       slug,
       products: [],
       categoryHighlights: storefront.categoryHighlights,
@@ -731,7 +742,9 @@ export async function getStoreCategoryBySlug(slug: string, options?: {
 
   const categoryMatch = storefront.categoryHighlights.find((item) => getStoreCategoryKey(item.label) === slug)
 
-  if (!categoryMatch) {
+  const categoryLabel = managedCategoryName || categoryMatch?.label || null
+
+  if (!categoryLabel) {
     return {
       category: null,
       slug,
@@ -748,7 +761,7 @@ export async function getStoreCategoryBySlug(slug: string, options?: {
   )
 
   return {
-    category: categoryMatch.label,
+    category: categoryLabel,
     slug,
     products,
     categoryHighlights: storefront.categoryHighlights,

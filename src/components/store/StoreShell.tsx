@@ -137,7 +137,7 @@ export async function StoreShell({
               <p className="text-sm font-semibold text-slate-950">Atendimento</p>
               <div className="mt-4 space-y-3 text-sm text-slate-500">
                 <p>Use sua conta para acompanhar os dados do pedido e finalize o checkout para salvar a solicitacao neste navegador.</p>
-                <Link href="/conta" className="inline-flex rounded-none border border-slate-200 px-3 py-2 text-slate-700 transition-colors hover:bg-slate-50">
+                <Link href="/conta" className="inline-flex rounded-md border border-slate-200 px-3 py-2 text-slate-700 transition-colors hover:bg-slate-50">
                   Abrir minha conta
                 </Link>
               </div>
@@ -150,9 +150,9 @@ export async function StoreShell({
           >
             <p>© 2024 {storeName}. Todos os direitos reservados.</p>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <span className="rounded-none border border-slate-200 px-3 py-1.5 text-slate-500">VISA</span>
-              <span className="rounded-none border border-slate-200 px-3 py-1.5 text-slate-500">Mastercard</span>
-              <span className="rounded-none border border-slate-200 px-3 py-1.5 text-slate-500">PIX</span>
+              <span className="rounded-md border border-slate-200 px-3 py-1.5 text-slate-500">VISA</span>
+              <span className="rounded-md border border-slate-200 px-3 py-1.5 text-slate-500">Mastercard</span>
+              <span className="rounded-md border border-slate-200 px-3 py-1.5 text-slate-500">PIX</span>
             </div>
           </div>
         </div>

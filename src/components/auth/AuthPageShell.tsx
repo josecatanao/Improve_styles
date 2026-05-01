@@ -1,30 +1,73 @@
+import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { StoreBrandMark } from '@/components/store/StoreBrandMark'
+
+type Branding = {
+  logoUrl?: string | null
+  storeName?: string | null
+}
 
 type AuthPageShellProps = {
   children: React.ReactNode
-  isStoreContext: boolean
+  isStoreContext?: boolean
   title?: string
   subtitle?: string
+  branding?: Branding
+  brandStyle?: CSSProperties
 }
 
-export function AuthPageShell({ children, isStoreContext, title, subtitle }: AuthPageShellProps) {
+export function AuthPageShell({
+  children,
+  isStoreContext = true,
+  title,
+  subtitle,
+  branding,
+  brandStyle,
+}: AuthPageShellProps) {
   const backHref = isStoreContext ? '/' : '/dashboard'
   const backLabel = isStoreContext ? 'Voltar para a loja' : 'Voltar para o painel'
 
+  const headerBg = brandStyle?.['--store-header-bg'] as string | undefined
+  const headerFg = brandStyle?.['--store-header-fg'] as string | undefined
+  const headerBorder = brandStyle?.['--store-header-border'] as string | undefined
+  const primaryColor = brandStyle?.['--primary'] as string | undefined
+
+  const resolvedHeaderBg = headerBg || '#ffffff'
+  const resolvedHeaderFg = headerFg || '#0f172a'
+  const resolvedHeaderBorder = headerBorder || 'rgba(15,23,42,0.06)'
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(52,131,250,0.12),transparent_26%),radial-gradient(circle_at_top_right,rgba(15,23,42,0.08),transparent_22%),linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)]">
-      <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
+    <div
+      className="min-h-screen"
+      style={{
+        background: primaryColor
+          ? `radial-gradient(circle at top left, ${primaryColor}1A, transparent 26%), radial-gradient(circle at top right, ${primaryColor}14, transparent 22%), linear-gradient(180deg, #f8fafc 0%, ${primaryColor}08 100%)`
+          : undefined,
+      }}
+    >
+      <header
+        className="border-b backdrop-blur"
+        style={{
+          backgroundColor: resolvedHeaderBg,
+          borderColor: resolvedHeaderBorder,
+          color: resolvedHeaderFg,
+        }}
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-[1.45rem] font-bold tracking-tight text-slate-950 sm:text-[1.8rem]">
-              Improve Styles
-            </span>
-          </Link>
+          <StoreBrandMark
+            logoUrl={branding?.logoUrl}
+            storeName={branding?.storeName}
+          />
 
           <Link
             href={backHref}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors hover:opacity-90"
+            style={{
+              borderColor: resolvedHeaderBorder,
+              color: resolvedHeaderFg,
+              backgroundColor: 'transparent',
+            }}
           >
             <ArrowLeft className="h-4 w-4" />
             {backLabel}

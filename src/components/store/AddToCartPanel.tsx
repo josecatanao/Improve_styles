@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useEffectEvent, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   AlertTriangle,
@@ -123,10 +123,19 @@ export function AddToCartPanel({
   const canPurchase = availableStock > 0
   const discountPercentage = getDiscountPercentage(displayComparePrice, displayPrice)
 
-  const shareUrl = `https://wa.me/?text=${encodeURIComponent(`Olha esse produto: ${product.name} - ${formatMoney(displayPrice)} - ${typeof window !== 'undefined' ? window.location.href : ''}`)}`
+  const [currentUrl, setCurrentUrl] = useState('')
 
-  const emitSelectionChange = useEffectEvent(() => {
-    onSelectionChange?.({
+  useEffect(() => {
+    setCurrentUrl(window.location.href)
+  }, [])
+
+  const shareUrl = `https://wa.me/?text=${encodeURIComponent(`Olha esse produto: ${product.name} - ${formatMoney(displayPrice)} - ${currentUrl}`)}`
+
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  onSelectionChangeRef.current = onSelectionChange
+
+  useEffect(() => {
+    onSelectionChangeRef.current?.({
       availableStock,
       colorHex: selectedVariant?.color_hex ?? colorOptions.find((item) => item.name === selectedColor)?.hex ?? null,
       colorName: effectiveColorName,
@@ -135,10 +144,6 @@ export function AddToCartPanel({
       selectedSize: effectiveSize,
       stockMessage,
     })
-  })
-
-  useEffect(() => {
-    emitSelectionChange()
   }, [
     availableStock,
     colorOptions,
@@ -296,12 +301,12 @@ export function AddToCartPanel({
   }
 
   return (
-    <div className="rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.35)] sm:p-6">
+    <div className="rounded-xl border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.35)] sm:p-6">
       <div className="space-y-6">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            {product.brand?.trim() ? <span className="rounded-none bg-slate-100 px-2.5 py-1">{product.brand}</span> : null}
-            {product.category?.trim() ? <span className="rounded-none bg-slate-100 px-2.5 py-1">{product.category}</span> : null}
+            {product.brand?.trim() ? <span className="rounded-md bg-slate-100 px-2.5 py-1">{product.brand}</span> : null}
+            {product.category?.trim() ? <span className="rounded-md bg-slate-100 px-2.5 py-1">{product.category}</span> : null}
           </div>
 
           <div className="space-y-1">
@@ -333,12 +338,12 @@ export function AddToCartPanel({
                   {formatMoney(couponAppliesToSelection ? finalUnitPrice : displayPrice)}
                 </p>
                 {discountPercentage ? (
-                  <span className="rounded-none bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                  <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
                     -{discountPercentage}%
                   </span>
                 ) : null}
                 {couponAppliesToSelection && appliedCoupon ? (
-                  <span className="rounded-none bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                  <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
                     {appliedCoupon.discount_type === 'free_shipping' ? 'Frete gratis' : appliedCoupon.discount_type === 'percentage' ? `-${appliedCoupon.discount_value}%` : `-${formatMoney(appliedCoupon.discount_value)}`}
                   </span>
                 ) : null}
@@ -401,12 +406,6 @@ export function AddToCartPanel({
           </span>
         </div>
 
-        {!isAuthenticated ? (
-          <div className="rounded-none border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Entre para adicionar ao carrinho e finalizar a compra.
-          </div>
-        ) : null}
-
         {colorOptions.length > 0 ? (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -426,7 +425,7 @@ export function AddToCartPanel({
                     onClick={() => handleColorSelection(color.name)}
                     disabled={!color.hasStock}
                     aria-label={`Cor: ${color.name}`}
-                    className={`relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-none border bg-white transition-all sm:h-[68px] sm:w-[68px] ${
+                    className={`relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-md border bg-white transition-all sm:h-[68px] sm:w-[68px] ${
                       isSelected
                         ? 'border-[color:var(--store-button-bg)] ring-2 ring-black/5'
                         : 'border-slate-200 hover:border-slate-300'
@@ -434,11 +433,10 @@ export function AddToCartPanel({
                     title={color.name}
                   >
                     {preview ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={preview} alt={color.name} className="h-full w-full object-cover" />
+                      <img src={preview} alt={color.name} className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
                       <span
-                        className="h-8 w-8 rounded-none border border-slate-200 sm:h-9 sm:w-9"
+                        className="h-8 w-8 rounded-md border border-slate-200 sm:h-9 sm:w-9"
                         style={{ backgroundColor: color.hex }}
                       />
                     )}
@@ -467,7 +465,7 @@ export function AddToCartPanel({
                     type="button"
                     onClick={() => handleSizeSelection(option.size)}
                     disabled={!option.hasStock}
-                    className={`inline-flex min-h-10 items-center justify-center rounded-none border px-2.5 py-2 text-[13px] font-medium transition-colors sm:min-h-11 sm:px-3 sm:text-sm ${
+                    className={`inline-flex min-h-10 items-center justify-center rounded-md border px-2.5 py-2 text-[13px] font-medium transition-colors sm:min-h-11 sm:px-3 sm:text-sm ${
                       isSelected || matchesResolved
                         ? 'border-[color:var(--store-button-bg)] bg-black/5 text-[var(--store-button-bg)]'
                         : 'border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -482,7 +480,7 @@ export function AddToCartPanel({
         ) : null}
 
         {availableStock > 0 && availableStock <= 3 ? (
-          <div className="flex items-center gap-2 rounded-none border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             Apenas {availableStock} unidade{availableStock > 1 ? 's' : ''} em estoque! Garanta o seu.
           </div>
@@ -492,7 +490,7 @@ export function AddToCartPanel({
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-950">Quantidade</p>
             <span
-              className={`rounded-none px-2.5 py-1 text-xs font-semibold ring-1 ${
+              className={`rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ${
                 availableStock <= 0
                   ? 'bg-red-50 text-red-700 ring-red-100'
                   : availableStock <= 3
@@ -506,7 +504,7 @@ export function AddToCartPanel({
               </span>
             </span>
           </div>
-          <div className="inline-flex items-center rounded-none border border-slate-200 bg-slate-50">
+          <div className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50">
             <button
               type="button"
               onClick={decreaseQuantity}
@@ -542,20 +540,20 @@ export function AddToCartPanel({
                   setCep(e.target.value.replace(/\D/g, '').slice(0, 8))
                   setShippingResult(null)
                 }}
-                className="h-10 w-full rounded-none border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 sm:h-11"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 sm:h-11"
               />
             </div>
             <button
               type="button"
               onClick={handleCalculateShipping}
               disabled={calculatingShipping || cep.replace(/\D/g, '').length !== 8}
-              className="inline-flex h-10 items-center justify-center rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 sm:h-11"
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 sm:h-11"
             >
               {calculatingShipping ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Calcular'}
             </button>
           </div>
           {shippingResult ? (
-            <div className="rounded-none border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
               {shippingResult.error ? (
                 <p className="text-sm text-red-600">{shippingResult.error}</p>
               ) : (
@@ -595,13 +593,13 @@ export function AddToCartPanel({
                 value={couponInput}
                 onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(null) }}
                 disabled={!!appliedCoupon}
-                className="h-10 flex-1 rounded-none border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 disabled:bg-slate-50 sm:h-11"
+                className="h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 disabled:bg-slate-50 sm:h-11"
               />
               {appliedCoupon ? (
                 <button
                   type="button"
                   onClick={handleRemoveCoupon}
-                  className="inline-flex h-10 items-center justify-center rounded-none border border-red-200 bg-white px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 sm:h-11"
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 sm:h-11"
                 >
                   Remover
                 </button>
@@ -610,7 +608,7 @@ export function AddToCartPanel({
                   type="button"
                   onClick={handleApplyCoupon}
                   disabled={!couponInput.trim() || applyingCoupon}
-                  className="inline-flex h-10 items-center justify-center rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 sm:h-11"
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 sm:h-11"
                 >
                   {applyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
                 </button>
@@ -638,14 +636,14 @@ export function AddToCartPanel({
                 router.push(`/checkout${couponAppliesToSelection && appliedCoupon ? `?coupon=${encodeURIComponent(appliedCoupon.code)}` : ''}`)
               }}
               disabled={!canPurchase}
-              className="inline-flex h-12 items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="inline-flex h-12 items-center justify-center rounded-lg bg-[var(--store-button-bg)] px-4 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Comprar agora
             </button>
           ) : (
             <Link
               href={`/login?mode=customer&next=${encodeURIComponent(`/produto/${product.id}`)}`}
-              className="inline-flex h-12 items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90"
+              className="inline-flex h-12 items-center justify-center rounded-lg bg-[var(--store-button-bg)] px-4 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90"
             >
               Entrar para comprar
             </Link>
@@ -655,7 +653,7 @@ export function AddToCartPanel({
             type="button"
             onClick={handleAddToCart}
             disabled={!isAuthenticated ? false : !canPurchase}
-            className={`inline-flex h-12 items-center justify-center rounded-none border px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${
+            className={`inline-flex h-12 items-center justify-center rounded-lg border px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${
               added
                 ? 'border-emerald-600 bg-emerald-600 text-white'
                 : 'border-slate-200 text-slate-700 hover:bg-slate-50 disabled:text-slate-400'
@@ -677,7 +675,7 @@ export function AddToCartPanel({
             href={shareUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50"
           >
             <Share2 className="h-4 w-4" />
             Compartilhar no WhatsApp

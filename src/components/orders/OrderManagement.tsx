@@ -87,6 +87,22 @@ function getPaymentLabel(order: StoreOrder) {
   return `Cartao ${order.installments}x`
 }
 
+function getDeliveryLabel(order: StoreOrder) {
+  return order.delivery_method === 'pickup' ? 'Retirada na loja' : 'Entrega'
+}
+
+function getPaymentIcon(paymentMethod: StoreOrder['payment_method']) {
+  if (paymentMethod === 'pix') {
+    return ShieldAlert
+  }
+
+  if (paymentMethod === 'cash') {
+    return Banknote
+  }
+
+  return CreditCard
+}
+
 function getStatusTemplateKey(status: string): MessageTemplateKey {
   if (status === 'processing') {
     return 'processing'
@@ -336,74 +352,68 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
         {orders.length === 0 ? (
           <div className="px-6 py-12 text-center text-sm text-slate-500">Nenhum pedido realizado ainda.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
-              <thead className="bg-slate-50 dark:bg-slate-950/60">
-                <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  <th scope="col" className="px-6 py-3">Pedido</th>
-                  <th scope="col" className="px-6 py-3">Cliente</th>
-                  <th scope="col" className="px-6 py-3">Resumo</th>
-                  <th scope="col" className="px-6 py-3">Entrega e pagamento</th>
-                  <th scope="col" className="px-6 py-3">Status</th>
-                  <th scope="col" className="px-6 py-3">Acoes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {orders.map((order) => {
-                  const currentStatus = statusOverrides[order.id] || order.status
-                  const isExpanded = expandedOrderId === order.id
-                  const isDeleting = busyDeleteId === order.id
+          <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-6">
+            {orders.map((order) => {
+              const currentStatus = statusOverrides[order.id] || order.status
+              const isExpanded = expandedOrderId === order.id
+              const isDeleting = busyDeleteId === order.id
+              const PaymentIcon = getPaymentIcon(order.payment_method)
 
-                  return (
-                    <Fragment key={order.id}>
-                      <tr key={order.id} className="align-top hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td scope="row" className="px-6 py-4">
-                          <p className="font-semibold text-slate-900 dark:text-slate-50">{getOrderCode(order.id)}</p>
-                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Criado em {formatDate(order.created_at)}</p>
-                          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Atualizado em {formatDate(order.updated_at)}</p>
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-slate-900 dark:text-slate-50">{order.customer_name}</p>
-                          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{order.customer_phone || 'Sem telefone'}</p>
-                          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{order.customer_email || 'Sem e-mail'}</p>
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-slate-900 dark:text-slate-50">{formatMoney(order.total_price)}</p>
-                          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            {order.total_items} {order.total_items === 1 ? 'item' : 'itens'}
-                          </p>
-                          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                            {order.store_order_items.length} produto{order.store_order_items.length === 1 ? '' : 's'} listado{order.store_order_items.length === 1 ? '' : 's'}
-                          </p>
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                            <div className="flex items-center gap-2">
-                              <Truck className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                              <span>{order.delivery_method === 'pickup' ? 'Retirada na loja' : 'Entrega'}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {order.payment_method === 'pix' ? (
-                                <ShieldAlert className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                              ) : order.payment_method === 'cash' ? (
-                                <Banknote className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                              ) : (
-                                <CreditCard className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                              )}
-                              <span>{getPaymentLabel(order)}</span>
-                            </div>
-                            {order.delivery_method !== 'pickup' ? (
-                              <p className="max-w-[240px] text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                {order.delivery_address || 'Endereco nao informado'}
-                              </p>
-                            ) : null}
+              return (
+                <Fragment key={order.id}>
+                  <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div className="border-b border-slate-100 px-4 py-4 dark:border-slate-800 sm:px-5">
+                      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-base font-semibold text-slate-900 dark:text-slate-50">{getOrderCode(order.id)}</p>
+                            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClasses(currentStatus)}`}>
+                              {getStatusLabel(currentStatus)}
+                            </span>
+                            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                              {getDeliveryLabel(order)}
+                            </span>
+                            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                              {getPaymentLabel(order)}
+                            </span>
                           </div>
-                        </td>
 
-                        <td className="px-6 py-4">
+                          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1.2fr)_minmax(180px,0.9fr)_minmax(160px,0.8fr)]">
+                            <div className="space-y-1">
+                              <p className="font-semibold text-slate-900 dark:text-slate-50">{order.customer_name}</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">{order.customer_phone || 'Sem telefone'}</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">{order.customer_email || 'Sem e-mail'}</p>
+                            </div>
+
+                            <div className="space-y-1">
+                              <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">{formatMoney(order.total_price)}</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">
+                                {order.total_items} {order.total_items === 1 ? 'item' : 'itens'}
+                              </p>
+                              <p className="text-xs text-slate-400 dark:text-slate-500">
+                                {order.store_order_items.length} produto{order.store_order_items.length === 1 ? '' : 's'} listado{order.store_order_items.length === 1 ? '' : 's'}
+                              </p>
+                            </div>
+
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Criado em {formatDate(order.created_at)}</p>
+                              <p className="text-xs text-slate-400 dark:text-slate-500">Atualizado em {formatDate(order.updated_at)}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300">
+                            <span className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-950/60">
+                              <Truck className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                              {getDeliveryLabel(order)}
+                            </span>
+                            <span className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-950/60">
+                              <PaymentIcon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                              {getPaymentLabel(order)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="w-full space-y-3 xl:w-[260px] xl:flex-none">
                           <OrderStatusSelect
                             order={{ ...order, status: currentStatus }}
                             onUpdated={(status) => {
@@ -412,13 +422,8 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                               router.refresh()
                             }}
                           />
-                          <span className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClasses(currentStatus)}`}>
-                            {getStatusLabel(currentStatus)}
-                          </span>
-                        </td>
 
-                        <td className="px-6 py-4">
-                          <div className="flex min-w-[220px] flex-col gap-2">
+                          <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
                             <Button
                               type="button"
                               variant="outline"
@@ -457,155 +462,176 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                               Apagar pedido
                             </Button>
                           </div>
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
+                    </div>
 
-                      {isExpanded ? (
-                        <tr key={`${order.id}-details`} className="bg-slate-50/70 dark:bg-slate-950/40">
-                          <td colSpan={6} className="px-6 py-5">
-                            <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
-                              <div className="space-y-5">
-                                <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Itens do pedido</h3>
-                                  <div className="mt-4 space-y-3">
-                                    {order.store_order_items.map((item) => (
-                                      <div key={item.id} className="flex items-start justify-between gap-4 rounded-xl bg-slate-50 px-3 py-3 dark:bg-slate-950/80">
-                                        <div className="min-w-0">
-                                          <p className="truncate font-medium text-slate-900 dark:text-slate-50">{item.name}</p>
-                                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                            {item.quantity}x
-                                            {item.size ? ` • Tam. ${item.size}` : ''}
-                                            {item.color_name ? ` • ${item.color_name}` : ''}
-                                            {item.sku ? ` • SKU ${item.sku}` : ''}
-                                          </p>
-                                        </div>
-                                        <span className="shrink-0 text-sm font-semibold text-slate-900 dark:text-slate-50">
-                                          {formatMoney(item.price * item.quantity)}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </section>
-
-                                <section className="grid gap-4 md:grid-cols-2">
-                                  <InfoPanel
-                                    title="Entrega"
-                                    content={
-                                      order.delivery_method === 'pickup' ? (
-                                        <p>Cliente vai retirar na loja.</p>
-                                      ) : (
-                                        <div className="space-y-2">
-                                          <p>{order.delivery_address || 'Endereco nao informado.'}</p>
-                                          {order.delivery_lat && order.delivery_lng ? (
-                                            <a
-                                              href={`https://www.google.com/maps/search/?api=1&query=${order.delivery_lat},${order.delivery_lng}`}
-                                              target="_blank"
-                                              rel="noreferrer"
-                                              className="inline-flex items-center gap-1.5 font-medium text-[#3483fa] hover:underline dark:text-blue-300"
-                                            >
-                                              <Navigation2 className="h-3.5 w-3.5" />
-                                              Abrir no mapa
-                                            </a>
-                                          ) : null}
-                                        </div>
-                                      )
-                                    }
-                                  />
-
-                                  <InfoPanel
-                                    title="Observacoes"
-                                    content={<p>{order.notes?.trim() || 'Nenhuma observacao enviada pelo cliente.'}</p>}
-                                  />
-                                </section>
+                    {isExpanded ? (
+                      <div className="space-y-5 bg-slate-50/70 px-4 py-5 dark:bg-slate-950/40 sm:px-5">
+                        <section className="grid gap-4 lg:grid-cols-3">
+                          <InfoPanel
+                            title="Resumo"
+                            content={
+                              <div className="space-y-2">
+                                <p><span className="font-medium text-slate-800 dark:text-slate-100">Total:</span> {formatMoney(order.total_price)}</p>
+                                <p><span className="font-medium text-slate-800 dark:text-slate-100">Itens:</span> {order.total_items} {order.total_items === 1 ? 'item' : 'itens'}</p>
+                                <p><span className="font-medium text-slate-800 dark:text-slate-100">Pagamento:</span> {getPaymentLabel(order)}</p>
+                                <p><span className="font-medium text-slate-800 dark:text-slate-100">Entrega:</span> {getDeliveryLabel(order)}</p>
                               </div>
+                            }
+                          />
 
-                              <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Mensagens por WhatsApp</h3>
-                                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                      A mensagem liberada acompanha o status atual do pedido. Edite se quiser antes de enviar.
-                                    </p>
+                          <InfoPanel
+                            title="Cliente"
+                            content={
+                              <div className="space-y-2">
+                                <p>{order.customer_name}</p>
+                                <p>{order.customer_phone || 'Sem telefone informado.'}</p>
+                                <p>{order.customer_email || 'Sem e-mail informado.'}</p>
+                              </div>
+                            }
+                          />
+
+                          <InfoPanel
+                            title="Observacoes"
+                            content={<p>{order.notes?.trim() || 'Nenhuma observacao enviada pelo cliente.'}</p>}
+                          />
+                        </section>
+
+                        <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+                          <div className="space-y-5">
+                            <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Itens do pedido</h3>
+                              <div className="mt-4 space-y-3">
+                                {order.store_order_items.map((item) => (
+                                  <div key={item.id} className="flex items-start justify-between gap-4 rounded-xl bg-slate-50 px-3 py-3 dark:bg-slate-950/80">
+                                    <div className="min-w-0">
+                                      <p className="truncate font-medium text-slate-900 dark:text-slate-50">{item.name}</p>
+                                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        {item.quantity}x
+                                        {item.size ? ` • Tam. ${item.size}` : ''}
+                                        {item.color_name ? ` • ${item.color_name}` : ''}
+                                        {item.sku ? ` • SKU ${item.sku}` : ''}
+                                      </p>
+                                    </div>
+                                    <span className="shrink-0 text-sm font-semibold text-slate-900 dark:text-slate-50">
+                                      {formatMoney(item.price * item.quantity)}
+                                    </span>
                                   </div>
-                                  <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                    {order.customer_phone || 'Sem telefone'}
-                                  </span>
-                                </div>
+                                ))}
+                              </div>
+                            </section>
 
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                  {TEMPLATE_BUTTONS.map((template) => {
-                                    const isAllowed = isTemplateAllowed(currentStatus, template.key)
-                                    const isCurrent = getStatusTemplateKey(currentStatus) === template.key
-
-                                    return (
-                                      <Button
-                                        key={template.key}
-                                        type="button"
-                                        variant={isCurrent ? 'default' : 'outline'}
-                                        size="sm"
-                                        disabled={!isAllowed}
-                                        className={cn(
-                                          'border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800',
-                                          isCurrent &&
-                                            'border-blue-500 bg-blue-500 text-white hover:bg-blue-500 dark:border-blue-500 dark:bg-blue-500 dark:text-white dark:hover:bg-blue-500',
-                                          !isAllowed &&
-                                            'border-slate-200 bg-slate-100 text-slate-400 opacity-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500'
-                                        )}
-                                        onClick={() => updateDraft(order, template.key)}
+                            <InfoPanel
+                              title="Entrega"
+                              content={
+                                order.delivery_method === 'pickup' ? (
+                                  <p>Cliente vai retirar na loja.</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    <p>{order.delivery_address || 'Endereco nao informado.'}</p>
+                                    {order.delivery_lat && order.delivery_lng ? (
+                                      <a
+                                        href={`https://www.google.com/maps/search/?api=1&query=${order.delivery_lat},${order.delivery_lng}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1.5 font-medium text-[#3483fa] hover:underline dark:text-blue-300"
                                       >
-                                        {template.label}
-                                      </Button>
-                                    )
-                                  })}
-                                </div>
+                                        <Navigation2 className="h-3.5 w-3.5" />
+                                        Abrir no mapa
+                                      </a>
+                                    ) : null}
+                                  </div>
+                                )
+                              }
+                            />
+                          </div>
 
-                                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                                  Status atual: <span className="font-semibold text-slate-700 dark:text-slate-200">{getStatusLabel(currentStatus)}</span>. So a mensagem correspondente a esse status fica habilitada.
+                          <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Mensagens por WhatsApp</h3>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                  Use a mensagem do status atual e edite apenas se precisar complementar algo.
                                 </p>
-
-                                <div className="mt-4 space-y-2">
-                                  <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Mensagem editavel</label>
-                                  <textarea
-                                    value={messageDrafts[order.id] || ''}
-                                    onChange={(event) =>
-                                      setMessageDrafts((current) => ({
-                                        ...current,
-                                        [order.id]: event.target.value,
-                                      }))
-                                    }
-                                    className="min-h-48 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-slate-600 dark:focus:ring-slate-800"
-                                  />
-                                </div>
-
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                                    onClick={() => copyMessage(order.id)}
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                    Copiar
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    className="bg-[#1d9bf0] text-white hover:bg-[#1683ca] dark:bg-[#1d9bf0] dark:text-white dark:hover:bg-[#1683ca]"
-                                    onClick={() => openWhatsApp(order)}
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                    Abrir WhatsApp
-                                  </Button>
-                                </div>
-                              </section>
+                              </div>
+                              <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                {order.customer_phone || 'Sem telefone'}
+                              </span>
                             </div>
-                          </td>
-                        </tr>
-                      ) : null}
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
+
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {TEMPLATE_BUTTONS.map((template) => {
+                                const isAllowed = isTemplateAllowed(currentStatus, template.key)
+                                const isCurrent = getStatusTemplateKey(currentStatus) === template.key
+
+                                return (
+                                  <Button
+                                    key={template.key}
+                                    type="button"
+                                    variant={isCurrent ? 'default' : 'outline'}
+                                    size="sm"
+                                    disabled={!isAllowed}
+                                    className={cn(
+                                      'border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800',
+                                      isCurrent &&
+                                        'border-blue-500 bg-blue-500 text-white hover:bg-blue-500 dark:border-blue-500 dark:bg-blue-500 dark:text-white dark:hover:bg-blue-500',
+                                      !isAllowed &&
+                                        'border-slate-200 bg-slate-100 text-slate-400 opacity-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500'
+                                    )}
+                                    onClick={() => updateDraft(order, template.key)}
+                                  >
+                                    {template.label}
+                                  </Button>
+                                )
+                              })}
+                            </div>
+
+                            <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                              Status atual: <span className="font-semibold text-slate-700 dark:text-slate-200">{getStatusLabel(currentStatus)}</span>. So a mensagem correspondente a esse status fica habilitada.
+                            </p>
+
+                            <div className="mt-4 space-y-2">
+                              <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Mensagem editavel</label>
+                              <textarea
+                                value={messageDrafts[order.id] || ''}
+                                onChange={(event) =>
+                                  setMessageDrafts((current) => ({
+                                    ...current,
+                                    [order.id]: event.target.value,
+                                  }))
+                                }
+                                className="min-h-48 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-slate-600 dark:focus:ring-slate-800"
+                              />
+                            </div>
+
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                                onClick={() => copyMessage(order.id)}
+                              >
+                                <Copy className="h-4 w-4" />
+                                Copiar
+                              </Button>
+                              <Button
+                                type="button"
+                                className="bg-[#1d9bf0] text-white hover:bg-[#1683ca] dark:bg-[#1d9bf0] dark:text-white dark:hover:bg-[#1683ca]"
+                                onClick={() => openWhatsApp(order)}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                Abrir WhatsApp
+                              </Button>
+                            </div>
+                          </section>
+                        </div>
+                      </div>
+                    ) : null}
+                  </article>
+                </Fragment>
+              )
+            })}
           </div>
         )}
       </section>

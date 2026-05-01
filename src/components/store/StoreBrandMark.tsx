@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 export function StoreBrandMark({
   href = '/',
@@ -21,17 +22,16 @@ export function StoreBrandMark({
     <Link href={href} className={`flex items-center gap-3 ${className}`.trim()}>
       {logoUrl ? (
         <span
-          className={`flex shrink-0 items-center justify-start overflow-hidden ${
-            compact ? 'h-9' : 'h-11'
+          className={`relative flex shrink-0 items-center justify-start overflow-hidden ${
+            compact ? 'h-9 w-9' : 'h-11 w-11'
           }`}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={logoUrl}
             alt={`Logo da loja ${resolvedStoreName}`}
-            className={`block h-full w-auto object-contain object-left ${
-              compact ? 'max-w-[40px]' : 'max-w-[56px]'
-            }`}
+            fill
+            className="object-contain object-left"
+            sizes={compact ? '36px' : '44px'}
           />
         </span>
       ) : (

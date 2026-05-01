@@ -119,6 +119,8 @@ export default async function Home({
   const promotionalProducts = storefront.allProducts.filter(p => p.compare_at_price && p.compare_at_price > (p.price || 0)).slice(0, 8)
   const featuredProducts = storefront.allProducts.filter(p => p.is_featured).slice(0, 8)
   const isSearchMode = query.trim().length > 0
+  const isSortMode = sort !== 'popular'
+  const isCatalogView = isSearchMode || isSortMode
   const matchedCategories = storefront.filteredProducts
     .map((product) => product.category)
     .filter((value): value is string => Boolean(value))
@@ -152,34 +154,46 @@ export default async function Home({
     >
       <Suspense fallback={<HomeLoading />}>
         <main className="mx-auto w-full max-w-7xl space-y-7 px-4 py-4 sm:px-6 sm:py-5 lg:space-y-8 lg:px-8">
-        {isSearchMode ? (
+        {isCatalogView ? (
           <section className="space-y-5">
             <div className="border border-slate-200 bg-white px-4 py-4 sm:px-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Busca na loja</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    {isSearchMode ? 'Busca na loja' : 'Catalogo'}
+                  </p>
                   <div className="space-y-1">
                     <h1 className="text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
-                      Resultados para &quot;{query}&quot;
+                      {isSearchMode
+                        ? `Resultados para "${query}"`
+                        : sort === 'price_asc'
+                          ? 'Promocoes'
+                          : sort === 'recent'
+                            ? 'Novidades'
+                            : 'Mais vendidos'}
                     </h1>
                     <p className="text-sm text-slate-500">
-                      {storefront.filteredProducts.length} produto{storefront.filteredProducts.length === 1 ? '' : 's'} encontrado{storefront.filteredProducts.length === 1 ? '' : 's'}.
+                      {isSearchMode
+                        ? `${storefront.filteredProducts.length} produto${storefront.filteredProducts.length === 1 ? '' : 's'} encontrado${storefront.filteredProducts.length === 1 ? '' : 's'}.`
+                        : `${storefront.filteredProducts.length} produto${storefront.filteredProducts.length === 1 ? '' : 's'} listado${storefront.filteredProducts.length === 1 ? '' : 's'}.`}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
-                  {matchedCategories.map((item) => (
-                    <Link key={`category:${item}`} href={`/?q=${encodeURIComponent(item)}`} className="border border-slate-200 px-3 py-2 text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950">
-                      {item}
-                    </Link>
-                  ))}
-                  {matchedBrands.map((item) => (
-                    <Link key={`brand:${item}`} href={`/?q=${encodeURIComponent(item)}`} className="border border-slate-200 px-3 py-2 text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950">
-                      {item}
-                    </Link>
-                  ))}
-                </div>
+                {isSearchMode ? (
+                  <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
+                    {matchedCategories.map((item) => (
+                      <Link key={`category:${item}`} href={`/?q=${encodeURIComponent(item)}`} className="border border-slate-200 px-3 py-2 text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950">
+                        {item}
+                      </Link>
+                    ))}
+                    {matchedBrands.map((item) => (
+                      <Link key={`brand:${item}`} href={`/?q=${encodeURIComponent(item)}`} className="border border-slate-200 px-3 py-2 text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950">
+                        {item}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
 

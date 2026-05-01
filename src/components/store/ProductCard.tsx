@@ -55,10 +55,10 @@ function getInstallments(price: number, maxInstallments = 12, minInstallmentValu
 }
 
 export function ProductCard({ product }: { product: ProductListItem }) {
-  const { isInWishlist, addToWishlist, removeFromWishlist, addItem, isReady } = useCart()
+  const { isInWishlist, addToWishlist, removeFromWishlist, addItem } = useCart()
   const [added, setAdded] = useState(false)
   const badge = getProductDisplayBadge(product)
-  const inWishlist = isReady ? isInWishlist(product.id) : false
+  const inWishlist = isInWishlist(product.id)
   const image = getProductPrimaryImage(product)
   const hasDiscount = Number(product.compare_at_price ?? 0) > Number(product.price ?? 0)
   const swatches = (product.colors ?? []).slice(0, 4)
@@ -76,9 +76,9 @@ export function ProductCard({ product }: { product: ProductListItem }) {
   const hasReviews = reviewCount > 0 && averageRating !== null
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-2.5 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_42px_-26px_rgba(15,23,42,0.26)] sm:p-4">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-2.5 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_42px_-26px_rgba(15,23,42,0.26)] sm:p-4">
       <Link href={`/produto/${product.id}`} className="flex h-full flex-col">
-        <div className="relative overflow-hidden rounded-none bg-white">
+        <div className="relative overflow-hidden rounded-lg bg-white">
           <StoreImage
             src={image}
             alt={product.name}
@@ -88,7 +88,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
           />
 
           {badgeLabel ? (
-            <span className={`absolute left-2.5 top-2.5 rounded-none px-2.5 py-1 text-[10px] font-bold shadow-sm sm:left-4 sm:top-4 sm:px-3 sm:text-[11px] ${badgeStyles}`}>
+            <span className={`absolute left-2.5 top-2.5 rounded-md px-2.5 py-1 text-[10px] font-bold shadow-sm sm:left-4 sm:top-4 sm:px-3 sm:text-[11px] ${badgeStyles}`}>
               {badgeLabel}
             </span>
           ) : null}
@@ -96,6 +96,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
           <button
             type="button"
             aria-label={inWishlist ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+            suppressHydrationWarning
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -105,11 +106,11 @@ export function ProductCard({ product }: { product: ProductListItem }) {
                 addToWishlist(product.id)
               }
             }}
-            className={`absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-none border border-slate-200/80 bg-white/95 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.6)] transition-colors sm:right-4 sm:top-4 sm:h-9 sm:w-9 ${
+            className={`absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200/80 bg-white/95 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.6)] transition-colors sm:right-4 sm:top-4 sm:h-9 sm:w-9 ${
               inWishlist ? 'text-red-500 hover:text-red-600' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${inWishlist ? 'fill-red-500' : ''}`} />
+            <Heart suppressHydrationWarning className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${inWishlist ? 'fill-red-500' : ''}`} />
           </button>
         </div>
 
@@ -120,7 +121,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
                 swatches.map((color, index) => (
                   <span
                     key={`${product.id}-${color.name}-${color.hex}`}
-                    className={`rounded-none border border-slate-200 ${index === 0 ? 'h-3.5 w-3.5 sm:h-4 sm:w-4' : 'h-3 w-3 sm:h-3.5 sm:w-3.5'}`}
+                    className={`rounded-full border border-slate-200 ${index === 0 ? 'h-3.5 w-3.5 sm:h-4 sm:w-4' : 'h-3 w-3 sm:h-3.5 sm:w-3.5'}`}
                     style={{ backgroundColor: color.hex }}
                   />
                 ))
@@ -180,7 +181,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
                 setAdded(true)
                 setTimeout(() => setAdded(false), 1500)
               }}
-              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none shadow-[0_18px_28px_-18px_rgba(11,47,111,0.75)] transition-all duration-300 sm:h-12 sm:w-12 ${
+              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md shadow-[0_18px_28px_-18px_rgba(11,47,111,0.75)] transition-all duration-300 sm:h-12 sm:w-12 ${
                 added
                   ? 'scale-110 bg-emerald-500 text-white'
                   : 'bg-[var(--store-cart-bg)] text-[var(--store-cart-fg)] group-hover:scale-[1.04]'

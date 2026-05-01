@@ -3,6 +3,9 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import imageCompression from 'browser-image-compression'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -56,6 +59,237 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Erro inesperado'
 }
 
+function SortableLayoutItem({
+  item,
+  index,
+  label,
+  description,
+  isDragging,
+  isFirst,
+  isLast,
+  onMove,
+}: {
+  item: string
+  index: number
+  label: string
+  description: string
+  isDragging: boolean
+  isFirst: boolean
+  isLast: boolean
+  onMove: (index: number, direction: 'up' | 'down') => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      className={`flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm transition-shadow ${
+        isDragging ? 'shadow-lg shadow-slate-300/60 ring-2 ring-sky-200' : ''
+      }`}
+    >
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-semibold text-slate-600">
+        {index + 1}
+      </div>
+      <button
+        type="button"
+        className="mt-2 shrink-0 cursor-grab text-slate-400 active:cursor-grabbing"
+        aria-label={`Reordenar ${label}`}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-slate-800">{label}</p>
+        <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-slate-500">{description}</p>
+      </div>
+      <div className="flex shrink-0 flex-col gap-1">
+        <button
+          disabled={isFirst}
+          onClick={() => onMove(index, 'up')}
+          className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 disabled:opacity-30"
+          aria-label="Mover para cima"
+        >
+          <ArrowUp className="h-3 w-3" />
+        </button>
+        <button
+          disabled={isLast}
+          onClick={() => onMove(index, 'down')}
+          className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 disabled:opacity-30"
+          aria-label="Mover para baixo"
+        >
+          <ArrowDown className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SortableBannerItem({
+  banner,
+  isDragging,
+  isUpdatingBannerId,
+  isRemovingBannerId,
+  isSavingBannerLinkId,
+  confirmDeleteBannerId,
+  onLinkChange,
+  onSaveLink,
+  onToggle,
+  onConfirmDelete,
+  onCancelDelete,
+  onRemove,
+}: {
+  banner: StoreBanner
+  isDragging: boolean
+  isUpdatingBannerId: string | null
+  isRemovingBannerId: string | null
+  isSavingBannerLinkId: string | null
+  confirmDeleteBannerId: string | null
+  onLinkChange: (bannerId: string, value: string) => void
+  onSaveLink: (bannerId: string) => void
+  onToggle: (bannerId: string, checked: boolean) => void
+  onConfirmDelete: (bannerId: string) => void
+  onCancelDelete: () => void
+  onRemove: (bannerId: string) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: banner.id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      className={`rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-shadow ${
+        isDragging ? 'shadow-lg shadow-slate-300/60 ring-2 ring-sky-200' : ''
+      }`}
+    >
+      <div className="space-y-4">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+          <button
+            type="button"
+            className="absolute right-3 top-3 z-10 cursor-grab rounded-xl border border-white/70 bg-white/90 p-2 text-slate-500 shadow-sm backdrop-blur active:cursor-grabbing"
+            aria-label="Reordenar banner"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <div className="relative aspect-[3/1] min-h-[120px] w-full max-h-[184px] bg-slate-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={banner.image_url} alt="Banner" className="h-full w-full object-cover" />
+          </div>
+        </div>
+
+        <div className="min-w-0 space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                  Banner principal
+                </span>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+                  banner.is_active
+                    ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                    : 'bg-slate-100 text-slate-600 ring-slate-200'
+                }`}>
+                  {banner.is_active ? 'Visivel no site' : 'Oculto'}
+                </span>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+                  banner.link_url
+                    ? 'bg-sky-50 text-sky-700 ring-sky-200'
+                    : 'bg-amber-50 text-amber-700 ring-amber-200'
+                }`}>
+                  {banner.link_url ? 'Com link' : 'Sem link'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">Arraste pelo icone sobre a imagem para ajustar a ordem de exibicao.</p>
+            </div>
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 lg:min-w-[164px] lg:justify-center">
+              <Switch
+                checked={banner.is_active}
+                disabled={isUpdatingBannerId === banner.id || isRemovingBannerId === banner.id}
+                onCheckedChange={(checked) => onToggle(banner.id, checked)}
+              />
+              <span>{banner.is_active ? 'Ativo' : 'Oculto'}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Link2 className="h-4 w-4" />
+              Link do banner
+            </label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                placeholder="Ex: /produto/123 ou /loja/promocoes"
+                value={banner.link_url || ''}
+                onChange={(e) => onLinkChange(banner.id, e.target.value)}
+                disabled={isSavingBannerLinkId === banner.id}
+              />
+              <Button
+                type="button"
+                onClick={() => onSaveLink(banner.id)}
+                disabled={isSavingBannerLinkId === banner.id}
+                className="bg-[#3483fa] hover:bg-[#2968c8]"
+              >
+                {isSavingBannerLinkId === banner.id ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                )}
+                Salvar link
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-500">
+              Ao clicar no banner da vitrine, o cliente sera enviado para este destino.
+            </p>
+            {confirmDeleteBannerId === banner.id ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-red-600">Remover?</span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={isRemovingBannerId === banner.id}
+                  onClick={() => onRemove(banner.id)}
+                >
+                  {isRemovingBannerId === banner.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Sim'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onCancelDelete}
+                >
+                  Nao
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isRemovingBannerId === banner.id || isUpdatingBannerId === banner.id}
+                onClick={() => onConfirmDelete(banner.id)}
+                className="text-red-500 hover:bg-red-50 hover:text-red-700"
+              >
+                {isRemovingBannerId === banner.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                Remover banner
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function MarketingManager({
   initialSettings,
   initialBanners,
@@ -67,7 +301,6 @@ export function MarketingManager({
 }) {
   const router = useRouter()
   const showToast = useToast()
-  const [activeTab, setActiveTab] = useState<'announcement' | 'layout' | 'banners'>('announcement')
 
   const [layout, setLayout] = useState<string[]>(
     initialSettings.homepage_layout?.filter((sectionId) => availableSections.some((section) => section.id === sectionId)) ||
@@ -86,10 +319,17 @@ export function MarketingManager({
   const [isRemovingBannerId, setIsRemovingBannerId] = useState<string | null>(null)
   const [isSavingBannerLinkId, setIsSavingBannerLinkId] = useState<string | null>(null)
   const [confirmDeleteBannerId, setConfirmDeleteBannerId] = useState<string | null>(null)
-  const [draggedLayoutItem, setDraggedLayoutItem] = useState<string | null>(null)
-  const [draggedBannerId, setDraggedBannerId] = useState<string | null>(null)
+  const [activeLayoutItemId, setActiveLayoutItemId] = useState<string | null>(null)
+  const [activeBannerId, setActiveBannerId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const saveBannerOrderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
+  const activeBannersCount = banners.filter((banner) => banner.is_active).length
+  const inactiveBannersCount = banners.length - activeBannersCount
+  const announcementStatusLabel = annActive ? 'Ativa' : 'Inativa'
 
   async function handleSaveAnnouncement() {
     setIsSavingAnnouncement(true)
@@ -188,33 +428,22 @@ export function MarketingManager({
     setLayout(newLayout)
   }
 
-  function onDragStartLayout(itemId: string, event: React.DragEvent) {
-    setDraggedLayoutItem(itemId)
-    event.dataTransfer.effectAllowed = 'move'
-  }
+  function handleLayoutDragEnd(event: DragEndEvent) {
+    const { active, over } = event
 
-  function onDragOverLayout(event: React.DragEvent) {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-  }
+    setActiveLayoutItemId(null)
 
-  function onDropLayout(targetId: string) {
-    if (!draggedLayoutItem || draggedLayoutItem === targetId) {
-      setDraggedLayoutItem(null)
+    if (!over || active.id === over.id) {
       return
     }
 
     setLayout((current) => {
-      const fromIndex = current.indexOf(draggedLayoutItem)
-      const toIndex = current.indexOf(targetId)
+      const fromIndex = current.indexOf(String(active.id))
+      const toIndex = current.indexOf(String(over.id))
       if (fromIndex === -1 || toIndex === -1) return current
 
-      const next = [...current]
-      const [moved] = next.splice(fromIndex, 1)
-      next.splice(toIndex, 0, moved)
-      return next
+      return arrayMove(current, fromIndex, toIndex)
     })
-    setDraggedLayoutItem(null)
   }
 
   async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -361,43 +590,14 @@ export function MarketingManager({
     }
   }
 
-  function onDragStartBanner(bannerId: string, event: React.DragEvent) {
-    setDraggedBannerId(bannerId)
-    event.dataTransfer.effectAllowed = 'move'
-  }
-
-  function onDragOverBanner(event: React.DragEvent) {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-  }
-
-  async function onDropBanner(targetId: string) {
-    if (!draggedBannerId || draggedBannerId === targetId) {
-      setDraggedBannerId(null)
-      return
-    }
-
-    setBanners((current) => {
-      const fromIndex = current.findIndex((b) => b.id === draggedBannerId)
-      const toIndex = current.findIndex((b) => b.id === targetId)
-      if (fromIndex === -1 || toIndex === -1) return current
-
-      const next = [...current]
-      const [moved] = next.splice(fromIndex, 1)
-      next.splice(toIndex, 0, moved)
-      return next
-    })
-
-    setDraggedBannerId(null)
-
+  function scheduleBannerReorder(nextBanners: StoreBanner[]) {
     if (saveBannerOrderTimeoutRef.current) {
       clearTimeout(saveBannerOrderTimeoutRef.current)
     }
 
     saveBannerOrderTimeoutRef.current = setTimeout(async () => {
       try {
-        const orderedIds = banners.map((b) => b.id)
-        await reorderStoreBanners(orderedIds)
+        await reorderStoreBanners(nextBanners.map((banner) => banner.id))
         router.refresh()
       } catch {
         // silent failure on reorder
@@ -405,312 +605,274 @@ export function MarketingManager({
     }, 600)
   }
 
+  function handleBannerDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+
+    setActiveBannerId(null)
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    setBanners((current) => {
+      const fromIndex = current.findIndex((banner) => banner.id === String(active.id))
+      const toIndex = current.findIndex((banner) => banner.id === String(over.id))
+      if (fromIndex === -1 || toIndex === -1) return current
+
+      const next = arrayMove(current, fromIndex, toIndex)
+      scheduleBannerReorder(next)
+      return next
+    })
+  }
+
   return (
     <div className="space-y-6">
-
-      {/* Menu de Abas */}
-      <div className="flex space-x-2 border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab('announcement')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'announcement'
-              ? 'border-[#3483fa] text-[#3483fa]'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <Megaphone className="h-4 w-4" />
-          Barra de Anuncios
-        </button>
-        <button
-          onClick={() => setActiveTab('layout')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'layout'
-              ? 'border-[#3483fa] text-[#3483fa]'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <LayoutList className="h-4 w-4" />
-          Ordem das Secoes
-        </button>
-        <button
-          onClick={() => setActiveTab('banners')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'banners'
-              ? 'border-[#3483fa] text-[#3483fa]'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <ImagePlus className="h-4 w-4" />
-          Banners Principais
-        </button>
-      </div>
-
-      <div className="max-w-2xl">
-        {/* ABA 1: BARRA DE ANUNCIOS */}
-        {activeTab === 'announcement' && (
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(320px,0.75fr)]">
+        <div className="space-y-6">
           <Card className="border-0 shadow-sm ring-1 ring-slate-200">
-            <CardHeader>
-              <CardTitle className="text-xl">Barra de Anuncios</CardTitle>
-              <CardDescription>
-                Aquela faixa colorida que fica fixa no topo do site para dar avisos, destacar uma promocao ou cupom.
-              </CardDescription>
+            <CardHeader className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl bg-sky-50 p-2.5 text-sky-600">
+                  <Megaphone className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <CardTitle className="text-xl">Barra de Anuncios</CardTitle>
+                  <CardDescription>
+                    Controle a faixa fixa do topo para divulgar campanhas, frete, cupons ou recados importantes.
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${annActive ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'}`}>
+                  {announcementStatusLabel}
+                </span>
+                {annLink ? (
+                  <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+                    Com link configurado
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                    Sem link
+                  </span>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
-                <span className="text-sm font-medium text-slate-700">Ativar Barra de Anuncios no site</span>
-                <Switch checked={annActive} onCheckedChange={setAnnActive} />
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">Exibir no site</p>
+                      <p className="text-xs text-slate-500">Ative quando a mensagem estiver pronta para publicacao.</p>
+                    </div>
+                    <Switch checked={annActive} onCheckedChange={setAnnActive} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Texto principal</label>
+                    <Input
+                      placeholder="Ex: Frete Gratis nas compras acima de R$ 200"
+                      value={annText}
+                      onChange={(e) => setAnnText(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Link de redirecionamento</label>
+                    <p className="text-[13px] text-slate-500">
+                      Opcional. Use quando a barra precisar levar o cliente para uma categoria, promocao ou produto.
+                    </p>
+                    <Input
+                      placeholder="Ex: /loja/promocao ou /produto/123"
+                      value={annLink}
+                      onChange={(e) => setAnnLink(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-slate-700">Cor e pre-visualizacao</label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={annBackgroundColor}
+                        onChange={(e) => setAnnBackgroundColor(e.target.value)}
+                        className="h-11 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white p-1"
+                        aria-label="Selecionar cor da barra de anuncios"
+                      />
+                      <Input
+                        value={annBackgroundColor}
+                        onChange={(e) => setAnnBackgroundColor(e.target.value)}
+                        placeholder="#3483fa"
+                      />
+                    </div>
+                    <div
+                      className="rounded-xl px-4 py-3 text-center text-sm font-medium text-white"
+                      style={{ backgroundColor: annBackgroundColor || '#3483fa' }}
+                    >
+                      {annText || 'Pre-visualizacao da barra de anuncios'}
+                    </div>
+                    <p className="text-xs leading-5 text-slate-500">
+                      Essa simulacao mostra o tom da faixa e ajuda a validar contraste antes de publicar.
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Texto principal da barra</label>
-                <Input
-                  placeholder="Ex: Frete Gratis nas compras acima de R$ 200"
-                  value={annText}
-                  onChange={(e) => setAnnText(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Link de Redirecionamento (Opcional)
-                </label>
-                <p className="text-[13px] text-slate-500">
-                  Se o cliente clicar na barra, para onde ele deve ser levado? (Deixe em branco caso nao queira um link).
-                </p>
-                <Input
-                  placeholder="Ex: /loja/promocao ou /produto/123"
-                  value={annLink}
-                  onChange={(e) => setAnnLink(e.target.value)}
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-slate-700">Cor da barra</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={annBackgroundColor}
-                    onChange={(e) => setAnnBackgroundColor(e.target.value)}
-                    className="h-11 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white p-1"
-                    aria-label="Selecionar cor da barra de anuncios"
-                  />
-                  <Input
-                    value={annBackgroundColor}
-                    onChange={(e) => setAnnBackgroundColor(e.target.value)}
-                    placeholder="#3483fa"
-                  />
-                </div>
-                <div
-                  className="rounded-xl px-4 py-3 text-center text-sm font-medium text-white"
-                  style={{ backgroundColor: annBackgroundColor || '#3483fa' }}
-                >
-                  {annText || 'Pre-visualizacao da barra de anuncios'}
-                </div>
-              </div>
-              <Button onClick={handleSaveAnnouncement} disabled={isSavingAnnouncement} className="w-full bg-[#3483fa] hover:bg-[#2968c8]">
-                {isSavingAnnouncement ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              <Button onClick={handleSaveAnnouncement} disabled={isSavingAnnouncement} className="w-full bg-[#3483fa] hover:bg-[#2968c8] sm:w-auto">
+                {isSavingAnnouncement ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                 Salvar Barra de Anuncios
               </Button>
             </CardContent>
           </Card>
-        )}
 
-        {/* ABA 2: LAYOUT */}
-        {activeTab === 'layout' && (
           <Card className="border-0 shadow-sm ring-1 ring-slate-200">
-            <CardHeader>
-              <CardTitle className="text-xl">Ordem das Secoes da Pagina Inicial</CardTitle>
-              <CardDescription>
-                Arraste para reordenar ou use as setinhas. A ordem que voce definir sera como os clientes verao sua vitrine.
-              </CardDescription>
+            <CardHeader className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl bg-slate-100 p-2.5 text-slate-700">
+                  <LayoutList className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <CardTitle className="text-xl">Ordem das Secoes da Pagina Inicial</CardTitle>
+                  <CardDescription>
+                    Defina a sequencia em que o cliente encontra cada bloco da vitrine. Arraste ou use os controles laterais.
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                O topo da lista aparece primeiro na home. Use descricoes curtas para conferir a funcao de cada secao sem poluir a leitura.
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {layout.map((item, index) => (
-                  <div
-                    key={item}
-                    draggable
-                    onDragStart={(e) => onDragStartLayout(item, e)}
-                    onDragOver={onDragOverLayout}
-                    onDrop={() => onDropLayout(item)}
-                    onDragEnd={() => setDraggedLayoutItem(null)}
-                    className={`flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-shadow ${
-                      draggedLayoutItem === item ? 'shadow-lg shadow-slate-300/60' : ''
-                    }`}
-                  >
-                    <div className="cursor-grab text-slate-400 active:cursor-grabbing">
-                      <GripVertical className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-slate-800">
-                        {availableSections.find((section) => section.id === item)?.label || SECTION_CONTENT[item]?.title || item}
-                      </p>
-                      <p className="mt-1 text-[13px] leading-5 text-slate-500">
-                        {availableSections.find((section) => section.id === item)?.description ||
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={(event) => setActiveLayoutItemId(String(event.active.id))}
+                onDragCancel={() => setActiveLayoutItemId(null)}
+                onDragEnd={handleLayoutDragEnd}
+              >
+                <SortableContext items={layout} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2.5">
+                    {layout.map((item, index) => (
+                      <SortableLayoutItem
+                        key={item}
+                        item={item}
+                        index={index}
+                        label={availableSections.find((section) => section.id === item)?.label || SECTION_CONTENT[item]?.title || item}
+                        description={
+                          availableSections.find((section) => section.id === item)?.description ||
                           SECTION_CONTENT[item]?.description ||
-                          'Sessao personalizada da pagina inicial.'}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <button
-                        disabled={index === 0}
-                        onClick={() => moveLayoutItem(index, 'up')}
-                        className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 disabled:opacity-30"
-                        aria-label="Mover para cima"
-                      >
-                        <ArrowUp className="h-3 w-3" />
-                      </button>
-                      <button
-                        disabled={index === layout.length - 1}
-                        onClick={() => moveLayoutItem(index, 'down')}
-                        className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 disabled:opacity-30"
-                        aria-label="Mover para baixo"
-                      >
-                        <ArrowDown className="h-3 w-3" />
-                      </button>
-                    </div>
+                          'Sessao personalizada da pagina inicial.'
+                        }
+                        isDragging={activeLayoutItemId === item}
+                        isFirst={index === 0}
+                        isLast={index === layout.length - 1}
+                        onMove={moveLayoutItem}
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
-              <Button onClick={handleSaveLayout} disabled={isSavingLayout} className="mt-4 w-full bg-[#3483fa] hover:bg-[#2968c8]">
-                {isSavingLayout ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                Salvar Ordem
+                </SortableContext>
+              </DndContext>
+              <Button onClick={handleSaveLayout} disabled={isSavingLayout} className="w-full bg-[#3483fa] hover:bg-[#2968c8] sm:w-auto">
+                {isSavingLayout ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                Salvar Ordem das Secoes
               </Button>
             </CardContent>
           </Card>
-        )}
+        </div>
 
-        {/* ABA 3: BANNERS */}
-        {activeTab === 'banners' && (
+        <div className="space-y-6">
           <Card className="border-0 shadow-sm ring-1 ring-slate-200">
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <div>
-                <CardTitle className="text-xl">Banners Principais</CardTitle>
-                <CardDescription>
-                  Sao as imagens grandes do carrossel principal (logo abaixo do cabecalho).
-                </CardDescription>
-                <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
-                  <Info className="h-3 w-3" />
-                  Tamanho recomendado: 1200x400px. Formatos aceitos: JPG, PNG, WebP.
-                </p>
+            <CardHeader className="space-y-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-2xl bg-amber-50 p-2.5 text-amber-600">
+                      <ImagePlus className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <CardTitle className="text-xl">Banners Principais</CardTitle>
+                      <CardDescription>
+                        Gerencie o carrossel principal logo abaixo do cabecalho com foco em ordem, visibilidade e destino de clique.
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <p className="flex items-center gap-1.5 text-xs text-slate-400">
+                    <Info className="h-3 w-3" />
+                    Tamanho recomendado: 1200x400px. Formatos aceitos: JPG, PNG, WebP.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                    {activeBannersCount} ativo(s)
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                    {inactiveBannersCount} oculto(s)
+                  </span>
+                </div>
               </div>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleBannerUpload} />
-              <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
-                {isUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                Adicionar Banner{isUploading ? 's' : ''}
-              </Button>
+              <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Biblioteca de banners</p>
+                  <p className="text-xs text-slate-500">Adicione novas imagens e depois ajuste a ordem de exibicao pela alca de arraste.</p>
+                </div>
+                <div>
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleBannerUpload} />
+                  <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                    {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                    Adicionar Banner{isUploading ? 's' : ''}
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {banners.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
                   Nenhum banner cadastrado ainda.
                 </div>
               ) : (
-                banners.map((banner) => (
-                  <div
-                    key={banner.id}
-                    draggable
-                    onDragStart={(e) => onDragStartBanner(banner.id, e)}
-                    onDragOver={onDragOverBanner}
-                    onDrop={() => onDropBanner(banner.id)}
-                    onDragEnd={() => setDraggedBannerId(null)}
-                    className={`overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow ${
-                      draggedBannerId === banner.id ? 'shadow-lg shadow-slate-300/60' : ''
-                    }`}
-                  >
-                    <div className="aspect-[3/1] w-full bg-slate-100">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={banner.image_url} alt="Banner" className="h-full w-full object-cover" />
-                    </div>
-                    <div className="space-y-4 border-t border-slate-100 bg-slate-50 p-3">
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <GripVertical className="h-3.5 w-3.5" />
-                        Arraste para reordenar
-                      </div>
-                      <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                          <Link2 className="h-4 w-4" />
-                          Link do banner
-                        </label>
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <Input
-                            placeholder="Ex: /produto/123 ou /loja/promocoes"
-                            value={banner.link_url || ''}
-                            onChange={(e) =>
-                              setBanners((current) =>
-                                current.map((currentBanner) =>
-                                  currentBanner.id === banner.id
-                                    ? { ...currentBanner, link_url: e.target.value }
-                                    : currentBanner
-                                )
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={(event) => setActiveBannerId(String(event.active.id))}
+                  onDragCancel={() => setActiveBannerId(null)}
+                  onDragEnd={handleBannerDragEnd}
+                >
+                  <SortableContext items={banners.map((banner) => banner.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-3">
+                      {banners.map((banner) => (
+                        <SortableBannerItem
+                          key={banner.id}
+                          banner={banner}
+                          isDragging={activeBannerId === banner.id}
+                          isUpdatingBannerId={isUpdatingBannerId}
+                          isRemovingBannerId={isRemovingBannerId}
+                          isSavingBannerLinkId={isSavingBannerLinkId}
+                          confirmDeleteBannerId={confirmDeleteBannerId}
+                          onLinkChange={(bannerId, value) =>
+                            setBanners((current) =>
+                              current.map((currentBanner) =>
+                                currentBanner.id === bannerId
+                                  ? { ...currentBanner, link_url: value }
+                                  : currentBanner
                               )
-                            }
-                            disabled={isSavingBannerLinkId === banner.id}
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => handleSaveBannerLink(banner.id)}
-                            disabled={isSavingBannerLinkId === banner.id}
-                            className="bg-[#3483fa] hover:bg-[#2968c8]"
-                          >
-                            {isSavingBannerLinkId === banner.id ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                            )}
-                            Salvar link
-                          </Button>
-                        </div>
-                        <p className="text-xs text-slate-500">
-                          Ao clicar no banner da vitrine, o cliente sera enviado para este destino.
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Switch
-                            checked={banner.is_active}
-                            disabled={isUpdatingBannerId === banner.id || isRemovingBannerId === banner.id}
-                            onCheckedChange={(checked) => handleToggleBanner(banner.id, checked)}
-                          />
-                          <span>{banner.is_active ? 'Visivel no site' : 'Oculto'}</span>
-                        </div>
-
-                        {confirmDeleteBannerId === banner.id ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-red-600">Remover?</span>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              disabled={isRemovingBannerId === banner.id}
-                              onClick={() => handleRemoveBanner(banner.id)}
-                            >
-                              {isRemovingBannerId === banner.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Sim'}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setConfirmDeleteBannerId(null)}
-                            >
-                              Nao
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={isRemovingBannerId === banner.id || isUpdatingBannerId === banner.id}
-                            onClick={() => setConfirmDeleteBannerId(banner.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          >
-                            {isRemovingBannerId === banner.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                          </Button>
-                        )}
-                      </div>
+                            )
+                          }
+                          onSaveLink={handleSaveBannerLink}
+                          onToggle={handleToggleBanner}
+                          onConfirmDelete={setConfirmDeleteBannerId}
+                          onCancelDelete={() => setConfirmDeleteBannerId(null)}
+                          onRemove={handleRemoveBanner}
+                        />
+                      ))}
                     </div>
-                  </div>
-                ))
+                  </SortableContext>
+                </DndContext>
               )}
             </CardContent>
           </Card>
-        )}
+        </div>
       </div>
     </div>
   )

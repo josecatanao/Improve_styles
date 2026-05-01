@@ -57,11 +57,10 @@ export function ProductGallery({
             key={`${image.public_url ?? 'placeholder'}-${index}`}
             type="button"
             onClick={() => selectImage(index)}
-            className={`overflow-hidden rounded-none border ${activeIndex === index ? 'border-[color:var(--store-button-bg)]' : 'border-slate-200'}`}
+            className={`relative w-full aspect-square overflow-hidden rounded-md border ${activeIndex === index ? 'border-[color:var(--store-button-bg)]' : 'border-slate-200'}`}
           >
             {image.public_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={image.public_url} alt={image.alt_text || productName} className="aspect-square w-full object-cover" />
+              <img src={image.public_url} alt={image.alt_text || productName} className="absolute inset-0 w-full h-full object-cover" />
             ) : (
               <div className="flex aspect-square items-center justify-center bg-slate-100 text-xs text-slate-500">Sem foto</div>
             )}
@@ -70,20 +69,20 @@ export function ProductGallery({
         </div>
 
         <div className="space-y-3">
-          <div className="group relative hidden aspect-square overflow-hidden rounded-none border border-slate-200 bg-white lg:block">
+          <div className="group relative hidden aspect-square overflow-hidden rounded-lg border border-slate-200 bg-white lg:block">
             {activeImage?.public_url ? (
               <>
                 <button
                   type="button"
                   onClick={() => setIsZoomOpen(true)}
-                  className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-none bg-white/92 text-slate-700 shadow-sm transition-colors hover:bg-white"
+                  className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/92 text-slate-700 shadow-sm transition-colors hover:bg-white"
                 >
                   <Search className="h-4 w-4" />
                 </button>
                 <img
                   src={activeImage.public_url}
                   alt={activeImage.alt_text || productName}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.06]"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.06]"
                 />
               </>
             ) : (
@@ -103,17 +102,33 @@ export function ProductGallery({
                     selectImage(index)
                     setIsZoomOpen(true)
                   }}
-                  className="min-w-full snap-center overflow-hidden rounded-none border border-slate-200 bg-white"
+                  className="relative min-w-full snap-center overflow-hidden rounded-md border border-slate-200 bg-white"
                 >
                   {image.public_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={image.public_url} alt={image.alt_text || productName} className="aspect-square w-full object-cover" />
+                    <div className="relative aspect-square w-full">
+                      <img src={image.public_url} alt={image.alt_text || productName} className="absolute inset-0 w-full h-full object-cover" />
+                    </div>
                   ) : (
                     <div className="flex aspect-square items-center justify-center bg-slate-100 text-sm text-slate-500">Sem imagem</div>
                   )}
                 </button>
               ))}
             </div>
+            {filteredImages.length > 1 ? (
+              <div className="mt-2.5 flex items-center justify-center gap-1.5">
+                {filteredImages.map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => selectImage(index)}
+                    aria-label={`Imagem ${index + 1}`}
+                    className={`h-2 rounded-full transition-all ${
+                      activeIndex === index ? 'w-5 bg-slate-800' : 'w-2 bg-slate-300'
+                    }`}
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -126,7 +141,7 @@ export function ProductGallery({
               <button
                 type="button"
                 onClick={() => setIsZoomOpen(false)}
-                className="inline-flex h-10 items-center justify-center rounded-none border border-white/15 bg-white/10 px-4 text-sm font-medium text-white transition-colors hover:bg-white/15"
+                className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 bg-white/10 px-4 text-sm font-medium text-white transition-colors hover:bg-white/15"
               >
                 Fechar
               </button>
@@ -139,13 +154,12 @@ export function ProductGallery({
                     key={`zoom-${image.public_url ?? 'placeholder'}-${index}`}
                     type="button"
                     onClick={() => selectImage(index)}
-                    className={`overflow-hidden rounded-none border ${
+                    className={`relative w-full aspect-square overflow-hidden rounded-md border ${
                       activeIndex === index ? 'border-white' : 'border-white/15'
                     }`}
                   >
                     {image.public_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={image.public_url} alt={image.alt_text || productName} className="aspect-square w-full object-cover" />
+                      <img src={image.public_url} alt={image.alt_text || productName} className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
                       <div className="flex aspect-square items-center justify-center bg-white/10 text-xs text-white/70">Sem foto</div>
                     )}
@@ -153,20 +167,20 @@ export function ProductGallery({
                 ))}
               </div>
 
-              <div className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-none bg-white/6">
+              <div className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-lg bg-white/6">
                 {filteredImages.length > 1 ? (
                   <>
                     <button
                       type="button"
                       onClick={showPreviousImage}
-                      className="absolute left-2 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-none bg-white/10 text-white transition-colors hover:bg-white/15 sm:left-4 sm:h-11 sm:w-11"
+                      className="absolute left-2 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md bg-white/10 text-white transition-colors hover:bg-white/15 sm:left-4 sm:h-11 sm:w-11"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
                     <button
                       type="button"
                       onClick={showNextImage}
-                      className="absolute right-2 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-none bg-white/10 text-white transition-colors hover:bg-white/15 sm:right-4 sm:h-11 sm:w-11"
+                      className="absolute right-2 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md bg-white/10 text-white transition-colors hover:bg-white/15 sm:right-4 sm:h-11 sm:w-11"
                     >
                       <ChevronRight className="h-5 w-5" />
                     </button>
@@ -177,7 +191,7 @@ export function ProductGallery({
                   <img
                     src={activeImage.public_url}
                     alt={activeImage.alt_text || productName}
-                    className="max-h-full max-w-full object-contain"
+                    className="absolute inset-0 w-full h-full object-contain"
                   />
                 ) : (
                   <div className="flex h-full min-h-[320px] w-full items-center justify-center text-sm text-white/70">

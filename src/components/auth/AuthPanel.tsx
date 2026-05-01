@@ -1,5 +1,6 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import { useState } from 'react'
 import { ArrowLeft, KeyRound, Mail, UserRound } from 'lucide-react'
 import { forgotPassword, login, signup } from '@/app/login/actions'
@@ -16,6 +17,7 @@ type AuthPanelProps = {
   message?: string | string[] | undefined
   next: string
   success?: string | string[] | undefined
+  brandStyle?: CSSProperties
 }
 
 export function AuthPanel({
@@ -26,6 +28,7 @@ export function AuthPanel({
   message,
   next,
   success,
+  brandStyle,
 }: AuthPanelProps) {
   const [view, setView] = useState<'login' | 'signup' | 'forgotPassword'>(initialView)
   const isForgotPassword = view === 'forgotPassword'
@@ -49,10 +52,78 @@ export function AuthPanel({
         ? 'Use sua conta para acessar carrinho, checkout e futuras compras.'
         : 'Faca login para gerenciar catalogo, equipe e operacao da loja.'
 
+  const hasBrand = isStoreContext && brandStyle
+
+  const primaryColor = brandStyle?.['--primary'] as string | undefined
+  const buttonBg = brandStyle?.['--store-button-bg'] as string | undefined
+  const buttonFg = brandStyle?.['--store-button-fg'] as string | undefined
+  const cardBg = brandStyle?.['--store-card-bg'] as string | undefined
+  const cardBorder = brandStyle?.['--store-card-border'] as string | undefined
+
+  const resolvedPrimary = primaryColor || '#0f172a'
+  const resolvedButtonBg = buttonBg || '#0f172a'
+  const resolvedButtonFg = buttonFg || '#ffffff'
+  const resolvedCardBg = cardBg || '#ffffff'
+
+  const btnClass = hasBrand
+    ? 'h-12 w-full rounded-xl font-medium transition-opacity hover:opacity-90'
+    : 'h-12 w-full rounded-xl bg-slate-950 text-white hover:bg-slate-900'
+
+  const toggleActiveClass = hasBrand
+    ? 'rounded-xl px-4 py-2 text-sm font-medium transition-colors shadow-sm'
+    : 'rounded-xl px-4 py-2 text-sm font-medium transition-colors bg-white text-slate-950 shadow-sm'
+
+  const toggleInactiveClass = hasBrand
+    ? 'rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:opacity-90'
+    : 'rounded-xl px-4 py-2 text-sm font-medium transition-colors text-slate-500 hover:text-slate-900'
+
+  const toggleContainerClass = hasBrand
+    ? 'inline-flex items-center rounded-2xl p-1'
+    : 'inline-flex items-center rounded-2xl bg-slate-100 p-1'
+
+  const footerClass = hasBrand
+    ? 'flex-col gap-3 px-6 py-5 sm:px-7'
+    : 'flex-col gap-3 border-t border-slate-100 bg-slate-50/70 px-6 py-5 sm:px-7'
+
+  const headerClass = hasBrand
+    ? 'space-y-5 px-6 py-6 sm:px-7'
+    : 'space-y-5 border-b border-slate-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.94)_100%)] px-6 py-6 sm:px-7'
+
+  const linkClass = hasBrand
+    ? 'text-sm text-slate-500 transition-colors hover:opacity-90'
+    : 'text-sm text-slate-500 transition-colors hover:text-slate-900'
+
   return (
-    <Card className="mx-auto w-full border-0 bg-white/96 shadow-[0_28px_80px_-52px_rgba(15,23,42,0.45)] ring-1 ring-slate-200/80 backdrop-blur">
-      <CardHeader className="space-y-5 border-b border-slate-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.94)_100%)] px-6 py-6 sm:px-7">
-        <div className="inline-flex items-center rounded-2xl bg-slate-100 p-1">
+    <Card
+      className="mx-auto w-full border-0 shadow-[0_28px_80px_-52px_rgba(15,23,42,0.45)] ring-1 backdrop-blur"
+      style={{
+        backgroundColor: resolvedCardBg,
+        borderColor: cardBorder || undefined,
+        borderTopWidth: hasBrand ? 3 : 0,
+        borderTopColor: hasBrand ? resolvedPrimary : undefined,
+        borderTopStyle: hasBrand ? 'solid' : undefined,
+        ...((!hasBrand) ? { ringColor: 'rgb(226 232 240 / 0.8)' } : {}),
+      }}
+    >
+      <CardHeader
+        className={headerClass}
+        style={
+          hasBrand
+            ? {
+                borderBottom: cardBorder ? `1px solid ${cardBorder}` : undefined,
+                background: `linear-gradient(180deg, ${resolvedCardBg} 0%, ${resolvedPrimary}08 100%)`,
+              }
+            : undefined
+        }
+      >
+        <div
+          className={toggleContainerClass}
+          style={
+            hasBrand
+              ? { backgroundColor: `${resolvedPrimary}14` }
+              : undefined
+          }
+        >
           {isForgotPassword ? (
             <button
               type="button"
@@ -67,9 +138,14 @@ export function AuthPanel({
               <button
                 type="button"
                 onClick={() => setView('login')}
-                className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-                  view === 'login' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-900'
-                }`}
+                className={view === 'login' ? toggleActiveClass : toggleInactiveClass}
+                style={
+                  hasBrand && view === 'login'
+                    ? { backgroundColor: resolvedButtonBg, color: resolvedButtonFg }
+                    : hasBrand
+                      ? { color: resolvedPrimary }
+                      : undefined
+                }
               >
                 Entrar
               </button>
@@ -77,9 +153,14 @@ export function AuthPanel({
                 <button
                   type="button"
                   onClick={() => setView('signup')}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-                    view === 'signup' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-900'
-                  }`}
+                  className={view === 'signup' ? toggleActiveClass : toggleInactiveClass}
+                  style={
+                    hasBrand && view === 'signup'
+                      ? { backgroundColor: resolvedButtonBg, color: resolvedButtonFg }
+                      : hasBrand
+                        ? { color: resolvedPrimary }
+                        : undefined
+                  }
                 >
                   Criar conta
                 </button>
@@ -113,7 +194,14 @@ export function AuthPanel({
 
       {view === 'forgotPassword' ? (
         <form>
-          <CardContent className="space-y-5 px-6 py-6 sm:px-7">
+          <CardContent
+            className="space-y-5 px-6 py-6 sm:px-7"
+            style={
+              hasBrand
+                ? { borderTop: cardBorder ? `1px solid ${cardBorder}` : undefined }
+                : undefined
+            }
+          >
             <input type="hidden" name="next" value={next} />
             <input type="hidden" name="authView" value="login" />
             <input type="hidden" name="mode" value={isStoreContext ? 'customer' : 'admin'} />
@@ -132,14 +220,22 @@ export function AuthPanel({
               </div>
             </div>
           </CardContent>
-          <CardFooter className="flex-col gap-2 border-t border-slate-100 bg-slate-50/70 px-6 py-5 sm:px-7">
-            <Button type="submit" className="h-12 w-full rounded-xl bg-slate-950 text-white hover:bg-slate-900" formAction={forgotPassword}>
+          <CardFooter
+            className={footerClass}
+            style={
+              hasBrand
+                ? { borderTop: cardBorder ? `1px solid ${cardBorder}` : undefined, background: `${resolvedPrimary}08` }
+                : undefined
+            }
+          >
+            <Button type="submit" className={btnClass} style={hasBrand ? { backgroundColor: resolvedButtonBg, color: resolvedButtonFg } : undefined} formAction={forgotPassword}>
               Enviar link de recuperacao
             </Button>
             <button
               type="button"
               onClick={() => setView('login')}
-              className="text-sm text-slate-500 transition-colors hover:text-slate-900"
+              className={linkClass}
+              style={hasBrand ? { color: resolvedPrimary } : undefined}
             >
               Voltar para o login
             </button>
@@ -147,7 +243,14 @@ export function AuthPanel({
         </form>
       ) : view === 'login' ? (
         <form>
-          <CardContent className="space-y-5 px-6 py-6 sm:px-7">
+          <CardContent
+            className="space-y-5 px-6 py-6 sm:px-7"
+            style={
+              hasBrand
+                ? { borderTop: cardBorder ? `1px solid ${cardBorder}` : undefined }
+                : undefined
+            }
+          >
             <input type="hidden" name="next" value={next} />
             <input type="hidden" name="authView" value="login" />
             <input type="hidden" name="mode" value={isStoreContext ? 'customer' : 'admin'} />
@@ -173,14 +276,22 @@ export function AuthPanel({
               </div>
             </div>
           </CardContent>
-          <CardFooter className="flex-col gap-3 border-t border-slate-100 bg-slate-50/70 px-6 py-5 sm:px-7">
-            <Button type="submit" className="h-12 w-full rounded-xl bg-slate-950 text-white hover:bg-slate-900" formAction={login}>
+          <CardFooter
+            className={footerClass}
+            style={
+              hasBrand
+                ? { borderTop: cardBorder ? `1px solid ${cardBorder}` : undefined, background: `${resolvedPrimary}08` }
+                : undefined
+            }
+          >
+            <Button type="submit" className={btnClass} style={hasBrand ? { backgroundColor: resolvedButtonBg, color: resolvedButtonFg } : undefined} formAction={login}>
               Entrar
             </Button>
             <button
               type="button"
               onClick={() => setView('forgotPassword')}
-              className="text-sm text-slate-500 transition-colors hover:text-slate-900"
+              className={linkClass}
+              style={hasBrand ? { color: resolvedPrimary } : undefined}
             >
               Esqueceu a senha?
             </button>
@@ -188,7 +299,14 @@ export function AuthPanel({
         </form>
       ) : allowSignup ? (
         <form>
-          <CardContent className="grid gap-5 px-6 py-6 sm:px-7">
+          <CardContent
+            className="grid gap-5 px-6 py-6 sm:px-7"
+            style={
+              hasBrand
+                ? { borderTop: cardBorder ? `1px solid ${cardBorder}` : undefined }
+                : undefined
+            }
+          >
             <input type="hidden" name="next" value={next} />
             <input type="hidden" name="authView" value="signup" />
             <input type="hidden" name="mode" value={isStoreContext ? 'customer' : 'admin'} />
@@ -212,23 +330,8 @@ export function AuthPanel({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="whatsapp">WhatsApp</Label>
-                    <Input id="whatsapp" name="whatsapp" required placeholder="(00) 00000-0000" className="h-11 rounded-xl bg-slate-50/70" />
+                    <Input id="whatsapp" name="whatsapp" required placeholder="(00) 00000-0000" className="h-11 rounded-xl bg-slate-50/70 pl-10" />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryAddress">Endereco de entrega</Label>
-                  <textarea
-                    id="deliveryAddress"
-                    name="deliveryAddress"
-                    required
-                    rows={4}
-                    placeholder="Rua, numero, bairro, cidade e complemento"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="photoUrl">Foto (opcional)</Label>
-                  <Input id="photoUrl" name="photoUrl" placeholder="https://..." className="h-11 rounded-xl bg-slate-50/70" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="customerPassword">Senha</Label>
@@ -257,10 +360,18 @@ export function AuthPanel({
               </>
             )}
           </CardContent>
-          <CardFooter className="border-t border-slate-100 bg-slate-50/70 px-6 py-5 sm:px-7">
+          <CardFooter
+            className={footerClass}
+            style={
+              hasBrand
+                ? { borderTop: cardBorder ? `1px solid ${cardBorder}` : undefined, background: `${resolvedPrimary}08` }
+                : undefined
+            }
+          >
             <Button
               type="submit"
-              className="h-12 w-full rounded-xl bg-slate-950 text-white hover:bg-slate-900"
+              className={btnClass}
+              style={hasBrand ? { backgroundColor: resolvedButtonBg, color: resolvedButtonFg } : undefined}
               formAction={signup}
             >
               {isStoreContext ? 'Criar conta de cliente' : 'Criar conta admin'}
