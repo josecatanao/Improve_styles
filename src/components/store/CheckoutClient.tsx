@@ -24,6 +24,12 @@ type CheckoutInitialProfile = CustomerProfile & {
   delivery_lng?: number | null
 }
 
+export type DeliverySettings = {
+  delivery_enabled: boolean
+  pickup_enabled: boolean
+  allow_shipping_other_states: boolean
+}
+
 function getEligibleCartItems(
   items: ReturnType<typeof useCart>['items'],
   coupon: NonNullable<Awaited<ReturnType<typeof validateCoupon>>['coupon']>
@@ -37,16 +43,35 @@ function getEligibleCartItems(
   )
 }
 
-export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { initialProfile?: CheckoutInitialProfile | null; orderId?: string; initialCoupon?: string | null }) {
+function resolveDefaultDeliveryMethod(settings: DeliverySettings): 'delivery' | 'pickup' {
+  if (settings.delivery_enabled) return 'delivery'
+  if (settings.pickup_enabled) return 'pickup'
+  return 'pickup'
+}
+
+export function CheckoutClient({
+  initialProfile,
+  orderId,
+  initialCoupon,
+  deliverySettings,
+}: {
+  initialProfile?: CheckoutInitialProfile | null
+  orderId?: string
+  initialCoupon?: string | null
+  deliverySettings: DeliverySettings
+}) {
   const { items, totalPrice, clearCart, isReady, appliedCoupon, applyCoupon, removeCoupon } = useCart()
   const showToast = useToast()
   const router = useRouter()
   const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items])
+  const defaultMethod = resolveDefaultDeliveryMethod(deliverySettings)
+  const showDeliverySelect = deliverySettings.delivery_enabled && deliverySettings.pickup_enabled
+
   const [customer, setCustomer] = useState<StoreOrderCustomer>({
     name: initialProfile?.full_name || '',
     phone: initialProfile?.whatsapp || '',
     notes: '',
-    delivery_method: 'delivery',
+    delivery_method: defaultMethod,
     payment_method: 'pix',
     installments: 1,
     delivery_address: initialProfile?.delivery_address || '',
@@ -55,7 +80,6 @@ export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { ini
   })
   const [isLocating, setIsLocating] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
-  const [reviewMode, setReviewMode] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submittedOrder, setSubmittedOrder] = useState<StoreOrder | null>(null)
   const [shippingZip, setShippingZip] = useState('')
@@ -115,10 +139,11 @@ export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { ini
         : shippingResult.cost
       : 0
 
-  const hasRequiredCustomerData = 
-    customer.name.trim().length > 0 && 
+  const isDelivery = customer.delivery_method === 'delivery'
+  const hasRequiredCustomerData =
+    customer.name.trim().length > 0 &&
     customer.phone.trim().length > 0 &&
-    (customer.delivery_method === 'pickup' || customer.delivery_address.trim().length > 0)
+    (!isDelivery || (customer.delivery_address.trim().length > 0 && shippingResult && !shippingResult.notFound))
 
   function handleGetLocation() {
     if (!navigator.geolocation) {
@@ -135,8 +160,6 @@ export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { ini
           ...current,
           delivery_lat: position.coords.latitude,
           delivery_lng: position.coords.longitude,
-          // Se o usuario usar a localizacao atual, preenchemos o endereco com um aviso,
-          // ou esperamos que eles completem o texto.
           delivery_address: current.delivery_address || 'Localizacao atual capturada via GPS (detalhe o numero/complemento).',
         }))
         setIsLocating(false)
@@ -201,14 +224,18 @@ export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { ini
           notFound: false,
         })
       } else if (result.correios) {
-        setShippingResult({
-          cost: result.correios.pac.price,
-          estimatedDays: result.correios.pac.maxDays,
-          zoneName: 'Correios PAC',
-          zoneId: null,
-          isFree: false,
-          notFound: false,
-        })
+        if (!deliverySettings.allow_shipping_other_states) {
+          setShippingResult({ cost: 0, estimatedDays: 0, zoneName: null, zoneId: null, isFree: false, notFound: true })
+        } else {
+          setShippingResult({
+            cost: result.correios.pac.price,
+            estimatedDays: result.correios.pac.maxDays,
+            zoneName: 'Correios PAC',
+            zoneId: null,
+            isFree: false,
+            notFound: false,
+          })
+        }
       } else {
         setShippingResult({ cost: 0, estimatedDays: 0, zoneName: null, zoneId: null, isFree: false, notFound: true })
       }
@@ -256,7 +283,8 @@ export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { ini
     setCouponError(null)
   }
 
-  async function handleConfirmOrder() {
+  async function handleFinalizeOrder() {
+    if (!hasRequiredCustomerData) return
     setIsSubmitting(true)
     try {
       const response = await submitOrder({
@@ -313,15 +341,9 @@ export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { ini
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
-      <form
-        className="rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-4 sm:p-6"
-        onSubmit={(event) => {
-          event.preventDefault()
-          setReviewMode(true)
-        }}
-      >
+      <div className="rounded-none border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-4 sm:p-6">
         <h2 className="text-xl font-semibold text-slate-950">Dados do pedido</h2>
-        <p className="mt-2 text-sm text-slate-500">Preencha os dados e revise o resumo antes de confirmar o pedido.</p>
+        <p className="mt-2 text-sm text-slate-500">Preencha os dados e finalize o pedido.</p>
         <div className="mt-5 grid gap-4">
           <label className="grid gap-2">
             <span className="text-sm font-medium text-slate-700">Nome (Associado a conta)</span>
@@ -343,38 +365,39 @@ export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { ini
               className="h-11 rounded-none border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none cursor-not-allowed"
             />
           </label>
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-slate-700">Forma de Pagamento</span>
+            <select
+              name="payment_method"
+              value={customer.payment_method}
+              onChange={(event) => setCustomer((current) => ({ ...current, payment_method: event.target.value }))}
+              className="h-11 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+            >
+              <option value="pix">Pix</option>
+              <option value="credit_card">Cartao de Credito</option>
+              <option value="cash">Dinheiro</option>
+            </select>
+          </label>
+
+          {customer.payment_method === 'credit_card' ? (
             <label className="grid gap-2">
-              <span className="text-sm font-medium text-slate-700">Forma de Pagamento</span>
+              <span className="text-sm font-medium text-slate-700">Parcelamento</span>
               <select
-                name="payment_method"
-                value={customer.payment_method}
-                onChange={(event) => setCustomer((current) => ({ ...current, payment_method: event.target.value }))}
+                name="installments"
+                value={customer.installments}
+                onChange={(event) => setCustomer((current) => ({ ...current, installments: Number(event.target.value) }))}
                 className="h-11 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               >
-                <option value="pix">Pix</option>
-                <option value="credit_card">Cartao de Credito</option>
-                <option value="cash">Dinheiro</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                  <option key={num} value={num}>
+                    {num}x {num === 1 ? 'sem juros' : ''}
+                  </option>
+                ))}
               </select>
             </label>
+          ) : null}
 
-            {customer.payment_method === 'credit_card' ? (
-              <label className="grid gap-2">
-                <span className="text-sm font-medium text-slate-700">Parcelamento</span>
-                <select
-                  name="installments"
-                  value={customer.installments}
-                  onChange={(event) => setCustomer((current) => ({ ...current, installments: Number(event.target.value) }))}
-                  className="h-11 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-                    <option key={num} value={num}>
-                      {num}x {num === 1 ? 'sem juros' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-
+          {showDeliverySelect ? (
             <label className="grid gap-2">
               <span className="text-sm font-medium text-slate-700">Metodo de Entrega</span>
               <select
@@ -387,178 +410,179 @@ export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { ini
                 <option value="pickup">Retirar na Loja</option>
               </select>
             </label>
+          ) : (
+            <div className="rounded-none border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              {customer.delivery_method === 'delivery' ? 'Entrega (Delivery)' : 'Retirada na Loja'}
+            </div>
+          )}
 
-            {customer.delivery_method === 'delivery' ? (
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">Endereco de Entrega</span>
-                  <button
-                    type="button"
-                    onClick={handleGetLocation}
-                    disabled={isLocating}
-                    className="flex items-center gap-1.5 text-xs font-medium text-[var(--store-button-bg)] transition-colors hover:opacity-80 disabled:opacity-50"
-                  >
-                    <Navigation2 className="h-3 w-3" />
-                    {isLocating ? 'Buscando...' : 'Usar minha localizacao'}
-                  </button>
-                </div>
-                {locationError ? <p className="text-xs text-red-500">{locationError}</p> : null}
-                {customer.delivery_lat && customer.delivery_lng ? (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-emerald-600">Localizacao exata capturada pelo GPS.</p>
-                    <div className="overflow-hidden rounded-none border border-emerald-200 bg-emerald-50">
-                      <iframe
-                        title="Mapa de localização"
-                        width="100%"
-                        height="140"
-                        style={{ border: 0, display: 'block' }}
-                        loading="lazy"
-                        allowFullScreen
-                        referrerPolicy="no-referrer-when-downgrade"
-                        src={`https://maps.google.com/maps?q=${customer.delivery_lat},${customer.delivery_lng}&hl=pt-BR&z=16&output=embed`}
-                      />
-                    </div>
+          {isDelivery ? (
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-700">Endereco de Entrega</span>
+                <button
+                  type="button"
+                  onClick={handleGetLocation}
+                  disabled={isLocating}
+                  className="flex items-center gap-1.5 text-xs font-medium text-[var(--store-button-bg)] transition-colors hover:opacity-80 disabled:opacity-50"
+                >
+                  <Navigation2 className="h-3 w-3" />
+                  {isLocating ? 'Buscando...' : 'Usar minha localizacao'}
+                </button>
+              </div>
+              {locationError ? <p className="text-xs text-red-500">{locationError}</p> : null}
+              {customer.delivery_lat && customer.delivery_lng ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-emerald-600">Localizacao exata capturada pelo GPS.</p>
+                  <div className="overflow-hidden rounded-none border border-emerald-200 bg-emerald-50">
+                    <iframe
+                      title="Mapa de localização"
+                      width="100%"
+                      height="140"
+                      style={{ border: 0, display: 'block' }}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={`https://maps.google.com/maps?q=${customer.delivery_lat},${customer.delivery_lng}&hl=pt-BR&z=16&output=embed`}
+                    />
                   </div>
-                ) : null}
-                <textarea
-                  required
-                  name="delivery_address"
-                  rows={2}
-                  value={customer.delivery_address}
-                  onChange={(event) => setCustomer((current) => ({ ...current, delivery_address: event.target.value }))}
-                  placeholder="Rua, Numero, Bairro, Ponto de Referencia..."
-                  className="rounded-none border border-slate-200 px-3 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                />
-              </div>
-            ) : null}
-
-            {customer.delivery_method === 'delivery' ? (
-              <div className="grid gap-2">
-                <span className="text-sm font-medium text-slate-700">Calcular frete</span>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={shippingZip}
-                    onChange={(event) => { setShippingZip(event.target.value); setShippingResult(null) }}
-                    placeholder="Digite seu CEP"
-                    maxLength={9}
-                    className="h-11 flex-1 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCalculateShipping}
-                    disabled={calculatingShipping || shippingZip.trim().length < 8}
-                    className="inline-flex h-11 items-center gap-2 rounded-none border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
-                  >
-                    {calculatingShipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
-                    Calcular frete
-                  </button>
                 </div>
-                {shippingResult ? (
-                  <div className={`mt-1 rounded-none border px-3 py-2 text-sm ${
-                    shippingResult.notFound
-                      ? 'border-amber-200 bg-amber-50 text-amber-700'
-                      : shippingResult.isFree
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                        : 'border-blue-200 bg-blue-50 text-blue-700'
-                  }`}>
-                    {shippingResult.notFound ? (
-                      'CEP nao encontrado nas zonas de entrega disponiveis.'
-                    ) : shippingResult.isFree ? (
-                      `Frete gratis! Entrega estimada em ${shippingResult.estimatedDays} dias uteis.`
-                    ) : (
-                      `Frete: ${formatMoney(shippingResult.cost)} • Entrega em ate ${shippingResult.estimatedDays} dias uteis`
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            <label className="grid gap-2">
-              <span className="text-sm font-medium text-slate-700">Cupom de desconto (Opcional)</span>
-              <div className="flex gap-2">
-                <input
-                  name="coupon"
-                  value={couponInput}
-                  onChange={(e) => {
-                    setCouponInput(e.target.value.toUpperCase())
-                    setCouponError(null)
-                  }}
-                  disabled={!!appliedCoupon}
-                  placeholder="Ex.: BOASVINDAS20"
-                  className="h-11 flex-1 rounded-none border border-slate-200 px-3 text-sm uppercase text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
-                />
-                {appliedCoupon ? (
-                  <button
-                    type="button"
-                    onClick={handleRemoveCoupon}
-                    className="inline-flex h-11 items-center gap-1.5 rounded-none border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    Remover
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleApplyCoupon}
-                    disabled={!couponInput.trim() || applyingCoupon}
-                    className="inline-flex h-11 items-center gap-1.5 rounded-none border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    {applyingCoupon ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <TicketPercent className="h-3.5 w-3.5" />}
-                    Aplicar
-                  </button>
-                )}
-              </div>
-              {couponError ? <p className="text-xs text-red-500">{couponError}</p> : null}
-              {appliedCoupon ? (
-                <p className="text-xs text-emerald-600">
-                  Cupom <span className="font-semibold">{appliedCoupon.code}</span> aplicado
-                  ({appliedCoupon.discount_type === 'free_shipping' ? 'Frete gratis' : appliedCoupon.discount_type === 'percentage' ? `${appliedCoupon.discount_value}%` : formatMoney(appliedCoupon.discount_value)} de desconto)
-                </p>
               ) : null}
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-sm font-medium text-slate-700">Observacao (Opcional)</span>
               <textarea
-                name="notes"
+                required
+                name="delivery_address"
                 rows={2}
-                value={customer.notes}
-                onChange={(event) => setCustomer((current) => ({ ...current, notes: event.target.value }))}
+                value={customer.delivery_address}
+                onChange={(event) => setCustomer((current) => ({ ...current, delivery_address: event.target.value }))}
+                placeholder="Rua, Numero, Bairro, Ponto de Referencia..."
                 className="rounded-none border border-slate-200 px-3 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
-            </label>
-          </div>
-
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <button
-            type="submit"
-            className="inline-flex h-12 w-full items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90"
-          >
-            Revisar pedido
-          </button>
-
-          {reviewMode ? (
-            <button
-              type="button"
-              onClick={handleConfirmOrder}
-              disabled={!hasRequiredCustomerData || isSubmitting}
-              className="inline-flex h-12 w-full items-center justify-center rounded-none border border-slate-200 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
-            >
-              {isSubmitting ? 'Salvando...' : 'Confirmar pedido'}
-            </button>
+            </div>
           ) : null}
+
+          {isDelivery ? (
+            <div className="grid gap-2">
+              <span className="text-sm font-medium text-slate-700">Calcular frete</span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={shippingZip}
+                  onChange={(event) => { setShippingZip(event.target.value); setShippingResult(null) }}
+                  placeholder="Digite seu CEP"
+                  maxLength={9}
+                  className="h-11 flex-1 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                />
+                <button
+                  type="button"
+                  onClick={handleCalculateShipping}
+                  disabled={calculatingShipping || shippingZip.trim().length < 8}
+                  className="inline-flex h-11 items-center gap-2 rounded-none border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+                >
+                  {calculatingShipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+                  Calcular frete
+                </button>
+              </div>
+              {shippingResult ? (
+                <div className={`mt-1 rounded-none border px-3 py-2 text-sm ${
+                  shippingResult.notFound
+                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                    : shippingResult.isFree
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-blue-200 bg-blue-50 text-blue-700'
+                }`}>
+                  {shippingResult.notFound ? (
+                    'CEP nao encontrado nas zonas de entrega disponiveis.'
+                  ) : shippingResult.isFree ? (
+                    `Frete gratis! Entrega estimada em ${shippingResult.estimatedDays} dias uteis.`
+                  ) : (
+                    `Frete: ${formatMoney(shippingResult.cost)} • Entrega em ate ${shippingResult.estimatedDays} dias uteis`
+                  )}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-slate-700">Cupom de desconto (Opcional)</span>
+            <div className="flex gap-2">
+              <input
+                name="coupon"
+                value={couponInput}
+                onChange={(e) => {
+                  setCouponInput(e.target.value.toUpperCase())
+                  setCouponError(null)
+                }}
+                disabled={!!appliedCoupon}
+                placeholder="Ex.: BOASVINDAS20"
+                className="h-11 flex-1 rounded-none border border-slate-200 px-3 text-sm uppercase text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+              />
+              {appliedCoupon ? (
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="inline-flex h-11 items-center gap-1.5 rounded-none border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Remover
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  disabled={!couponInput.trim() || applyingCoupon}
+                  className="inline-flex h-11 items-center gap-1.5 rounded-none border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {applyingCoupon ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <TicketPercent className="h-3.5 w-3.5" />}
+                  Aplicar
+                </button>
+              )}
+            </div>
+            {couponError ? <p className="text-xs text-red-500">{couponError}</p> : null}
+            {appliedCoupon ? (
+              <p className="text-xs text-emerald-600">
+                Cupom <span className="font-semibold">{appliedCoupon.code}</span> aplicado
+                ({appliedCoupon.discount_type === 'free_shipping' ? 'Frete gratis' : appliedCoupon.discount_type === 'percentage' ? `${appliedCoupon.discount_value}%` : formatMoney(appliedCoupon.discount_value)} de desconto)
+              </p>
+            ) : null}
+          </label>
+
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-slate-700">Observacao (Opcional)</span>
+            <textarea
+              name="notes"
+              rows={2}
+              value={customer.notes}
+              onChange={(event) => setCustomer((current) => ({ ...current, notes: event.target.value }))}
+              className="rounded-none border border-slate-200 px-3 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+            />
+          </label>
         </div>
-      </form>
+
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={handleFinalizeOrder}
+            disabled={!hasRequiredCustomerData || isSubmitting}
+            className="inline-flex h-12 w-full items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90 disabled:opacity-50"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Finalizar pedido'
+            )}
+          </button>
+        </div>
+      </div>
 
       <aside className="rounded-none border border-slate-200 bg-white p-4 sm:p-6">
         <h2 className="text-xl font-semibold text-slate-950">Resumo do pedido</h2>
-        {reviewMode ? (
-          <div className="mt-4 rounded-none border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-sm text-[#1d4ed8]">
-            Revise os dados abaixo. Ao confirmar, o pedido sera salvo neste navegador e o carrinho sera esvaziado.
-          </div>
-        ) : null}
+        <div className="mt-4 rounded-none border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-sm text-[#1d4ed8]">
+          Revise os dados ao lado. Ao confirmar, o pedido sera salvo neste navegador e o carrinho sera esvaziado.
+        </div>
         <div className="mt-5 space-y-4">
           {items.map((item) => (
             <div key={item.id} className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
@@ -616,20 +640,20 @@ export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { ini
 
         <div className="mt-5 rounded-none bg-slate-50 px-4 py-4 text-sm text-slate-600">
           <p className="font-medium text-slate-900">
-            {customer.delivery_method === 'pickup' ? 'Retirar na Loja' : 'Entrega para'}
+            {isDelivery ? 'Entrega para' : 'Retirar na Loja'}
           </p>
           <p className="mt-2">{customer.name || 'Nome ainda nao informado'}</p>
           <p>{customer.phone || 'Telefone ainda nao informado'}</p>
-          {customer.delivery_method === 'delivery' ? (
-             <p className="mt-2 text-slate-500">
-               {customer.delivery_address ? (
-                 <>
-                   <MapPin className="mb-0.5 mr-1.5 inline-block h-3.5 w-3.5" />
-                   {customer.delivery_address}
-                 </>
-               ) : 'Endereco nao informado'}
-             </p>
-           ) : null}
+          {isDelivery ? (
+            <p className="mt-2 text-slate-500">
+              {customer.delivery_address ? (
+                <>
+                  <MapPin className="mb-0.5 mr-1.5 inline-block h-3.5 w-3.5" />
+                  {customer.delivery_address}
+                </>
+              ) : 'Endereco nao informado'}
+            </p>
+          ) : null}
           {shippingResult && !shippingResult.notFound ? (
             <p className="mt-2 text-slate-500">
               <Truck className="mb-0.5 mr-1.5 inline-block h-3.5 w-3.5" />
@@ -638,11 +662,11 @@ export function CheckoutClient({ initialProfile, orderId, initialCoupon }: { ini
             </p>
           ) : null}
           <div className="mt-3 border-t border-slate-200 pt-3">
-             <p className="font-medium text-slate-900">Pagamento: {
-               customer.payment_method === 'pix' ? 'Pix' : 
-               customer.payment_method === 'cash' ? 'Dinheiro' : 
-               `Cartao em ${customer.installments}x`
-             }</p>
+            <p className="font-medium text-slate-900">Pagamento: {
+              customer.payment_method === 'pix' ? 'Pix' :
+              customer.payment_method === 'cash' ? 'Dinheiro' :
+              `Cartao em ${customer.installments}x`
+            }</p>
           </div>
           {customer.notes ? <p className="mt-3 text-slate-500 italic">&quot;{customer.notes}&quot;</p> : null}
         </div>

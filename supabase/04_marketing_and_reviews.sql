@@ -105,6 +105,9 @@ alter table public.store_settings add column if not exists store_card_background
 alter table public.store_settings add column if not exists store_card_border_color text not null default '#e2e8f0';
 alter table public.store_settings add column if not exists store_cart_button_color text not null default '#ffffff';
 alter table public.store_settings add column if not exists dashboard_theme text not null default 'light';
+alter table public.store_settings add column if not exists delivery_enabled boolean not null default true;
+alter table public.store_settings add column if not exists pickup_enabled boolean not null default true;
+alter table public.store_settings add column if not exists allow_shipping_other_states boolean not null default true;
 
 -- Enable RLS for store_settings
 alter table public.store_settings enable row level security;

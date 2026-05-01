@@ -22,6 +22,7 @@ import {
   User as UserIcon,
   Users,
 } from 'lucide-react'
+import { useSyncExternalStore } from 'react'
 import { logout } from '@/app/login/actions'
 
 const productNavigation = [
@@ -35,6 +36,7 @@ const productNavigation = [
 const settingsNavigation = [
   { name: 'Configurações da loja', href: '/dashboard/configuracoes/loja', icon: ShoppingBag },
   { name: 'Configurações do dashboard', href: '/dashboard/configuracoes/dashboard', icon: LayoutDashboard },
+  { name: 'Configurações de entrega', href: '/dashboard/configuracoes/entrega', icon: Truck },
 ]
 
 const navigation = [
@@ -69,24 +71,19 @@ export function Sidebar({ onNavigate, branding, recentOrders = [] }: SidebarProp
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   const latestRecentOrderAt = useMemo(() => recentOrders[0]?.createdAt ?? null, [recentOrders])
-  const recentOrderCount = useMemo(() => {
-    if (pathname === '/dashboard/pedidos' || pathname.startsWith('/dashboard/pedidos/')) {
-      return 0
-    }
-
-    if (typeof window === 'undefined') {
-      return 0
-    }
-
-    const lastViewedAt = window.localStorage.getItem(ORDER_NOTIFICATIONS_VIEWED_KEY)
-    return recentOrders.filter((order) => !lastViewedAt || order.createdAt > lastViewedAt).length
-  }, [pathname, recentOrders])
+  const recentOrderCount = useSyncExternalStore(
+    () => () => {},
+    () => {
+      if (pathname === '/dashboard/pedidos' || pathname.startsWith('/dashboard/pedidos/')) {
+        return 0
+      }
+      const lastViewedAt = window.localStorage.getItem(ORDER_NOTIFICATIONS_VIEWED_KEY)
+      return recentOrders.filter((order) => !lastViewedAt || order.createdAt > lastViewedAt).length
+    },
+    () => 0
+  )
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
     if (pathname === '/dashboard/pedidos' || pathname.startsWith('/dashboard/pedidos/')) {
       if (latestRecentOrderAt) {
         window.localStorage.setItem(ORDER_NOTIFICATIONS_VIEWED_KEY, latestRecentOrderAt)

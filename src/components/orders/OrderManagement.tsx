@@ -5,19 +5,26 @@ import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { formatMoney } from '@/lib/storefront'
 import type { StoreOrder } from '@/lib/orders'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useConfirm, useToast } from '@/components/ui/feedback-provider'
 import {
+  ArrowRight,
   Banknote,
+  CalendarDays,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Clock3,
   Copy,
   CreditCard,
   ExternalLink,
+  LayoutGrid,
+  List,
   Loader2,
   MessageCircleMore,
   Navigation2,
+  RotateCcw,
+  Search,
   ShieldAlert,
   ShoppingBag,
   Trash2,
@@ -25,8 +32,13 @@ import {
 } from 'lucide-react'
 import { deleteOrder, updateOrderStatus } from '@/app/dashboard/pedidos/actions'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 type MessageTemplateKey = 'pending' | 'processing' | 'shipped' | 'completed'
+type SortOption = 'recent' | 'oldest' | 'highest' | 'lowest'
+type ViewMode = 'list' | 'compact'
+
+const PAGE_SIZE = 4
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pendente' },
@@ -101,6 +113,41 @@ function getPaymentIcon(paymentMethod: StoreOrder['payment_method']) {
   }
 
   return CreditCard
+}
+
+function matchesPaymentFilter(order: StoreOrder, filter: string) {
+  if (filter === 'all') {
+    return true
+  }
+
+  if (filter === 'card') {
+    return order.payment_method !== 'pix' && order.payment_method !== 'cash'
+  }
+
+  return order.payment_method === filter
+}
+
+function matchesPeriodFilter(order: StoreOrder, filter: string, mountedAt: number) {
+  if (filter === 'all') {
+    return true
+  }
+
+  const createdAt = new Date(order.created_at).getTime()
+  const diff = mountedAt - createdAt
+
+  if (filter === '24h') {
+    return diff <= 1000 * 60 * 60 * 24
+  }
+
+  if (filter === '7d') {
+    return diff <= 1000 * 60 * 60 * 24 * 7
+  }
+
+  if (filter === '30d') {
+    return diff <= 1000 * 60 * 60 * 24 * 30
+  }
+
+  return true
 }
 
 function getStatusTemplateKey(status: string): MessageTemplateKey {
@@ -189,14 +236,14 @@ function OrderStatusSelect({
   }
 
   return (
-    <div className="relative inline-block w-full min-w-[170px]">
+    <div className="relative inline-block w-full min-w-0 max-w-[180px]">
       <label htmlFor={`status-${order.id}`} className="sr-only">Status do pedido</label>
       <select
         id={`status-${order.id}`}
         disabled={isPending}
         value={order.status}
         onChange={handleStatusChange}
-        className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-8 text-sm font-semibold text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:border-slate-600 dark:focus:ring-slate-800"
+        className="h-9 w-full appearance-none rounded-lg border border-slate-200 bg-white py-1.5 pl-3 pr-8 text-sm font-medium text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:border-slate-600 dark:focus:ring-slate-800"
       >
         {STATUS_OPTIONS.map((status) => (
           <option key={status.value} value={status.value}>
@@ -222,7 +269,15 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
   const showToast = useToast()
   const confirm = useConfirm()
   const [mountedAt] = useState(() => Date.now())
-  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(orders[0]?.id ?? null)
+  const [expandedOrderId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [paymentFilter, setPaymentFilter] = useState('all')
+  const [deliveryFilter, setDeliveryFilter] = useState('all')
+  const [periodFilter, setPeriodFilter] = useState('7d')
+  const [sortOption, setSortOption] = useState<SortOption>('recent')
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [currentPage, setCurrentPage] = useState(1)
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>(
     Object.fromEntries(orders.map((order) => [order.id, buildWhatsAppMessage(order, getStatusTemplateKey(order.status))]))
   )
@@ -233,10 +288,65 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
   const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total_price), 0)
   const pendingOrders = orders.filter((order) => (statusOverrides[order.id] || order.status) === 'pending').length
   const completedOrders = orders.filter((order) => (statusOverrides[order.id] || order.status) === 'completed').length
-
   const recentOrdersCount = useMemo(() => {
     return orders.filter((order) => mountedAt - new Date(order.created_at).getTime() <= 1000 * 60 * 60 * 24).length
   }, [mountedAt, orders])
+
+  const filteredOrders = useMemo(() => {
+    const searchTerm = search.trim().toLowerCase()
+
+    const filtered = orders.filter((order) => {
+      const currentStatus = statusOverrides[order.id] || order.status
+      const matchesSearch =
+        !searchTerm ||
+        getOrderCode(order.id).toLowerCase().includes(searchTerm) ||
+        order.customer_name.toLowerCase().includes(searchTerm) ||
+        (order.customer_phone || '').toLowerCase().includes(searchTerm) ||
+        (order.customer_email || '').toLowerCase().includes(searchTerm)
+
+      const matchesStatus = statusFilter === 'all' || currentStatus === statusFilter
+      const matchesPayment = matchesPaymentFilter(order, paymentFilter)
+      const matchesDelivery = deliveryFilter === 'all' || order.delivery_method === deliveryFilter
+      const matchesPeriod = matchesPeriodFilter(order, periodFilter, mountedAt)
+
+      return matchesSearch && matchesStatus && matchesPayment && matchesDelivery && matchesPeriod
+    })
+
+    filtered.sort((a, b) => {
+      if (sortOption === 'oldest') {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      }
+
+      if (sortOption === 'highest') {
+        return Number(b.total_price) - Number(a.total_price)
+      }
+
+      if (sortOption === 'lowest') {
+        return Number(a.total_price) - Number(b.total_price)
+      }
+
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+
+    return filtered
+  }, [deliveryFilter, mountedAt, orders, paymentFilter, search, sortOption, statusFilter, statusOverrides, periodFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))
+  const currentPageSafe = Math.min(currentPage, totalPages)
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPageSafe - 1) * PAGE_SIZE
+    return filteredOrders.slice(start, start + PAGE_SIZE)
+  }, [currentPageSafe, filteredOrders])
+
+  function resetFilters() {
+    setSearch('')
+    setStatusFilter('all')
+    setPaymentFilter('all')
+    setDeliveryFilter('all')
+    setPeriodFilter('7d')
+    setSortOption('recent')
+    setCurrentPage(1)
+  }
 
   function updateDraft(order: StoreOrder, template: MessageTemplateKey) {
     setMessageDrafts((current) => ({
@@ -325,141 +435,456 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
     }
   }
 
+  function handleOpenDetails(order: StoreOrder, currentStatus: string) {
+    if (!messageDrafts[order.id]) {
+      updateDraft(order, getStatusTemplateKey(currentStatus))
+    }
+
+    router.push(`/dashboard/pedidos/${order.id}`)
+  }
+
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Total de pedidos" value={String(totalOrders)} helper="Pedidos registrados no sistema." icon={<ShoppingBag className="h-5 w-5 text-slate-400" />} />
-        <MetricCard label="Receita total" value={formatMoney(totalRevenue)} helper="Valor bruto acumulado dos pedidos." icon={<CreditCard className="h-5 w-5 text-slate-400" />} />
-        <MetricCard label="Pendentes" value={String(pendingOrders)} helper="Pedidos aguardando andamento." icon={<ShieldAlert className="h-5 w-5 text-slate-400" />} />
-        <MetricCard label="Entregues" value={String(completedOrders)} helper="Pedidos marcados como concluidos." icon={<CheckCircle2 className="h-5 w-5 text-slate-400" />} />
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <MetricCard label="Total de pedidos" value={String(totalOrders)} helper="Pedidos registrados" icon={<ShoppingBag className="h-5 w-5 text-[#2563eb]" />} accent="bg-blue-50 text-blue-600" />
+        <MetricCard label="Receita total" value={formatMoney(totalRevenue)} helper="Valor bruto acumulado" icon={<Banknote className="h-5 w-5 text-emerald-600" />} accent="bg-emerald-50 text-emerald-600" />
+        <MetricCard label="Pendentes" value={String(pendingOrders)} helper="Aguardando andamento" icon={<Clock3 className="h-5 w-5 text-amber-500" />} accent="bg-amber-50 text-amber-600" />
+        <MetricCard label="Concluidos" value={String(completedOrders)} helper="Pedidos finalizados" icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />} accent="bg-emerald-50 text-emerald-600" />
+        <MetricCard label="Pedidos hoje" value={String(recentOrdersCount)} helper="Ultimas 24h" icon={<CalendarDays className="h-5 w-5 text-rose-600" />} accent="bg-rose-50 text-rose-600" />
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="border-b border-slate-100 px-6 py-5 dark:border-slate-800">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Pedidos recentes</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Gerencie status, acompanhe detalhes e envie atualizacoes pelo WhatsApp.
-              </p>
-            </div>
-            <span className="inline-flex rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 dark:bg-red-950/40 dark:text-red-300">
-              {recentOrdersCount} pedidos nas ultimas 24h
-            </span>
-          </div>
-        </div>
+      <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+        <CardContent className="px-5 py-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="min-w-[260px] flex-1 space-y-1.5">
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-transparent select-none">
+                Busca
+              </span>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value)
+                    setCurrentPage(1)
+                  }}
+                  placeholder="Buscar por pedido, cliente ou telefone..."
+                  className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 text-sm shadow-none dark:border-slate-700 dark:bg-slate-950"
+                />
+              </div>
+            </label>
 
-        {orders.length === 0 ? (
-          <div className="px-6 py-12 text-center text-sm text-slate-500">Nenhum pedido realizado ainda.</div>
+            <FilterSelect
+              label="Status"
+              value={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value)
+                setCurrentPage(1)
+              }}
+              options={[
+                { value: 'all', label: 'Todos' },
+                ...STATUS_OPTIONS,
+              ]}
+              className="w-[180px] shrink-0"
+            />
+
+            <FilterSelect
+              label="Pagamento"
+              value={paymentFilter}
+              onChange={(value) => {
+                setPaymentFilter(value)
+                setCurrentPage(1)
+              }}
+              options={[
+                { value: 'all', label: 'Todos' },
+                { value: 'pix', label: 'Pix' },
+                { value: 'cash', label: 'Dinheiro' },
+                { value: 'card', label: 'Cartao' },
+              ]}
+              className="w-[180px] shrink-0"
+            />
+
+            <FilterSelect
+              label="Entrega"
+              value={deliveryFilter}
+              onChange={(value) => {
+                setDeliveryFilter(value)
+                setCurrentPage(1)
+              }}
+              options={[
+                { value: 'all', label: 'Todos' },
+                { value: 'delivery', label: 'Entrega' },
+                { value: 'pickup', label: 'Retirada' },
+              ]}
+              className="w-[180px] shrink-0"
+            />
+
+            <FilterSelect
+              label="Periodo"
+              value={periodFilter}
+              onChange={(value) => {
+                setPeriodFilter(value)
+                setCurrentPage(1)
+              }}
+              options={[
+                { value: '7d', label: 'Ultimos 7 dias' },
+                { value: '24h', label: 'Ultimas 24h' },
+                { value: '30d', label: 'Ultimos 30 dias' },
+                { value: 'all', label: 'Todo periodo' },
+              ]}
+              className="w-[180px] shrink-0"
+            />
+
+            <Button variant="outline" className="h-11 shrink-0 rounded-xl px-4" onClick={resetFilters}>
+              <RotateCcw className="h-4 w-4" />
+              Limpar filtros
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+        <CardHeader className="border-b border-slate-100 pb-4 dark:border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-[1.35rem] font-semibold text-slate-900 dark:text-slate-50">Pedidos recentes</CardTitle>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                {filteredOrders.length} pedido{filteredOrders.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <FilterSelect
+                label="Ordenar"
+                value={sortOption}
+                onChange={(value) => setSortOption(value as SortOption)}
+                options={[
+                  { value: 'recent', label: 'Mais recentes' },
+                  { value: 'oldest', label: 'Mais antigos' },
+                  { value: 'highest', label: 'Maior valor' },
+                  { value: 'lowest', label: 'Menor valor' },
+                ]}
+                hideLabel
+                className="min-w-[170px]"
+              />
+
+              <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-950">
+                <Button
+                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                  size="icon-sm"
+                  className="rounded-lg"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'compact' ? 'secondary' : 'ghost'}
+                  size="icon-sm"
+                  className="rounded-lg"
+                  onClick={() => setViewMode('compact')}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        {filteredOrders.length === 0 ? (
+          <div className="px-6 py-12 text-center text-sm text-slate-500">Nenhum pedido encontrado com os filtros atuais.</div>
         ) : (
-          <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-6">
-            {orders.map((order) => {
+          <div className="px-4 py-4 sm:px-6 sm:py-6">
+            <div className={cn(viewMode === 'compact' ? 'grid gap-4 md:grid-cols-2 2xl:grid-cols-3' : 'space-y-4')}>
+              {paginatedOrders.map((order) => {
               const currentStatus = statusOverrides[order.id] || order.status
               const isExpanded = expandedOrderId === order.id
               const isDeleting = busyDeleteId === order.id
               const PaymentIcon = getPaymentIcon(order.payment_method)
 
-              return (
-                <Fragment key={order.id}>
-                  <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div className="border-b border-slate-100 px-4 py-4 dark:border-slate-800 sm:px-5">
-                      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                        <div className="space-y-3">
+              if (viewMode === 'compact') {
+                return (
+                  <article key={order.id} className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+                    <div className="space-y-4 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-base font-semibold text-slate-900 dark:text-slate-50">{getOrderCode(order.id)}</p>
-                            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClasses(currentStatus)}`}>
+                            <p className="text-[1.05rem] font-semibold tracking-tight text-slate-900 dark:text-slate-50">{getOrderCode(order.id)}</p>
+                            <span className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${getStatusBadgeClasses(currentStatus)}`}>
                               {getStatusLabel(currentStatus)}
                             </span>
-                            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                              {getDeliveryLabel(order)}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[1.05rem] font-semibold text-slate-900 dark:text-slate-50">{order.customer_name}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{order.customer_phone || 'Sem telefone'}</p>
+                            <p className="truncate text-sm text-slate-500 dark:text-slate-400">{order.customer_email || 'Sem e-mail'}</p>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                          <span className="inline-flex items-center gap-1.5">
+                            <PaymentIcon className="h-3.5 w-3.5" />
+                            {getPaymentLabel(order)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-950/60">
+                        <p className="text-[1.55rem] font-semibold tracking-tight text-slate-900 dark:text-slate-50">{formatMoney(order.total_price)}</p>
+                        <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                          {order.total_items} {order.total_items === 1 ? 'item' : 'itens'} • {order.store_order_items.length} produto{order.store_order_items.length === 1 ? '' : 's'}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700">
+                            <Truck className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                            {getDeliveryLabel(order)}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700">
+                            <PaymentIcon className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                            {getPaymentLabel(order)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2.5 border-t border-slate-100 pt-3 text-sm dark:border-slate-800">
+                        <div className="flex items-start gap-2 text-slate-600 dark:text-slate-300">
+                          <CalendarDays className="mt-0.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                          <div>
+                            <p className="font-medium text-slate-700 dark:text-slate-200">Criado em</p>
+                            <p>{formatDate(order.created_at)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2 text-slate-500 dark:text-slate-400">
+                          <CalendarDays className="mt-0.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                          <div>
+                            <p className="font-medium text-slate-600 dark:text-slate-300">Atualizado em</p>
+                            <p>{formatDate(order.updated_at)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-9 rounded-lg bg-[#2563eb] text-white hover:bg-[#1d4ed8]"
+                          onClick={() => handleOpenDetails(order, currentStatus)}
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                          Ver detalhes
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 rounded-lg border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+                          onClick={() => {
+                            if (!messageDrafts[order.id]) {
+                              updateDraft(order, getStatusTemplateKey(currentStatus))
+                            }
+                            openWhatsApp(order)
+                          }}
+                        >
+                          <MessageCircleMore className="h-4 w-4" />
+                          WhatsApp
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <OrderStatusSelect
+                          order={{ ...order, status: currentStatus }}
+                          onUpdated={(status) => {
+                            setStatusOverrides((current) => ({ ...current, [order.id]: status }))
+                            updateDraft(order, getStatusTemplateKey(status))
+                            router.refresh()
+                          }}
+                        />
+
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="h-9 w-full rounded-lg px-4 text-sm bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300"
+                          disabled={isDeleting}
+                          onClick={() => handleDelete(order)}
+                        >
+                          {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          Excluir pedido
+                        </Button>
+                      </div>
+
+                      {isExpanded ? (
+                        <div className="space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+                          <section className="grid gap-3">
+                            <InfoPanel
+                              title="Resumo"
+                              content={
+                                <div className="space-y-3">
+                                  <p><span className="font-medium text-slate-800 dark:text-slate-100">Total:</span> {formatMoney(order.total_price)}</p>
+                                  <p><span className="font-medium text-slate-800 dark:text-slate-100">Itens:</span> {order.total_items} {order.total_items === 1 ? 'item' : 'itens'}</p>
+                                  <p><span className="font-medium text-slate-800 dark:text-slate-100">Pagamento:</span> {getPaymentLabel(order)}</p>
+                                  <p><span className="font-medium text-slate-800 dark:text-slate-100">Entrega:</span> {getDeliveryLabel(order)}</p>
+                                </div>
+                              }
+                            />
+
+                            <InfoPanel
+                              title="Cliente"
+                              content={
+                                <div className="space-y-2">
+                                  <p>{order.customer_name}</p>
+                                  <p>{order.customer_phone || 'Sem telefone informado.'}</p>
+                                  <p>{order.customer_email || 'Sem e-mail informado.'}</p>
+                                </div>
+                              }
+                            />
+                          </section>
+
+                          <section className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Itens do pedido</h3>
+                            <div className="mt-3 space-y-2">
+                              {order.store_order_items.map((item) => (
+                                <div key={item.id} className="flex items-start justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-950/80">
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium text-slate-900 dark:text-slate-50">{item.name}</p>
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                      {item.quantity}x
+                                      {item.size ? ` • Tam. ${item.size}` : ''}
+                                      {item.color_name ? ` • ${item.color_name}` : ''}
+                                      {item.sku ? ` • SKU ${item.sku}` : ''}
+                                    </p>
+                                  </div>
+                                  <span className="shrink-0 text-sm font-semibold text-slate-900 dark:text-slate-50">
+                                    {formatMoney(item.price * item.quantity)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                )
+              }
+
+              return (
+                <Fragment key={order.id}>
+                  <article className="h-full overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+                    <div className={cn('border-b border-slate-100 px-4 dark:border-slate-800 sm:px-5', viewMode === 'compact' ? 'py-4' : 'py-5')}>
+                      <div className={cn('grid gap-4', viewMode === 'compact' ? 'lg:grid-cols-1' : 'xl:grid-cols-[1fr_0.95fr_0.9fr_440px] xl:items-center')}>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <p className="text-[1.05rem] font-semibold tracking-tight text-slate-900 dark:text-slate-50">{getOrderCode(order.id)}</p>
+                            <span className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${getStatusBadgeClasses(currentStatus)}`}>
+                              {getStatusLabel(currentStatus)}
                             </span>
-                            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {mountedAt - new Date(order.created_at).getTime() <= 1000 * 60 * 60 * 24 ? (
+                              <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                Novo
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-[1.05rem] font-semibold text-slate-900 dark:text-slate-50">{order.customer_name}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{order.customer_phone || 'Sem telefone'}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{order.customer_email || 'Sem e-mail'}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                              <PaymentIcon className="h-3.5 w-3.5" />
                               {getPaymentLabel(order)}
                             </span>
                           </div>
-
-                          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1.2fr)_minmax(180px,0.9fr)_minmax(160px,0.8fr)]">
-                            <div className="space-y-1">
-                              <p className="font-semibold text-slate-900 dark:text-slate-50">{order.customer_name}</p>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">{order.customer_phone || 'Sem telefone'}</p>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">{order.customer_email || 'Sem e-mail'}</p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">{formatMoney(order.total_price)}</p>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                {order.total_items} {order.total_items === 1 ? 'item' : 'itens'}
-                              </p>
-                              <p className="text-xs text-slate-400 dark:text-slate-500">
-                                {order.store_order_items.length} produto{order.store_order_items.length === 1 ? '' : 's'} listado{order.store_order_items.length === 1 ? '' : 's'}
-                              </p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Criado em {formatDate(order.created_at)}</p>
-                              <p className="text-xs text-slate-400 dark:text-slate-500">Atualizado em {formatDate(order.updated_at)}</p>
-                            </div>
+                          <div className="space-y-0.5">
+                            <p className="text-[1.7rem] font-semibold tracking-tight text-slate-900 dark:text-slate-50">{formatMoney(order.total_price)}</p>
+                            <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                              {order.total_items} {order.total_items === 1 ? 'item' : 'itens'} • {order.store_order_items.length} produto{order.store_order_items.length === 1 ? '' : 's'}
+                            </p>
                           </div>
-
                           <div className="flex flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300">
-                            <span className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-950/60">
-                              <Truck className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium dark:bg-slate-800">
+                              <Truck className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                               {getDeliveryLabel(order)}
                             </span>
-                            <span className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-950/60">
-                              <PaymentIcon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium dark:bg-slate-800">
+                              <PaymentIcon className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                               {getPaymentLabel(order)}
                             </span>
                           </div>
                         </div>
 
-                        <div className="w-full space-y-3 xl:w-[260px] xl:flex-none">
-                          <OrderStatusSelect
-                            order={{ ...order, status: currentStatus }}
-                            onUpdated={(status) => {
-                              setStatusOverrides((current) => ({ ...current, [order.id]: status }))
-                              updateDraft(order, getStatusTemplateKey(status))
-                              router.refresh()
-                            }}
-                          />
+                        <div className={cn('space-y-3 border-slate-100 dark:border-slate-800', viewMode === 'compact' ? 'border-t pt-4' : 'border-l-0 xl:border-l xl:pl-5')}>
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+                              <CalendarDays className="mt-0.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                              <div>
+                                <p className="font-medium text-slate-700 dark:text-slate-200">Criado em</p>
+                                <p>{formatDate(order.created_at)}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2 text-sm text-slate-500 dark:text-slate-400">
+                              <CalendarDays className="mt-0.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                              <div>
+                                <p className="font-medium text-slate-600 dark:text-slate-300">Atualizado em</p>
+                                <p>{formatDate(order.updated_at)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
 
-                          <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
+                        <div className="space-y-3">
+                          <div className={cn('grid gap-2', viewMode === 'compact' ? 'sm:grid-cols-1 lg:grid-cols-3' : 'sm:grid-cols-2 xl:grid-cols-[minmax(132px,1fr)_minmax(126px,1fr)_180px]' )}>
                             <Button
                               type="button"
-                              variant="outline"
-                              onClick={() => {
-                                setExpandedOrderId((current) => (current === order.id ? null : order.id))
-                                if (!messageDrafts[order.id]) {
-                                  updateDraft(order, getStatusTemplateKey(currentStatus))
-                                }
-                              }}
+                              size="sm"
+                              className="h-9 rounded-lg px-3 text-sm bg-[#2563eb] text-white hover:bg-[#1d4ed8]"
+                              onClick={() => handleOpenDetails(order, currentStatus)}
                             >
-                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                              {isExpanded ? 'Ocultar detalhes' : 'Ver detalhes'}
+                              <ArrowRight className="h-4 w-4" />
+                              Ver detalhes
                             </Button>
 
                             <Button
                               type="button"
                               variant="outline"
+                              size="sm"
+                              className="h-9 rounded-lg px-3 text-sm border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
                               onClick={() => {
-                                setExpandedOrderId(order.id)
                                 if (!messageDrafts[order.id]) {
                                   updateDraft(order, getStatusTemplateKey(currentStatus))
                                 }
+                                openWhatsApp(order)
                               }}
                             >
                               <MessageCircleMore className="h-4 w-4" />
                               WhatsApp
                             </Button>
 
+                            <OrderStatusSelect
+                              order={{ ...order, status: currentStatus }}
+                              onUpdated={(status) => {
+                                setStatusOverrides((current) => ({ ...current, [order.id]: status }))
+                                updateDraft(order, getStatusTemplateKey(status))
+                                router.refresh()
+                              }}
+                            />
+                          </div>
+
+                          <div className="flex justify-end">
                             <Button
                               type="button"
                               variant="destructive"
+                              size="sm"
+                              className="h-9 w-full sm:w-auto sm:min-w-[180px] rounded-lg px-4 text-sm bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300"
                               disabled={isDeleting}
                               onClick={() => handleDelete(order)}
                             >
                               {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                              Apagar pedido
+                              Excluir pedido
                             </Button>
                           </div>
                         </div>
@@ -472,11 +897,21 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                           <InfoPanel
                             title="Resumo"
                             content={
-                              <div className="space-y-2">
+                              <div className="space-y-3">
                                 <p><span className="font-medium text-slate-800 dark:text-slate-100">Total:</span> {formatMoney(order.total_price)}</p>
                                 <p><span className="font-medium text-slate-800 dark:text-slate-100">Itens:</span> {order.total_items} {order.total_items === 1 ? 'item' : 'itens'}</p>
                                 <p><span className="font-medium text-slate-800 dark:text-slate-100">Pagamento:</span> {getPaymentLabel(order)}</p>
                                 <p><span className="font-medium text-slate-800 dark:text-slate-100">Entrega:</span> {getDeliveryLabel(order)}</p>
+                                <div className="pt-1">
+                                  <OrderStatusSelect
+                                    order={{ ...order, status: currentStatus }}
+                                    onUpdated={(status) => {
+                                      setStatusOverrides((current) => ({ ...current, [order.id]: status }))
+                                      updateDraft(order, getStatusTemplateKey(status))
+                                      router.refresh()
+                                    }}
+                                  />
+                                </div>
                               </div>
                             }
                           />
@@ -632,9 +1067,39 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                 </Fragment>
               )
             })}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                Mostrando {filteredOrders.length === 0 ? 0 : (currentPageSafe - 1) * PAGE_SIZE + 1} a {Math.min(currentPageSafe * PAGE_SIZE, filteredOrders.length)} de {filteredOrders.length} pedidos
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="rounded-xl"
+                  disabled={currentPageSafe === 1}
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                >
+                  <ChevronDown className="h-4 w-4 rotate-90" />
+                </Button>
+                <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-3 font-semibold text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
+                  {currentPageSafe}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="rounded-xl"
+                  disabled={currentPageSafe === totalPages}
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                >
+                  <ChevronDown className="h-4 w-4 -rotate-90" />
+                </Button>
+              </div>
+            </div>
           </div>
         )}
-      </section>
+      </Card>
     </div>
   )
 }
@@ -644,23 +1109,65 @@ function MetricCard({
   value,
   helper,
   icon,
+  accent,
 }: {
   label: string
   value: string
   helper: string
   icon: ReactNode
+  accent: string
 }) {
   return (
-    <Card className="border-0 bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-      <CardContent className="px-5 py-5">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-          {icon}
+    <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800" size="sm">
+      <CardContent className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', accent)}>
+            {icon}
+          </div>
+          <div className="min-w-0 space-y-1">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
+            <p className="truncate text-2xl leading-none font-bold tracking-tight text-slate-900 dark:text-slate-50">{value}</p>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{helper}</p>
+          </div>
         </div>
-        <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">{value}</p>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{helper}</p>
       </CardContent>
     </Card>
+  )
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+  hideLabel,
+  className,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: Array<{ value: string; label: string }>
+  hideLabel?: boolean
+  className?: string
+}) {
+  return (
+    <label className={cn('min-w-0 space-y-1.5', className)}>
+      <span className={cn('block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400', hideLabel ? 'sr-only' : '')}>{label}</span>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 pr-10 text-sm font-medium text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900 dark:focus:border-slate-600 dark:focus:ring-slate-800"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      </div>
+    </label>
   )
 }
 

@@ -16,6 +16,7 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
   }
 
   revalidatePath('/dashboard/pedidos')
+  revalidatePath(`/dashboard/pedidos/${orderId}`)
   return { success: true }
 }
 
@@ -32,5 +33,6 @@ export async function deleteOrder(orderId: string) {
   }
 
   revalidatePath('/dashboard/pedidos')
+  revalidatePath(`/dashboard/pedidos/${orderId}`)
   return { success: true }
 }

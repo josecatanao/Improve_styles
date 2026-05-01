@@ -109,3 +109,58 @@ export async function getRecentOrderSignals(limit = 20) {
     createdAt: order.created_at,
   }))
 }
+
+export async function getStoreOrderById(orderId: string) {
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from('store_orders')
+    .select(`
+      *,
+      store_order_items (
+        id,
+        name,
+        sku,
+        color_name,
+        size,
+        price,
+        quantity,
+        image_url
+      )
+    `)
+    .eq('id', orderId)
+    .maybeSingle()
+
+  if (error?.code === '42P01') {
+    return {
+      order: null,
+      setupRequired: true,
+      errorMessage: null,
+    }
+  }
+
+  if (error) {
+    return {
+      order: null,
+      setupRequired: false,
+      errorMessage: error.message ?? 'Nao foi possivel carregar o pedido.',
+    }
+  }
+
+  if (!data) {
+    return {
+      order: null,
+      setupRequired: false,
+      errorMessage: null,
+    }
+  }
+
+  return {
+    order: {
+      ...(data as StoreOrder),
+      store_order_items: (data as StoreOrder).store_order_items ?? [],
+    },
+    setupRequired: false,
+    errorMessage: null,
+  }
+}

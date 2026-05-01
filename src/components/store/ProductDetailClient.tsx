@@ -14,9 +14,11 @@ import {
 export function ProductDetailClient({
   product,
   isAuthenticated,
+  deliverySettings,
 }: {
   product: ProductDetail
   isAuthenticated: boolean
+  deliverySettings: { delivery_enabled: boolean; pickup_enabled: boolean; allow_shipping_other_states: boolean }
 }) {
   const { addItem } = useCart()
   const hasVariants = hasRealVariants(product)
@@ -34,7 +36,7 @@ export function ProductDetailClient({
       <ProductGallery images={gallery} productName={product.name} selectedColor={selectedColor} colorHex={colorHex} />
 
       <div className="space-y-5">
-        <AddToCartPanel product={product} isAuthenticated={isAuthenticated} selectedColor={selectedColor} onColorChange={setSelectedColor} />
+        <AddToCartPanel product={product} isAuthenticated={isAuthenticated} selectedColor={selectedColor} onColorChange={setSelectedColor} deliverySettings={deliverySettings} />
       </div>
     </section>
   )

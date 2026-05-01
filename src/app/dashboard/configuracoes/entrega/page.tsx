@@ -1,0 +1,34 @@
+import { ProductWorkspaceHeader } from '@/components/products/ProductWorkspaceHeader'
+import { DeliverySettingsManager } from '@/components/settings/DeliverySettingsManager'
+import { getPublicStoreSettings } from '@/lib/store-branding'
+import { isMissingStoreSettingsColumnError, normalizeStoreSettings } from '@/lib/store-settings'
+import { createClient } from '@/utils/supabase/server'
+
+export default async function DeliverySettingsPage() {
+  const supabase = await createClient()
+  const [{ data, error }, cachedSettings] = await Promise.all([
+    supabase.from('store_settings').select('*').limit(1).maybeSingle(),
+    getPublicStoreSettings(),
+  ])
+
+  const schemaReady = !isMissingStoreSettingsColumnError(error)
+  const settings = schemaReady ? normalizeStoreSettings(data) : cachedSettings
+
+  return (
+    <div className="space-y-6">
+      <ProductWorkspaceHeader
+        title="Configuracoes de entrega"
+        description="Ative ou desative opcoes de entrega e controle como o checkout se comporta."
+      />
+
+      <DeliverySettingsManager
+        initialSettings={{
+          delivery_enabled: settings.delivery_enabled,
+          pickup_enabled: settings.pickup_enabled,
+          allow_shipping_other_states: settings.allow_shipping_other_states,
+        }}
+        schemaReady={schemaReady}
+      />
+    </div>
+  )
+}

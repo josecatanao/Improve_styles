@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/store/ProductCard'
 import { StoreShell } from '@/components/store/StoreShell'
 import { ProductReviews } from '@/components/store/ProductReviews'
 import { getPublicProductById, getStorefrontData } from '@/lib/products'
+import { getPublicStoreSettings } from '@/lib/store-branding'
 import { getStoreCategoryKey, slugifyStoreValue } from '@/lib/storefront'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
@@ -24,6 +25,7 @@ export default async function ProductDetailPage({
       data: { user },
     },
     { data: reviewsData },
+    settings,
   ] = await Promise.all([
     getPublicProductById(id),
     getStorefrontData(),
@@ -33,6 +35,7 @@ export default async function ProductDetailPage({
       .select('id, rating, comment, created_at, customer:customer_profiles(full_name)')
       .eq('product_id', id)
       .order('created_at', { ascending: false }),
+    getPublicStoreSettings(),
   ])
 
   const reviews = (reviewsData || []).map((r) => ({
@@ -62,6 +65,11 @@ export default async function ProductDetailPage({
   }
 
   const product = productResult.product
+  const deliverySettings = {
+    delivery_enabled: settings.delivery_enabled,
+    pickup_enabled: settings.pickup_enabled,
+    allow_shipping_other_states: settings.allow_shipping_other_states,
+  }
 
   return (
     <StoreShell categories={categories}>
@@ -82,7 +90,7 @@ export default async function ProductDetailPage({
           <span>{product.name}</span>
         </div>
 
-        <ProductDetailClient product={product} isAuthenticated={Boolean(user)} />
+        <ProductDetailClient product={product} isAuthenticated={Boolean(user)} deliverySettings={deliverySettings} />
 
         <section className="rounded-none border border-slate-200 bg-white p-6">
           <h2 className="text-xl font-semibold text-slate-950">Descricao do produto</h2>

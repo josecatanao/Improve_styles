@@ -61,12 +61,14 @@ export function AddToCartPanel({
   selectedColor,
   onColorChange,
   onSelectionChange,
+  deliverySettings,
 }: {
   product: ProductDetail
   isAuthenticated: boolean
   selectedColor: string | null
   onColorChange: (colorName: string) => void
   onSelectionChange?: (selection: SelectionSnapshot) => void
+  deliverySettings: { delivery_enabled: boolean; allow_shipping_other_states: boolean }
 }) {
   const router = useRouter()
   const { addItem, appliedCoupon, applyCoupon, removeCoupon } = useCart()
@@ -240,7 +242,11 @@ export function AddToCartPanel({
 
     try {
       const result = await calculateShipping(cleanCep, { productWeight, orderTotal: 0 })
-      setShippingResult(result)
+      if (!deliverySettings.allow_shipping_other_states && result.correios && !result.local) {
+        setShippingResult({ local: null, correios: null, error: null })
+      } else {
+        setShippingResult(result)
+      }
     } finally {
       setCalculatingShipping(false)
     }
@@ -525,6 +531,7 @@ export function AddToCartPanel({
           </div>
         </div>
 
+        {deliverySettings.delivery_enabled ? (
         <div className="space-y-2">
           <p className="text-sm font-semibold text-slate-950">Calcular frete</p>
           <div className="flex gap-2">
@@ -582,6 +589,7 @@ export function AddToCartPanel({
             </div>
           ) : null}
         </div>
+        ) : null}
 
         {isAuthenticated ? (
           <div className="space-y-2">

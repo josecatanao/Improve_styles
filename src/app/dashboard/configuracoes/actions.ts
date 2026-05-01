@@ -137,6 +137,48 @@ export async function saveDashboardAppearance(input: {
   return { success: true }
 }
 
+export async function saveDeliverySettings(input: {
+  deliveryEnabled: boolean
+  pickupEnabled: boolean
+  allowShippingOtherStates: boolean
+}) {
+  const supabase = createAdminClient()
+
+  const { data: existing, error: existingError } = await supabase
+    .from('store_settings')
+    .select('id')
+    .limit(1)
+    .maybeSingle()
+  ensureSuccess(existingError, 'Erro ao buscar configuracoes da loja')
+
+  if (existing) {
+    const { error } = await supabase
+      .from('store_settings')
+      .update({
+        delivery_enabled: input.deliveryEnabled,
+        pickup_enabled: input.pickupEnabled,
+        allow_shipping_other_states: input.allowShippingOtherStates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+    ensureSuccess(error, 'Erro ao atualizar configuracoes de entrega')
+  } else {
+    const { error } = await supabase.from('store_settings').insert({
+      delivery_enabled: input.deliveryEnabled,
+      pickup_enabled: input.pickupEnabled,
+      allow_shipping_other_states: input.allowShippingOtherStates,
+    })
+    ensureSuccess(error, 'Erro ao criar configuracoes de entrega')
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/configuracoes')
+  revalidatePath('/checkout')
+  revalidateTag('store-branding', 'max')
+  refresh()
+  return { success: true }
+}
+
 export async function uploadStoreLogoAction(formData: FormData) {
   const file = formData.get('file')
 
