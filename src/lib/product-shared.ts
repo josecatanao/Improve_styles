@@ -64,6 +64,7 @@ export type ProductDetail = ProductListItem & {
   cost_price: number | null
   is_featured: boolean
   is_new: boolean
+  show_specs: boolean
   weight: number | null
   width: number | null
   height: number | null

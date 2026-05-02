@@ -91,7 +91,7 @@ export function HomeHeroCarousel({ banners }: Props) {
     [banners],
   )
 
-  const plugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true }))
+  const plugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true, stopOnFocusIn: false }))
 
   if (slides.length === 0) {
     return null

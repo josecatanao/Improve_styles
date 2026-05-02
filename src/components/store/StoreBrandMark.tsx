@@ -19,11 +19,11 @@ export function StoreBrandMark({
   const resolvedStoreName = storeName?.trim() || 'Improve Styles'
 
   return (
-    <Link href={href} className={`flex items-center gap-3 ${className}`.trim()}>
+    <Link href={href} className={`flex items-center gap-2 ${className}`.trim()}>
       {logoUrl ? (
         <span
           className={`relative flex shrink-0 items-center justify-start overflow-hidden ${
-            compact ? 'h-9 w-9' : 'h-11 w-11'
+            compact ? 'h-11 w-11' : 'h-14 w-14'
           }`}
         >
           <Image
@@ -31,13 +31,13 @@ export function StoreBrandMark({
             alt={`Logo da loja ${resolvedStoreName}`}
             fill
             className="object-contain object-left"
-            sizes={compact ? '36px' : '44px'}
+            sizes={compact ? '44px' : '56px'}
           />
         </span>
       ) : (
         <span
           className={`flex shrink-0 items-center justify-center rounded-full bg-[var(--store-header-fg)]/10 font-semibold text-[var(--store-header-fg)] ${
-            compact ? 'h-9 w-9 text-sm' : 'h-11 w-11 text-base'
+            compact ? 'h-11 w-11 text-base' : 'h-14 w-14 text-lg'
           }`}
         >
           {resolvedStoreName.slice(0, 1).toUpperCase()}
@@ -47,7 +47,7 @@ export function StoreBrandMark({
       <span className="min-w-0">
         <span
           className={`block truncate font-bold tracking-tight ${
-            compact ? 'text-[0.95rem] sm:text-lg' : 'text-base sm:text-xl'
+            compact ? 'text-base sm:text-xl' : 'text-lg sm:text-2xl'
           }`}
         >
           {resolvedStoreName}

@@ -32,7 +32,7 @@ export default async function ProductDetailPage({
     supabase.auth.getUser(),
     adminSupabase
       .from('product_reviews')
-      .select('id, rating, comment, created_at, customer:customer_profiles(full_name)')
+      .select('id, rating, comment, created_at, customer:customer_profiles(full_name, photo_url)')
       .eq('product_id', id)
       .order('created_at', { ascending: false }),
     getPublicStoreSettings(),
@@ -91,17 +91,19 @@ export default async function ProductDetailPage({
 
         <ProductDetailClient product={product} isAuthenticated={Boolean(user)} deliverySettings={deliverySettings} />
 
-        <section className="rounded-none border border-slate-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-slate-950">Descricao do produto</h2>
-          {product.short_description?.trim() ? (
-            <p className="mt-3 text-base font-medium text-slate-900">{product.short_description.trim()}</p>
-          ) : null}
-          <p className="mt-3 text-sm leading-7 text-slate-600">
-            {product.description?.trim() || 'Adicione mais detalhes do produto no painel para enriquecer esta pagina.'}
-          </p>
-        </section>
+        {product.short_description?.trim() || product.description?.trim() ? (
+          <section className="rounded-none border border-slate-200 bg-white p-6">
+            <h2 className="text-xl font-semibold text-slate-950">Descricao do produto</h2>
+            {product.short_description?.trim() ? (
+              <p className="mt-3 text-base font-medium text-slate-900">{product.short_description.trim()}</p>
+            ) : null}
+            {product.description?.trim() ? (
+              <p className="mt-3 text-sm leading-7 text-slate-600">{product.description.trim()}</p>
+            ) : null}
+          </section>
+        ) : null}
 
-        {product.weight != null || product.width != null || product.height != null || product.length != null ? (
+        {product.show_specs && (product.weight != null || product.width != null || product.height != null || product.length != null) ? (
           <section className="rounded-none border border-slate-200 bg-white p-6">
             <h2 className="text-xl font-semibold text-slate-950">Especificacoes tecnicas</h2>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

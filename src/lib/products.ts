@@ -801,6 +801,7 @@ export async function getProductById(productId: string): Promise<{
         tags,
         is_featured,
         is_new,
+        show_specs,
         sales_count,
         weight,
         width,

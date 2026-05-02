@@ -65,6 +65,7 @@ export type ProductFormState = {
   compare_at_price: string
   status: ProductStatus
   is_featured: boolean
+  show_specs: boolean
   collection: string
   audience: string
   weight: string
@@ -137,6 +138,7 @@ const initialState: ProductFormState = {
   compare_at_price: '',
   status: 'draft',
   is_featured: false,
+  show_specs: false,
   collection: '',
   audience: '',
   weight: '',
@@ -514,6 +516,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         compare_at_price: String(product.compare_at_price ?? ''),
         status: product.status ?? 'draft',
         is_featured: product.is_featured ?? false,
+        show_specs: product.show_specs ?? false,
         collection: product.collection ?? '',
         audience: product.audience ?? '',
         weight: product.weight != null ? String(product.weight) : '',
@@ -1100,6 +1103,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         audience: form.audience.trim() || null,
         tags: [],
         is_featured: form.is_featured,
+        show_specs: form.show_specs,
         is_new: false,
         weight: parseOptionalNumber(form.weight),
         width: parseOptionalNumber(form.width),
@@ -1572,6 +1576,16 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                       <Input type="number" step="0.1" min="0" value={form.length} onChange={(e) => setForm(f => ({ ...f, length: e.target.value }))} placeholder="5" className="h-11" />
                     </FieldGroup>
                   </div>
+
+                  <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={form.show_specs}
+                      onChange={(e) => setForm((f) => ({ ...f, show_specs: e.target.checked }))}
+                      className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Exibir especificacoes tecnicas na pagina do produto</span>
+                  </label>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FieldGroup label="Preco" hint="Valor de venda padrao.">

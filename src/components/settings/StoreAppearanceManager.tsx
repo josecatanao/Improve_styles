@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 type AppearanceFormState = {
   storeName: string
   storeLogoUrl: string
+  storeWhatsapp: string
   brandPrimaryColor: string
   brandSecondaryColor: string
   storeHeaderBackgroundColor: string
@@ -30,6 +31,7 @@ export function StoreAppearanceManager({
     StoreSettings,
     | 'store_name'
     | 'store_logo_url'
+    | 'store_whatsapp'
     | 'brand_primary_color'
     | 'brand_secondary_color'
     | 'store_header_background_color'
@@ -45,6 +47,7 @@ export function StoreAppearanceManager({
   const [form, setForm] = useState<AppearanceFormState>({
     storeName: initialSettings.store_name,
     storeLogoUrl: initialSettings.store_logo_url ?? '',
+    storeWhatsapp: initialSettings.store_whatsapp,
     brandPrimaryColor: initialSettings.brand_primary_color,
     brandSecondaryColor: initialSettings.brand_secondary_color,
     storeHeaderBackgroundColor: initialSettings.store_header_background_color,
@@ -248,6 +251,15 @@ export function StoreAppearanceManager({
                     </div>
                   </div>
                 </FieldGroup>
+
+                <FieldGroup label="WhatsApp da loja" hint="Numero que aparecera no botao &quot;Atendimento&quot; do cabecalho. Ex.: 5511999999999" infoText="Digite o numero completo do WhatsApp com DDD e codigo do pais, sem espacos ou tracos. Exemplo: 5511999999999.">
+                  <Input
+                    value={form.storeWhatsapp}
+                    onChange={(event) => setForm((current) => ({ ...current, storeWhatsapp: event.target.value }))}
+                    placeholder="5511999999999"
+                    type="tel"
+                  />
+                </FieldGroup>
               </SectionCard>
             ) : null}
 
@@ -333,6 +345,7 @@ export function StoreAppearanceManager({
                 <div className="grid gap-4 md:grid-cols-2">
                   <SummaryItem label="Nome da loja" value={form.storeName || 'Nao definido'} />
                   <SummaryItem label="Logo" value={previewLogoUrl ? 'Configurada' : 'Sem logo'} />
+                  <SummaryItem label="WhatsApp" value={form.storeWhatsapp || 'Nao definido'} />
                   <SummaryItem label="Cor primaria" value={form.brandPrimaryColor} swatch={form.brandPrimaryColor} />
                   <SummaryItem label="Cor secundaria" value={form.brandSecondaryColor} swatch={form.brandSecondaryColor} />
                   <SummaryItem label="Menu" value={form.storeHeaderBackgroundColor} swatch={form.storeHeaderBackgroundColor} />
@@ -488,9 +501,10 @@ export function StoreAppearanceManager({
                   <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Resumo final</p>
                       <div className="mt-4 grid gap-3">
-                        <ReviewLine label="Nome da loja" value={form.storeName || 'Nao definido'} />
-                        <ReviewLine label="Logo" value={previewLogoUrl ? 'Configurada' : 'Sem logo'} />
-                        <ReviewLine label="Cor primaria" value={form.brandPrimaryColor} />
+                      <ReviewLine label="Nome da loja" value={form.storeName || 'Nao definido'} />
+                      <ReviewLine label="Logo" value={previewLogoUrl ? 'Configurada' : 'Sem logo'} />
+                      <ReviewLine label="WhatsApp" value={form.storeWhatsapp || 'Nao definido'} />
+                      <ReviewLine label="Cor primaria" value={form.brandPrimaryColor} />
                         <ReviewLine label="Cor secundaria" value={form.brandSecondaryColor} />
                         <ReviewLine label="Componentes" value={`${form.storeHeaderBackgroundColor} • ${form.storeButtonBackgroundColor} • ${form.storeCardBackgroundColor}`} />
                       </div>

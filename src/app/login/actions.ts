@@ -108,8 +108,15 @@ export async function signup(formData: FormData) {
     return redirect(buildLoginRedirect(nextPath, 'A senha deve ter pelo menos 6 caracteres.', authView, mode))
   }
 
+  const confirmPassword = String(formData.get('confirmPassword') || '').trim()
+
+  if (accountType === 'customer' && confirmPassword !== password) {
+    return redirect(buildLoginRedirect(nextPath, 'As senhas nao coincidem.', authView, mode))
+  }
+
   const fullName = String(formData.get('fullName') || '').trim()
-  const whatsapp = String(formData.get('whatsapp') || '').trim()
+  const rawWhatsapp = String(formData.get('whatsapp') || '')
+  const whatsapp = rawWhatsapp.replace(/\D/g, '')
   const deliveryAddress = String(formData.get('deliveryAddress') || '').trim()
   const photoUrl = String(formData.get('photoUrl') || '').trim()
 

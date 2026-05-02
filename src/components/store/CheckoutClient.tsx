@@ -104,6 +104,9 @@ export function CheckoutClient({
   deliverySettings,
   initialShippingCep,
   initialShippingResult,
+  storeAddress,
+  storeAddressLat,
+  storeAddressLng,
 }: {
   initialProfile?: CheckoutInitialProfile | null
   orderId?: string
@@ -111,6 +114,9 @@ export function CheckoutClient({
   deliverySettings: DeliverySettings
   initialShippingCep?: string | null
   initialShippingResult?: ShippingCalculation | null
+  storeAddress?: string | null
+  storeAddressLat?: number | null
+  storeAddressLng?: number | null
 }) {
   const { items, clearCart, isReady, appliedCoupon, applyCoupon, removeCoupon } = useCart()
   const showToast = useToast()
@@ -408,18 +414,56 @@ export function CheckoutClient({
   }
 
   if (visibleOrder) {
+    const isPickup = visibleOrder.customer.delivery_method === 'pickup'
+    const hasMap = isPickup && storeAddressLat != null && storeAddressLng != null
+
     return (
-      <div className="rounded-none border border-emerald-200 bg-emerald-50 p-8 text-center">
-        <p className="text-lg font-semibold text-emerald-800">Pedido salvo com sucesso.</p>
-        <p className="mt-2 text-sm text-emerald-700">
-          O pedido <span className="font-semibold">{visibleOrder.id}</span> foi registrado neste navegador e o carrinho foi liberado para uma nova compra.
-        </p>
-        <Link
-          href="/conta"
-          className="mt-5 inline-flex items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 py-2.5 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90"
-        >
-          Ver minha conta
-        </Link>
+      <div className="rounded-2xl border border-emerald-200 bg-white shadow-sm">
+        <div className="rounded-t-2xl bg-emerald-50 px-6 py-8 text-center sm:px-10">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+            <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+          </div>
+          <p className="mt-4 text-2xl font-bold tracking-tight text-emerald-800">Compra realizada com sucesso!</p>
+          <p className="mt-2 text-sm leading-6 text-emerald-700">
+            Sua solicitacao ja foi enviada para a loja. Em breve voce podera acompanhar o status do pedido.
+          </p>
+          <p className="mt-2 text-xs text-emerald-600">
+            Pedido <span className="font-semibold">{visibleOrder.id}</span>
+          </p>
+        </div>
+
+        {isPickup && storeAddress ? (
+          <div className="space-y-4 px-6 py-6 sm:px-10">
+            <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-slate-600" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900">Local de retirada</p>
+                <p className="mt-1 text-sm text-slate-600">{storeAddress}</p>
+              </div>
+            </div>
+
+            {hasMap ? (
+              <div className="overflow-hidden rounded-xl border border-slate-200">
+                <iframe
+                  title="Local de retirada"
+                  src={`https://maps.google.com/maps?q=${storeAddressLat},${storeAddressLng}&hl=pt-BR&z=16&output=embed`}
+                  className="h-56 w-full border-0 sm:h-64"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="rounded-b-2xl border-t border-slate-100 px-6 py-5 sm:px-10">
+          <Link
+            href="/conta/pedidos"
+            className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--store-button-bg)] px-6 py-3 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90 sm:w-auto"
+          >
+            Ver minha compra
+          </Link>
+        </div>
       </div>
     )
   }

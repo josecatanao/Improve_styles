@@ -22,6 +22,7 @@ function ensureSuccess(error: { message: string } | null, fallbackMessage: strin
 export async function saveStoreAppearance(input: {
   storeName: string
   storeLogoUrl: string
+  storeWhatsapp: string
   brandPrimaryColor: string
   brandSecondaryColor: string
   storeHeaderBackgroundColor: string
@@ -34,6 +35,7 @@ export async function saveStoreAppearance(input: {
   const supabase = createAdminClient()
   const storeName = input.storeName.trim() || 'Improve Styles'
   const storeLogoUrl = input.storeLogoUrl.trim() || null
+  const storeWhatsapp = input.storeWhatsapp.trim()
   const brandPrimaryColor = normalizeHexColor(input.brandPrimaryColor, '#0f172a')
   const brandSecondaryColor = normalizeHexColor(input.brandSecondaryColor, '#e2e8f0')
   const storeHeaderBackgroundColor = normalizeHexColor(input.storeHeaderBackgroundColor, '#ffffff')
@@ -56,6 +58,7 @@ export async function saveStoreAppearance(input: {
       .update({
         store_name: storeName,
         store_logo_url: storeLogoUrl,
+        store_whatsapp: storeWhatsapp || null,
         brand_primary_color: brandPrimaryColor,
         brand_secondary_color: brandSecondaryColor,
         store_header_background_color: storeHeaderBackgroundColor,
@@ -72,6 +75,7 @@ export async function saveStoreAppearance(input: {
     const { error } = await supabase.from('store_settings').insert({
       store_name: storeName,
       store_logo_url: storeLogoUrl,
+      store_whatsapp: storeWhatsapp || null,
       brand_primary_color: brandPrimaryColor,
       brand_secondary_color: brandSecondaryColor,
       store_header_background_color: storeHeaderBackgroundColor,
@@ -140,6 +144,9 @@ export async function saveDashboardAppearance(input: {
 export async function saveDeliverySettings(input: {
   deliveryEnabled: boolean
   pickupEnabled: boolean
+  storeAddress: string
+  storeAddressLat: number | null
+  storeAddressLng: number | null
 }) {
   const supabase = createAdminClient()
 
@@ -156,6 +163,9 @@ export async function saveDeliverySettings(input: {
       .update({
         delivery_enabled: input.deliveryEnabled,
         pickup_enabled: input.pickupEnabled,
+        store_address: input.storeAddress.trim() || null,
+        store_address_lat: input.storeAddressLat,
+        store_address_lng: input.storeAddressLng,
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
@@ -164,6 +174,9 @@ export async function saveDeliverySettings(input: {
     const { error } = await supabase.from('store_settings').insert({
       delivery_enabled: input.deliveryEnabled,
       pickup_enabled: input.pickupEnabled,
+      store_address: input.storeAddress.trim() || null,
+      store_address_lat: input.storeAddressLat,
+      store_address_lng: input.storeAddressLng,
     })
     ensureSuccess(error, 'Erro ao criar configuracoes de entrega')
   }

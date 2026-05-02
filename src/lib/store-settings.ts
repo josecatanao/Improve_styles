@@ -30,6 +30,10 @@ export type StoreSettings = {
   delivery_enabled: boolean
   pickup_enabled: boolean
   header_navigation: HeaderNavigation
+  store_whatsapp: string
+  store_address: string
+  store_address_lat: number | null
+  store_address_lng: number | null
   updated_at?: string | null
 }
 
@@ -63,6 +67,10 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   delivery_enabled: true,
   pickup_enabled: true,
   header_navigation: DEFAULT_HEADER_NAVIGATION,
+  store_whatsapp: '',
+  store_address: '',
+  store_address_lat: null,
+  store_address_lng: null,
   updated_at: null,
 }
 
@@ -150,6 +158,10 @@ export function normalizeStoreSettings(input: StoreSettingsInput): StoreSettings
     delivery_enabled: input?.delivery_enabled !== undefined ? Boolean(input.delivery_enabled) : true,
     pickup_enabled: input?.pickup_enabled !== undefined ? Boolean(input.pickup_enabled) : true,
     header_navigation: normalizeHeaderNavigation(input?.header_navigation),
+    store_whatsapp: input?.store_whatsapp?.trim() ?? '',
+    store_address: input?.store_address?.trim() ?? '',
+    store_address_lat: typeof input?.store_address_lat === 'number' ? input.store_address_lat : null,
+    store_address_lng: typeof input?.store_address_lng === 'number' ? input.store_address_lng : null,
     updated_at: input?.updated_at ?? null,
   }
 }
@@ -280,6 +292,17 @@ export function isMissingStoreSettingsColumnError(error: { code?: string; messag
     error.message.includes("Could not find the 'dashboard_theme' column") ||
     error.message.includes("Could not find the 'delivery_enabled' column") ||
     error.message.includes("Could not find the 'pickup_enabled' column") ||
-    error.message.includes("Could not find the 'header_navigation' column")
+    error.message.includes("Could not find the 'header_navigation' column") ||
+    error.message.includes("Could not find the 'store_whatsapp' column") ||
+    error.message.includes("Could not find the 'store_address' column")
   )
+}
+
+export function normalizeWhatsappNumber(input: string | null | undefined): string {
+  return (input ?? '').replace(/\D/g, '')
+}
+
+export function buildWhatsappUrl(whatsapp: string | null | undefined): string | null {
+  const digits = normalizeWhatsappNumber(whatsapp)
+  return digits ? `https://wa.me/${digits}` : null
 }

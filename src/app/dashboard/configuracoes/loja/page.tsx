@@ -26,6 +26,7 @@ export default async function StoreSettingsPage() {
         initialSettings={{
           store_name: settings.store_name,
           store_logo_url: settings.store_logo_url,
+          store_whatsapp: settings.store_whatsapp,
           brand_primary_color: settings.brand_primary_color,
           brand_secondary_color: settings.brand_secondary_color,
           store_header_background_color: settings.store_header_background_color,

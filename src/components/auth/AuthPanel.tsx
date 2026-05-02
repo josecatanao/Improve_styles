@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from 'react'
 import { useState } from 'react'
-import { ArrowLeft, KeyRound, Mail, UserRound } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, KeyRound, Mail, Phone, UserRound } from 'lucide-react'
 import { forgotPassword, login, signup } from '@/app/login/actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +31,10 @@ export function AuthPanel({
   brandStyle,
 }: AuthPanelProps) {
   const [view, setView] = useState<'login' | 'signup' | 'forgotPassword'>(initialView)
+  const [showPassword, setShowPassword] = useState(false)
+  const [formPassword, setFormPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [whatsappValue, setWhatsappValue] = useState('')
   const isForgotPassword = view === 'forgotPassword'
   const isSignup = view === 'signup'
   const panelTitle = isForgotPassword
@@ -92,6 +96,20 @@ export function AuthPanel({
   const linkClass = hasBrand
     ? 'text-sm text-slate-500 transition-colors hover:opacity-90'
     : 'text-sm text-slate-500 transition-colors hover:text-slate-900'
+
+  function handleWhatsAppChange(e: React.ChangeEvent<HTMLInputElement>) {
+    let value = e.target.value.replace(/\D/g, '')
+    if (value.length > 11) value = value.slice(0, 11)
+    if (value.length > 2) {
+      value = `(${value.slice(0, 2)}) ${value.slice(2)}`
+    }
+    if (value.length > 10) {
+      value = `${value.slice(0, 10)}-${value.slice(10)}`
+    }
+    setWhatsappValue(value)
+  }
+
+  const passwordMismatch = confirmPassword !== '' && formPassword !== confirmPassword
 
   return (
     <Card
@@ -272,7 +290,16 @@ export function AuthPanel({
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
                 <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input id="password" name="password" type="password" required className="h-11 rounded-xl bg-slate-50/70 pl-10" />
+                <Input id="password" name="password" type={showPassword ? 'text' : 'password'} required className="h-11 rounded-xl bg-slate-50/70 pl-10 pr-10" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
           </CardContent>
@@ -330,16 +357,64 @@ export function AuthPanel({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="whatsapp">WhatsApp</Label>
-                    <Input id="whatsapp" name="whatsapp" required placeholder="(00) 00000-0000" className="h-11 rounded-xl bg-slate-50/70 pl-10" />
+                    <div className="relative">
+                      <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        id="whatsapp"
+                        name="whatsapp"
+                        type="tel"
+                        required
+                        placeholder="(00) 00000-0000"
+                        className="h-11 rounded-xl bg-slate-50/70 pl-10"
+                        maxLength={15}
+                        value={whatsappValue}
+                        onChange={handleWhatsAppChange}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="customerPassword">Senha</Label>
                   <div className="relative">
                     <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <Input id="customerPassword" name="password" type="password" required className="h-11 rounded-xl bg-slate-50/70 pl-10" />
+                    <Input
+                      id="customerPassword"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      className="h-11 rounded-xl bg-slate-50/70 pl-10 pr-10"
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customerConfirmPassword">Confirmar senha</Label>
+                  <div className="relative">
+                    <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      id="customerConfirmPassword"
+                      name="confirmPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      className="h-11 rounded-xl bg-slate-50/70 pl-10"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {passwordMismatch ? (
+                  <p className="text-sm text-red-500">As senhas nao coincidem.</p>
+                ) : null}
               </>
             ) : (
               <>
@@ -354,7 +429,22 @@ export function AuthPanel({
                   <Label htmlFor="adminPassword">Senha</Label>
                   <div className="relative">
                     <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <Input id="adminPassword" name="password" type="password" required className="h-11 rounded-xl bg-slate-50/70 pl-10" />
+                    <Input
+                      id="adminPassword"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      className="h-11 rounded-xl bg-slate-50/70 pl-10 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
               </>
@@ -373,6 +463,7 @@ export function AuthPanel({
               className={btnClass}
               style={hasBrand ? { backgroundColor: resolvedButtonBg, color: resolvedButtonFg } : undefined}
               formAction={signup}
+              disabled={passwordMismatch}
             >
               {isStoreContext ? 'Criar conta de cliente' : 'Criar conta admin'}
             </Button>

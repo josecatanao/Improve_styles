@@ -12,6 +12,7 @@ type Review = {
   created_at: string
   customer: {
     full_name: string | null
+    photo_url: string | null
   } | null
 }
 
@@ -105,8 +106,16 @@ export function ProductReviews({
               <div key={review.id} className="rounded-lg border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 font-bold uppercase">
-                      {(review.customer?.full_name || 'A')[0]}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-600 font-bold uppercase">
+                      {review.customer?.photo_url ? (
+                        <img
+                          src={review.customer.photo_url}
+                          alt={review.customer.full_name || 'Cliente'}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        (review.customer?.full_name || 'A')[0]
+                      )}
                     </div>
                     <div>
                       <p className="font-semibold text-slate-900">{review.customer?.full_name || 'Cliente Anonimo'}</p>

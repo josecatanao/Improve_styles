@@ -55,7 +55,6 @@ function buildNavItems(
 }
 
 const customerAccountHref = '/conta'
-const supportHref = '#atendimento'
 
 function NavLink({ href, label, className }: { href: string; label: string; className?: string }) {
   const pathname = usePathname()
@@ -142,6 +141,7 @@ function MobileSheetContent({
   branding,
   storeName,
   navItems,
+  supportHref,
   isAuthenticated,
   customerName,
   customerPhotoUrl,
@@ -149,6 +149,7 @@ function MobileSheetContent({
   branding?: { logoUrl?: string | null; storeName?: string | null }
   storeName: string
   navItems: ComputedNavItem[]
+  supportHref: string | null
   isAuthenticated: boolean
   customerName: string
   customerPhotoUrl: string | null
@@ -168,12 +169,16 @@ function MobileSheetContent({
             {item.label}
           </Link>
         ))}
-        <Link
-          href={supportHref}
-          className="rounded-none px-3 py-3 text-sm font-medium transition-colors hover:opacity-90"
-        >
-          Atendimento
-        </Link>
+        {supportHref ? (
+          <Link
+            href={supportHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-none px-3 py-3 text-sm font-medium transition-colors hover:opacity-90"
+          >
+            Atendimento
+          </Link>
+        ) : null}
         {isAuthenticated ? (
           <div className="px-3 py-3">
             <Link href={customerAccountHref} className="flex items-center gap-3 transition-colors hover:opacity-90">
@@ -221,6 +226,7 @@ export function Header({
   branding,
   searchSuggestions,
   headerNavigation,
+  storeWhatsapp,
 }: {
   categories: HeaderCategory[]
   query?: string
@@ -231,6 +237,7 @@ export function Header({
     storeName?: string | null
   }
   headerNavigation: HeaderNavigation
+  storeWhatsapp?: string | null
 }) {
   const customerName = customerSession?.profile?.full_name?.trim() || 'Minha conta'
   const customerPhotoUrl = customerSession?.profile?.photo_url?.trim() || null
@@ -238,6 +245,9 @@ export function Header({
   const storeName = branding?.storeName?.trim() || 'Improve Styles'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false)
+
+  const rawWhatsapp = storeWhatsapp?.replace(/\D/g, '') ?? ''
+  const supportHref = rawWhatsapp ? `https://wa.me/${rawWhatsapp}` : null
 
   const closeMenu = useCallback(() => setIsMenuOpen(false), [])
   const closeCategories = useCallback(() => setIsCategoriesOpen(false), [])
@@ -251,6 +261,7 @@ export function Header({
           branding={branding}
           storeName={storeName}
           navItems={navItems}
+          supportHref={supportHref}
           isAuthenticated={isAuthenticated}
           customerName={customerName}
           customerPhotoUrl={customerPhotoUrl}
@@ -311,43 +322,6 @@ export function Header({
               </Link>
 
               <CartSheet compact />
-
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    href={customerAccountHref}
-                    className="hidden h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-[color:var(--store-header-border)] transition-colors hover:opacity-90 lg:inline-flex"
-                    aria-label={customerName}
-                  >
-                    {customerPhotoUrl ? (
-                      <Image src={customerPhotoUrl} alt={customerName} width={40} height={40} className="h-full w-full object-cover" />
-                    ) : (
-                      <UserRound className="h-5 w-5" />
-                    )}
-                  </Link>
-                  <form action={logout} className="flex items-center">
-                    <input type="hidden" name="mode" value="customer" />
-                    <input type="hidden" name="next" value="/" />
-                    <button
-                      type="submit"
-                      className="hidden h-10 items-center justify-center gap-1.5 rounded-full border border-[color:var(--store-header-border)] px-3 text-sm font-medium transition-colors hover:opacity-90 lg:inline-flex"
-                      aria-label="Sair da conta"
-                      title="Sair da conta"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span className="hidden xl:inline">Sair</span>
-                    </button>
-                  </form>
-                </>
-              ) : (
-                <Link
-                  href={customerAccountHref}
-                  className="hidden h-10 w-10 items-center justify-center rounded-none transition-colors hover:opacity-90 lg:inline-flex"
-                  aria-label="Minha conta"
-                >
-                  <UserRound className="h-5 w-5" />
-                </Link>
-              )}
             </div>
           </div>
 
@@ -380,13 +354,17 @@ export function Header({
             ))}
 
             <div className="ml-auto hidden items-center gap-2 lg:flex">
-              <Link
-                href={supportHref}
-                className="inline-flex shrink-0 items-center gap-2 rounded-none px-3 py-1.5 text-sm font-medium transition-colors hover:opacity-90"
-              >
-                <Headphones className="h-4 w-4" />
-                Atendimento
-              </Link>
+              {supportHref ? (
+                <Link
+                  href={supportHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex shrink-0 items-center gap-2 rounded-none px-3 py-1.5 text-sm font-medium transition-colors hover:opacity-90"
+                >
+                  <Headphones className="h-4 w-4" />
+                  Atendimento
+                </Link>
+              ) : null}
 
               {isAuthenticated ? (
                 <>
@@ -404,6 +382,18 @@ export function Header({
                     </span>
                     <span className="truncate">{customerName}</span>
                   </Link>
+                  <form action={logout} className="flex items-center">
+                    <input type="hidden" name="mode" value="customer" />
+                    <input type="hidden" name="next" value="/" />
+                    <button
+                      type="submit"
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors hover:opacity-70"
+                      aria-label="Sair da conta"
+                      title="Sair da conta"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                    </button>
+                  </form>
                 </>
               ) : (
                 <Link

@@ -53,6 +53,10 @@ export default async function CheckoutPage({
     pickup_enabled: settings.pickup_enabled,
   }
 
+  const storeAddress = settings.store_address?.trim() || null
+  const storeAddressLat = settings.store_address_lat ?? null
+  const storeAddressLng = settings.store_address_lng ?? null
+
   return (
     <StoreShell categories={categories}>
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -68,6 +72,9 @@ export default async function CheckoutPage({
           deliverySettings={deliverySettings}
           initialShippingCep={initialShippingCep}
           initialShippingResult={initialShippingResult}
+          storeAddress={storeAddress}
+          storeAddressLat={storeAddressLat}
+          storeAddressLng={storeAddressLng}
         />
       </main>
     </StoreShell>

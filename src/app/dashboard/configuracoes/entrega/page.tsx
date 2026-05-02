@@ -25,6 +25,9 @@ export default async function DeliverySettingsPage() {
         initialSettings={{
           delivery_enabled: settings.delivery_enabled,
           pickup_enabled: settings.pickup_enabled,
+          store_address: settings.store_address,
+          store_address_lat: settings.store_address_lat,
+          store_address_lng: settings.store_address_lng,
         }}
         schemaReady={schemaReady}
       />

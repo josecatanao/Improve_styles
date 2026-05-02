@@ -9,7 +9,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const [customerSession, storefront] = await Promise.all([getStoreCustomerSession(), getStorefrontData()])
 
   if (!customerSession) {
-    redirect('/login?mode=customer&next=%2Fconta')
+    redirect('/login?mode=customer')
   }
 
   const categories = storefront.categoryHighlights.map((item) => ({

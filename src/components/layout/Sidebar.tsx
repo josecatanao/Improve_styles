@@ -130,16 +130,16 @@ export function Sidebar({ onNavigate, branding, recentOrders = [] }: SidebarProp
           isCollapsed ? 'justify-center px-3' : 'justify-between px-6'
         }`}
       >
-        <div className={`flex items-center ${isCollapsed ? '' : 'gap-2.5'}`}>
+        <div className={`flex items-center ${isCollapsed ? '' : 'gap-2'}`}>
           {branding?.logoUrl ? (
-            <div className="flex h-10 shrink-0 items-center justify-start overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={branding.logoUrl} alt="Logo da loja" className="block h-full w-auto max-w-[44px] object-contain object-left" />
+              <div className="flex h-12 shrink-0 items-center justify-start overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={branding.logoUrl} alt="Logo da loja" className="block h-full w-auto max-w-[52px] object-contain object-left" />
             </div>
           ) : null}
           {!isCollapsed ? (
             <div className="min-w-0">
-              <span className="block truncate text-base leading-tight font-bold text-slate-900 dark:text-slate-50">
+              <span className="block truncate text-lg leading-tight font-bold text-slate-900 dark:text-slate-50">
                 {branding?.storeName?.trim() || 'Improve Styles'}
               </span>
               <span className="mt-1 block text-[11px] uppercase tracking-[0.26em] text-slate-400 dark:text-slate-500">Admin Store</span>
