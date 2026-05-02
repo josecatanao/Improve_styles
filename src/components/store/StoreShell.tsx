@@ -5,7 +5,8 @@ import { StoreBrandMark } from '@/components/store/StoreBrandMark'
 import { getPublicStoreSettings } from '@/lib/store-branding'
 import { getStoreCustomerSession } from '@/lib/customer-session'
 import { getStoreSearchIndex } from '@/lib/products'
-import { buildStorefrontThemeStyle, getContrastingTextColor } from '@/lib/store-settings'
+import { buildStorefrontThemeStyle, getContrastingTextColor, DEFAULT_STORE_SETTINGS } from '@/lib/store-settings'
+import type { HeaderNavigation } from '@/lib/store-settings'
 
 const footerColumns = [
   {
@@ -51,35 +52,33 @@ export async function StoreShell({
   } | null
   children: React.ReactNode
 }) {
-  const needsStoreSettings =
-    typeof branding === 'undefined' || typeof brandStyle === 'undefined' || typeof announcement === 'undefined'
-
   const [customerSession, settingsResponse, searchSuggestions] = await Promise.all([
     getStoreCustomerSession(),
-    needsStoreSettings ? getPublicStoreSettings() : Promise.resolve(null),
+    getPublicStoreSettings(),
     getStoreSearchIndex(),
   ])
 
-  const resolvedSettings = settingsResponse
   const resolvedBranding = {
-    logoUrl: branding?.logoUrl ?? resolvedSettings?.store_logo_url ?? null,
-    storeName: branding?.storeName ?? resolvedSettings?.store_name ?? 'Improve Styles',
+    logoUrl: branding?.logoUrl ?? settingsResponse?.store_logo_url ?? null,
+    storeName: branding?.storeName ?? settingsResponse?.store_name ?? 'Improve Styles',
   }
-  const resolvedBrandStyle = brandStyle ?? (resolvedSettings ? buildStorefrontThemeStyle(resolvedSettings) : undefined)
+  const resolvedBrandStyle = brandStyle ?? (settingsResponse ? buildStorefrontThemeStyle(settingsResponse) : undefined)
   const resolvedAnnouncement =
     announcement ??
-    (resolvedSettings?.announcement_active && resolvedSettings.announcement_text
+    (settingsResponse?.announcement_active && settingsResponse.announcement_text
       ? {
-          active: resolvedSettings.announcement_active,
-          text: resolvedSettings.announcement_text,
-          link: resolvedSettings.announcement_link,
-          backgroundColor: resolvedSettings.announcement_background_color,
+          active: settingsResponse.announcement_active,
+          text: settingsResponse.announcement_text,
+          link: settingsResponse.announcement_link,
+          backgroundColor: settingsResponse.announcement_background_color,
         }
       : null)
 
   const announcementBackgroundColor = resolvedAnnouncement?.backgroundColor || '#3483fa'
   const announcementTextColor = getContrastingTextColor(announcementBackgroundColor)
   const storeName = resolvedBranding.storeName?.trim() || 'Improve Styles'
+  const headerNavigation: HeaderNavigation =
+    settingsResponse?.header_navigation ?? DEFAULT_STORE_SETTINGS.header_navigation
 
   return (
     <div className="min-h-screen bg-[#f7f8fa]" style={resolvedBrandStyle}>
@@ -103,6 +102,7 @@ export async function StoreShell({
         query={query}
         customerSession={customerSession}
         searchSuggestions={searchSuggestions}
+        headerNavigation={headerNavigation}
       />
       {children}
 

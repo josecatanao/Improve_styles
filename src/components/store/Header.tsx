@@ -12,18 +12,47 @@ import { CartSheet } from '@/components/store/CartSheet'
 import { StoreSearchBox } from '@/components/store/StoreSearchBox'
 import type { StoreCustomerSession } from '@/lib/customer-session'
 import type { StoreSearchSuggestion } from '@/lib/products'
+import type { HeaderNavigation, HeaderNavItemId } from '@/lib/store-settings'
 
 type HeaderCategory = {
   label: string
   href: string
 }
 
-const primaryLinks = [
-  { label: 'Inicio', href: '/' },
-  { label: 'Promocoes', href: '/?sort=price_asc' },
-  { label: 'Novidades', href: '/?sort=recent' },
-  { label: 'Mais vendidos', href: '/?sort=popular' },
-]
+type ComputedNavItem =
+  | { type: 'link'; label: string; href: string; id: HeaderNavItemId }
+  | { type: 'category'; label: string; href: string }
+
+const NAV_ITEM_REGISTRY: Record<string, { label: string; href: string }> = {
+  home: { label: 'Inicio', href: '/' },
+  promocoes: { label: 'Promocoes', href: '/?sort=price_asc' },
+  novidades: { label: 'Novidades', href: '/?sort=recent' },
+  mais_vendidos: { label: 'Mais vendidos', href: '/?sort=popular' },
+}
+
+function buildNavItems(
+  config: HeaderNavigation,
+  categories: HeaderCategory[],
+): ComputedNavItem[] {
+  const items: ComputedNavItem[] = []
+
+  for (const entry of config) {
+    if (!entry.enabled) continue
+
+    if (entry.id === 'categories') {
+      for (const cat of categories) {
+        items.push({ type: 'category', label: cat.label, href: cat.href })
+      }
+    } else {
+      const def = NAV_ITEM_REGISTRY[entry.id]
+      if (def) {
+        items.push({ type: 'link', label: def.label, href: def.href, id: entry.id })
+      }
+    }
+  }
+
+  return items
+}
 
 const customerAccountHref = '/conta'
 const supportHref = '#atendimento'
@@ -112,14 +141,14 @@ function StoreDrawer({
 function MobileSheetContent({
   branding,
   storeName,
-  categories,
+  navItems,
   isAuthenticated,
   customerName,
   customerPhotoUrl,
 }: {
   branding?: { logoUrl?: string | null; storeName?: string | null }
   storeName: string
-  categories: HeaderCategory[]
+  navItems: ComputedNavItem[]
   isAuthenticated: boolean
   customerName: string
   customerPhotoUrl: string | null
@@ -130,9 +159,9 @@ function MobileSheetContent({
         <StoreBrandMark logoUrl={branding?.logoUrl} storeName={storeName} compact />
       </div>
       <nav className="flex flex-col gap-1 px-4 py-4">
-        {primaryLinks.map((item) => (
+        {navItems.map((item) => (
           <Link
-            key={item.href}
+            key={item.type === 'link' ? item.id : `category:${item.href}`}
             href={item.href}
             className="rounded-none px-3 py-3 text-sm font-medium transition-colors hover:opacity-90"
           >
@@ -181,20 +210,6 @@ function MobileSheetContent({
           </Link>
         )}
       </nav>
-      <div className="border-t border-[color:var(--store-header-border)] px-4 py-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--store-header-muted)]">Categorias</p>
-        <div className="flex flex-col gap-1">
-          {categories.map((category) => (
-            <Link
-              key={category.href}
-              href={category.href}
-              className="rounded-none px-3 py-3 text-sm transition-colors hover:opacity-90"
-            >
-              {category.label}
-            </Link>
-          ))}
-        </div>
-      </div>
     </>
   )
 }
@@ -205,6 +220,7 @@ export function Header({
   customerSession,
   branding,
   searchSuggestions,
+  headerNavigation,
 }: {
   categories: HeaderCategory[]
   query?: string
@@ -214,6 +230,7 @@ export function Header({
     logoUrl?: string | null
     storeName?: string | null
   }
+  headerNavigation: HeaderNavigation
 }) {
   const customerName = customerSession?.profile?.full_name?.trim() || 'Minha conta'
   const customerPhotoUrl = customerSession?.profile?.photo_url?.trim() || null
@@ -225,13 +242,15 @@ export function Header({
   const closeMenu = useCallback(() => setIsMenuOpen(false), [])
   const closeCategories = useCallback(() => setIsCategoriesOpen(false), [])
 
+  const navItems = buildNavItems(headerNavigation, categories)
+
   return (
     <>
       <StoreDrawer open={isMenuOpen} onClose={closeMenu} side="left">
         <MobileSheetContent
           branding={branding}
           storeName={storeName}
-          categories={categories}
+          navItems={navItems}
           isAuthenticated={isAuthenticated}
           customerName={customerName}
           customerPhotoUrl={customerPhotoUrl}
@@ -351,20 +370,9 @@ export function Header({
 
             <div className="hidden h-5 w-px bg-[var(--store-header-border)] lg:block" />
 
-            {categories.map((category) => (
+            {navItems.map((item) => (
               <NavLink
-                key={category.href}
-                href={category.href}
-                label={category.label}
-                className="border border-[color:var(--store-header-border)] px-3 py-1.5 text-xs sm:text-sm lg:border-0 lg:px-3 lg:py-1"
-              />
-            ))}
-
-            <div className="hidden h-5 w-px bg-[var(--store-header-border)] lg:block" />
-
-            {primaryLinks.map((item) => (
-              <NavLink
-                key={item.href}
+                key={item.type === 'link' ? item.id : `category:${item.href}`}
                 href={item.href}
                 label={item.label}
                 className="border border-[color:var(--store-header-border)] px-3 py-1.5 text-xs sm:text-sm lg:border-0 lg:px-3 lg:py-1"

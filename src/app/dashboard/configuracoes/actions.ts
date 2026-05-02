@@ -2,7 +2,7 @@
 
 import { refresh, revalidatePath, revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/utils/supabase/admin'
-import type { DashboardTheme } from '@/lib/store-settings'
+import type { DashboardTheme, HeaderNavigation } from '@/lib/store-settings'
 import {
   isMissingStoreSettingsColumnError,
   normalizeDashboardTheme,
@@ -171,6 +171,40 @@ export async function saveDeliverySettings(input: {
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/configuracoes')
   revalidatePath('/checkout')
+  revalidateTag('store-branding', 'max')
+  refresh()
+  return { success: true }
+}
+
+export async function saveHeaderNavigation(input: HeaderNavigation) {
+  const supabase = createAdminClient()
+
+  const { data: existing, error: existingError } = await supabase
+    .from('store_settings')
+    .select('id')
+    .limit(1)
+    .maybeSingle()
+  ensureSuccess(existingError, 'Erro ao buscar configuracoes da loja')
+
+  if (existing) {
+    const { error } = await supabase
+      .from('store_settings')
+      .update({
+        header_navigation: input,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+    ensureSuccess(error, 'Erro ao atualizar navegacao do header')
+  } else {
+    const { error } = await supabase.from('store_settings').insert({
+      header_navigation: input,
+    })
+    ensureSuccess(error, 'Erro ao criar navegacao do header')
+  }
+
+  revalidatePath('/')
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/configuracoes')
   revalidateTag('store-branding', 'max')
   refresh()
   return { success: true }

@@ -2,6 +2,15 @@ import type { CSSProperties } from 'react'
 
 export type DashboardTheme = 'light' | 'dark'
 
+export type HeaderNavItemId = 'home' | 'categories' | 'promocoes' | 'novidades' | 'mais_vendidos'
+
+export type HeaderNavItem = {
+  id: HeaderNavItemId
+  enabled: boolean
+}
+
+export type HeaderNavigation = HeaderNavItem[]
+
 export type StoreSettings = {
   homepage_layout: string[]
   announcement_active: boolean
@@ -20,11 +29,20 @@ export type StoreSettings = {
   dashboard_theme: DashboardTheme
   delivery_enabled: boolean
   pickup_enabled: boolean
+  header_navigation: HeaderNavigation
   updated_at?: string | null
 }
 
 const DEFAULT_PRIMARY_COLOR = '#0f172a'
 const DEFAULT_SECONDARY_COLOR = '#e2e8f0'
+
+const DEFAULT_HEADER_NAVIGATION: HeaderNavigation = [
+  { id: 'home', enabled: true },
+  { id: 'categories', enabled: true },
+  { id: 'promocoes', enabled: false },
+  { id: 'novidades', enabled: false },
+  { id: 'mais_vendidos', enabled: false },
+]
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   homepage_layout: ['banners', 'promotions', 'featured', 'category-nav'],
@@ -44,6 +62,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   dashboard_theme: 'light',
   delivery_enabled: true,
   pickup_enabled: true,
+  header_navigation: DEFAULT_HEADER_NAVIGATION,
   updated_at: null,
 }
 
@@ -56,6 +75,39 @@ export function normalizeHexColor(value: string | null | undefined, fallback: st
 
 export function normalizeDashboardTheme(value: string | null | undefined): DashboardTheme {
   return value === 'dark' ? 'dark' : 'light'
+}
+
+const VALID_NAV_ITEM_IDS = new Set<string>(['home', 'categories', 'promocoes', 'novidades', 'mais_vendidos'])
+
+function normalizeHeaderNavigation(input: unknown): HeaderNavigation {
+  if (!Array.isArray(input)) {
+    return DEFAULT_HEADER_NAVIGATION
+  }
+
+  const items: HeaderNavigation = []
+
+  for (const entry of input) {
+    if (entry === null || typeof entry !== 'object') continue
+    const { id, enabled } = entry as Record<string, unknown>
+    if (typeof id === 'string' && VALID_NAV_ITEM_IDS.has(id)) {
+      items.push({ id: id as HeaderNavItemId, enabled: Boolean(enabled) })
+    }
+  }
+
+  if (items.length === 0) {
+    return DEFAULT_HEADER_NAVIGATION
+  }
+
+  const seen = new Set<string>()
+  const deduped: HeaderNavigation = []
+  for (const item of items) {
+    if (!seen.has(item.id)) {
+      seen.add(item.id)
+      deduped.push(item)
+    }
+  }
+
+  return deduped
 }
 
 export function normalizeStoreSettings(input: StoreSettingsInput): StoreSettings {
@@ -97,6 +149,7 @@ export function normalizeStoreSettings(input: StoreSettingsInput): StoreSettings
     dashboard_theme: normalizeDashboardTheme(input?.dashboard_theme),
     delivery_enabled: input?.delivery_enabled !== undefined ? Boolean(input.delivery_enabled) : true,
     pickup_enabled: input?.pickup_enabled !== undefined ? Boolean(input.pickup_enabled) : true,
+    header_navigation: normalizeHeaderNavigation(input?.header_navigation),
     updated_at: input?.updated_at ?? null,
   }
 }
@@ -226,6 +279,7 @@ export function isMissingStoreSettingsColumnError(error: { code?: string; messag
     error.message.includes("Could not find the 'store_cart_button_color' column") ||
     error.message.includes("Could not find the 'dashboard_theme' column") ||
     error.message.includes("Could not find the 'delivery_enabled' column") ||
-    error.message.includes("Could not find the 'pickup_enabled' column")
+    error.message.includes("Could not find the 'pickup_enabled' column") ||
+    error.message.includes("Could not find the 'header_navigation' column")
   )
 }

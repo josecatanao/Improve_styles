@@ -1,5 +1,6 @@
 import { ProductWorkspaceHeader } from '@/components/products/ProductWorkspaceHeader'
 import { StoreAppearanceManager } from '@/components/settings/StoreAppearanceManager'
+import { StoreNavigationManager } from '@/components/settings/StoreNavigationManager'
 import { getPublicStoreSettings } from '@/lib/store-branding'
 import { isMissingStoreSettingsColumnError, normalizeStoreSettings } from '@/lib/store-settings'
 import { createClient } from '@/utils/supabase/server'
@@ -36,6 +37,8 @@ export default async function StoreSettingsPage() {
         }}
         schemaReady={schemaReady}
       />
+
+      <StoreNavigationManager initialNavigation={settings.header_navigation} />
     </div>
   )
 }
