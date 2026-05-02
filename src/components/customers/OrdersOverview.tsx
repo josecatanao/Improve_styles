@@ -438,7 +438,7 @@ export function OrdersOverview({
                   </section>
                 </div>
 
-                {order.status === 'pending' ? (
+                {order.status === 'cancelled' ? null : order.status === 'pending' || order.status === 'processing' ? (
                   <div className="border-t border-slate-200/80 px-6 py-4">
                     <button
                       type="button"
@@ -450,7 +450,13 @@ export function OrdersOverview({
                       {cancellingOrderId === order.id ? 'Cancelando...' : 'Cancelar pedido'}
                     </button>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="border-t border-slate-200/80 px-6 py-4">
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                      Esse pedido nao pode mais ser cancelado. Para cancelar, entre em contato com a loja.
+                    </div>
+                  </div>
+                )}
                   </>
                 ) : null}
               </article>

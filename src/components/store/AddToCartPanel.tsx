@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   AlertTriangle,
   Check,
+  Copy,
   CreditCard,
   Loader2,
   MapPin,
@@ -126,13 +127,33 @@ export function AddToCartPanel({
   const canPurchase = availableStock > 0
   const discountPercentage = getDiscountPercentage(displayComparePrice, displayPrice)
 
-  const [currentUrl, setCurrentUrl] = useState('')
+  const [shareState, setShareState] = useState<'idle' | 'shared' | 'copied'>('idle')
 
-  useEffect(() => {
-    setCurrentUrl(window.location.href)
-  }, [])
+  function getProductUrl() {
+    if (typeof window === 'undefined') return ''
+    return `${window.location.origin}/produto/${product.id}`
+  }
 
-  const shareUrl = `https://wa.me/?text=${encodeURIComponent(`Olha esse produto: ${product.name} - ${formatMoney(displayPrice)} - ${currentUrl}`)}`
+  async function handleShare() {
+    const productUrl = getProductUrl()
+
+    try {
+      await navigator.share({
+        title: product.name,
+        url: productUrl,
+      })
+      setShareState('shared')
+      setTimeout(() => setShareState('idle'), 2000)
+    } catch {
+      try {
+        await navigator.clipboard.writeText(`${product.name}\n${formatMoney(displayPrice)}\n${productUrl}`)
+        setShareState('copied')
+        setTimeout(() => setShareState('idle'), 2000)
+      } catch {
+        // fallback: nothing to do
+      }
+    }
+  }
 
   const onSelectionChangeRef = useRef(onSelectionChange)
   onSelectionChangeRef.current = onSelectionChange
@@ -314,8 +335,29 @@ export function AddToCartPanel({
             <h1 className="text-[1.55rem] font-semibold leading-tight tracking-tight text-slate-950 sm:text-[2.2rem]">
               {product.name}
             </h1>
-            {product.short_description?.trim() ? (
-              <p className="text-sm leading-6 text-slate-500">{product.short_description.trim()}</p>
+            {product.average_rating != null ? (
+              <button
+                type="button"
+                onClick={() => {
+                  document.getElementById('product-reviews')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="mt-1 flex items-center gap-2 text-sm -ml-0.5"
+              >
+                <div className="flex items-center">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-4 w-4 ${
+                        i < Math.round(product.average_rating ?? 0)
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'fill-slate-200 text-slate-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="font-medium text-slate-700">{product.average_rating.toFixed(1)}</span>
+                <span className="text-slate-400">({product.review_count ?? 0} avaliacoes)</span>
+              </button>
             ) : null}
           </div>
         </div>
@@ -356,34 +398,6 @@ export function AddToCartPanel({
               ) : null}
             </div>
           </div>
-
-          {product.average_rating != null ? (
-            <div className="mt-3 flex items-center gap-2 text-sm">
-              <div className="flex items-center">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-3.5 w-3.5 ${
-                      i < Math.round(product.average_rating ?? 0)
-                        ? 'fill-amber-400 text-amber-400'
-                        : 'fill-slate-200 text-slate-200'
-                    }`}
-                  />
-                ))}
-              </div>
-              <span className="font-medium text-slate-700">{product.average_rating.toFixed(1)}</span>
-              <span className="text-slate-400">({product.review_count ?? 0})</span>
-              <button
-                type="button"
-                onClick={() => {
-                  document.getElementById('product-reviews')?.scrollIntoView({ behavior: 'smooth' })
-                }}
-                className="text-xs text-slate-500 underline transition-colors hover:text-slate-700"
-              >
-                Ver avaliacoes
-              </button>
-            </div>
-          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
@@ -679,15 +693,28 @@ export function AddToCartPanel({
             )}
           </button>
 
-          <a
-            href={shareUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={handleShare}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50"
           >
-            <Share2 className="h-4 w-4" />
-            Compartilhar no WhatsApp
-          </a>
+            {shareState === 'shared' ? (
+              <>
+                <Check className="h-4 w-4 text-emerald-500" />
+                Compartilhado
+              </>
+            ) : shareState === 'copied' ? (
+              <>
+                <Copy className="h-4 w-4 text-emerald-500" />
+                Link copiado
+              </>
+            ) : (
+              <>
+                <Share2 className="h-4 w-4" />
+                Compartilhar
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

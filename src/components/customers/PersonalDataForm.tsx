@@ -6,9 +6,21 @@ import { createClient } from '@/utils/supabase/client'
 import type { AccountProfile } from '@/lib/account'
 
 export function PersonalDataForm({ initialProfile, email }: { initialProfile: AccountProfile | null; email: string }) {
+  function formatWhatsapp(raw: string) {
+    let value = raw.replace(/\D/g, '')
+    if (value.length > 11) value = value.slice(0, 11)
+    if (value.length > 2) {
+      value = `(${value.slice(0, 2)}) ${value.slice(2)}`
+    }
+    if (value.length > 10) {
+      value = `${value.slice(0, 10)}-${value.slice(10)}`
+    }
+    return value
+  }
+
   const [profile, setProfile] = useState({
     full_name: initialProfile?.full_name || '',
-    whatsapp: initialProfile?.whatsapp || '',
+    whatsapp: formatWhatsapp(initialProfile?.whatsapp || ''),
     photo_url: initialProfile?.photo_url || '',
   })
   
@@ -19,19 +31,8 @@ export function PersonalDataForm({ initialProfile, email }: { initialProfile: Ac
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
-  // MASCARA PARA WHATSAPP
   function handleWhatsAppChange(e: React.ChangeEvent<HTMLInputElement>) {
-    let value = e.target.value.replace(/\D/g, '')
-    if (value.length > 11) value = value.slice(0, 11)
-
-    if (value.length > 2) {
-      value = `(${value.slice(0, 2)}) ${value.slice(2)}`
-    }
-    if (value.length > 10) {
-      value = `${value.slice(0, 10)}-${value.slice(10)}`
-    }
-
-    setProfile({ ...profile, whatsapp: value })
+    setProfile({ ...profile, whatsapp: formatWhatsapp(e.target.value) })
   }
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -97,7 +98,7 @@ export function PersonalDataForm({ initialProfile, email }: { initialProfile: Ac
       .from('customer_profiles')
       .update({
         full_name: profile.full_name,
-        whatsapp: profile.whatsapp,
+        whatsapp: profile.whatsapp.replace(/\D/g, ''),
         photo_url: profile.photo_url,
       })
       .eq('id', authData.user.id)

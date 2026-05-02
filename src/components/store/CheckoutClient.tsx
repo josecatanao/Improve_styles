@@ -877,7 +877,15 @@ export function CheckoutClient({
               )}
 
               <div className="grid gap-2">
-                <label htmlFor="checkout-name" className="text-sm font-medium text-slate-700">Nome (Associado a conta)</label>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="checkout-name" className="text-sm font-medium text-slate-700">Nome (Associado a conta)</label>
+                  <Link
+                    href="/conta/dados"
+                    className="inline-flex rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-200"
+                  >
+                    editar
+                  </Link>
+                </div>
                 <input
                   id="checkout-name"
                   required
@@ -887,7 +895,15 @@ export function CheckoutClient({
                 />
               </div>
               <div className="grid gap-2">
-                <label htmlFor="checkout-phone" className="text-sm font-medium text-slate-700">Telefone / WhatsApp</label>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="checkout-phone" className="text-sm font-medium text-slate-700">Telefone / WhatsApp</label>
+                  <Link
+                    href="/conta/dados"
+                    className="inline-flex rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-200"
+                  >
+                    editar
+                  </Link>
+                </div>
                 <input
                   id="checkout-phone"
                   required

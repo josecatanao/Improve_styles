@@ -23,8 +23,8 @@ export default async function ProductCatalogPage({
   return (
     <div className="space-y-6">
       <ProductWorkspaceHeader
-        title="Catalogo"
-        description="Consulte o catalogo interno, acompanhe variacoes e filtre os produtos por situacao comercial."
+        title="Estoque"
+        description="Consulte o estoque interno, acompanhe variacoes e filtre os produtos por situacao comercial."
       />
 
       <ProductMetricsGrid metrics={metrics} />

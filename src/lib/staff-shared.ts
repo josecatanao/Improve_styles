@@ -6,7 +6,7 @@ export type StaffStatus = (typeof staffStatuses)[number]
 
 export const permissionOptions = [
   { key: 'dashboard:view', label: 'Dashboard', description: 'Acompanhar indicadores gerais do painel.' },
-  { key: 'products:view', label: 'Catalogo', description: 'Visualizar produtos, estoque e status.' },
+  { key: 'products:view', label: 'Estoque', description: 'Visualizar produtos, estoque e status.' },
   { key: 'products:manage', label: 'Editar produtos', description: 'Cadastrar, editar e apagar produtos.' },
   { key: 'team:manage', label: 'Gerenciar equipe', description: 'Cadastrar funcionarios e editar permissoes.' },
   { key: 'settings:manage', label: 'Configuracoes', description: 'Alterar configuracoes administrativas.' },

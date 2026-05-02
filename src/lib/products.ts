@@ -831,7 +831,7 @@ export async function getProductById(productId: string): Promise<{
   }
 
   return {
-    product: data ? (normalizeProductRecord(data as ProductListItem) as ProductDetail) : null,
+    product: data ? (await attachReviewStats([normalizeProductRecord(data as ProductListItem)], supabase))[0] as ProductDetail : null,
     setupRequired: false,
     errorMessage: null,
   }

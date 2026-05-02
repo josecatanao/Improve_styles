@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import type { CartItem } from '@/components/store/CartProvider'
 import {
   calculateCouponDiscountFromItems,
@@ -304,6 +305,52 @@ export async function submitOrder(payload: CheckoutPayload) {
       await supabase.from('store_orders').delete().eq('id', orderId)
       throw new Error('Este cupom atingiu o limite de uso ou nao esta mais disponivel.')
     }
+  }
+
+  const adminSupabase = createAdminClient()
+
+  try {
+    for (const item of verifiedItems) {
+      const { productId, colorHex, size, quantity } = item
+
+      if (colorHex && size) {
+        const { data: variantData } = await adminSupabase
+          .from('product_variants')
+          .select('stock')
+          .eq('product_id', productId)
+          .eq('color_hex', colorHex)
+          .eq('size', size)
+          .maybeSingle()
+
+        if (variantData) {
+          const newStock = Math.max(0, Number(variantData.stock) - quantity)
+          await adminSupabase
+            .from('product_variants')
+            .update({ stock: newStock })
+            .eq('product_id', productId)
+            .eq('color_hex', colorHex)
+            .eq('size', size)
+        }
+      }
+
+      const { data: productData } = await adminSupabase
+        .from('products')
+        .select('stock')
+        .eq('id', productId)
+        .maybeSingle()
+
+      if (productData) {
+        const newStock = Math.max(0, Number(productData.stock) - quantity)
+        await adminSupabase
+          .from('products')
+          .update({ stock: newStock })
+          .eq('id', productId)
+      }
+    }
+  } catch {
+    await supabase.from('store_order_items').delete().eq('order_id', orderId)
+    await supabase.from('store_orders').delete().eq('id', orderId)
+    throw new Error('Falha ao atualizar estoque. O pedido nao foi concluido.')
   }
 
   revalidatePath('/conta/pedidos')

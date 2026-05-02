@@ -27,7 +27,7 @@ import { logout } from '@/app/login/actions'
 
 const productNavigation = [
   { name: 'Visao geral', href: '/dashboard/produtos', icon: Grid2X2 },
-  { name: 'Catalogo', href: '/dashboard/produtos/catalogo', icon: FolderKanban },
+  { name: 'Estoque', href: '/dashboard/produtos/catalogo', icon: FolderKanban },
   { name: 'Categorias', href: '/dashboard/produtos/categorias', icon: Tags },
   { name: 'Cupons', href: '/dashboard/cupons', icon: TicketPercent },
   { name: 'Cadastrar produto', href: '/dashboard/produtos/novo', icon: PlusCircle },

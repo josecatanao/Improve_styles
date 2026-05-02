@@ -14,7 +14,7 @@ const routeLabels: Record<string, string> = {
   marketing: 'Marketing',
   cupons: 'Cupons',
   entrega: 'Entrega',
-  catalogo: 'Catalogo',
+  catalogo: 'Estoque',
   categorias: 'Categorias',
   novo: 'Novo produto',
   loja: 'Loja',
