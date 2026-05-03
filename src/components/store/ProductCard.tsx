@@ -34,15 +34,15 @@ function getBadgeLabel(product: ProductListItem, badge: string | null) {
 
   if (comparePrice > currentPrice && comparePrice > 0) {
     const percent = Math.round(((comparePrice - currentPrice) / comparePrice) * 100)
-    return `-${percent}%`
+    return `🔥 -${percent}%`
   }
 
   if (badge === 'Novo') {
-    return 'Novo'
+    return '✨ Novo'
   }
 
   if (badge === 'Destaque' || Number(product.sales_count ?? 0) > 10) {
-    return 'Mais vendido'
+    return '⭐ Mais vendido'
   }
 
   return badge
@@ -70,7 +70,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
   const badgeStyles = getBadgeStyles(product, badge)
   const secondaryLabel = product.category?.trim()
     ? normalizeStoreCategoryLabel(product.category)
-    : product.brand?.trim() || 'Colecao da loja'
+    : product.brand?.trim() || 'Coleção da loja'
   const reviewCount = Number(product.review_count ?? 0)
   const averageRating = typeof product.average_rating === 'number' ? product.average_rating : null
   const hasReviews = reviewCount > 0 && averageRating !== null
@@ -198,7 +198,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
           <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs">
             <span className="line-clamp-1 font-medium text-slate-400">{secondaryLabel}</span>
             <span className={Number(product.stock ?? 0) > 0 ? 'shrink-0 font-semibold text-emerald-600' : 'shrink-0 font-semibold text-amber-600'}>
-              {Number(product.stock ?? 0) > 0 ? 'Em estoque' : 'Indisponivel'}
+              {Number(product.stock ?? 0) > 0 ? 'Em estoque' : 'Indisponível'}
             </span>
           </div>
         </div>

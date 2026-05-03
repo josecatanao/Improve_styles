@@ -53,7 +53,7 @@ export default async function MarketingPage() {
   ]
   const normalizedSettings = {
     ...settings,
-    homepage_layout: normalizeHomepageLayout(settings.homepage_layout, availableSections.slice(4).map((section) => section.id)),
+    homepage_layout: normalizeHomepageLayout(settings.homepage_layout, availableSections.slice(4).map((section) => section.id), settings.hidden_home_sections),
   }
 
   return (

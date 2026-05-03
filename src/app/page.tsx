@@ -78,20 +78,15 @@ export default async function Home({
 
     if (existing) {
       existing.products.push(product)
-      return
+    } else if (storefrontCategoryResult.source === 'fallback') {
+      categorySectionMap.set(key, {
+        key,
+        label,
+        href: `/loja/${key}`,
+        products: [product],
+        sortOrder: storefrontCategories.length + categorySectionMap.size,
+      })
     }
-
-    if (storefrontCategoryResult.source !== 'fallback') {
-      return
-    }
-
-    categorySectionMap.set(key, {
-      key,
-      label,
-      href: `/loja/${key}`,
-      products: [product],
-      sortOrder: storefrontCategories.length + categorySectionMap.size,
-    })
   })
 
   const categories = Array.from(categorySectionMap.values())
@@ -160,17 +155,17 @@ export default async function Home({
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    {isSearchMode ? 'Busca na loja' : 'Catalogo'}
+                    {isSearchMode ? 'Buscar na loja' : 'Catálogo'}
                   </p>
                   <div className="space-y-1">
                     <h1 className="text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
                       {isSearchMode
                         ? `Resultados para "${query}"`
                         : sort === 'price_asc'
-                          ? 'Promocoes'
+                          ? '🔥 Promoções'
                           : sort === 'recent'
-                            ? 'Novidades'
-                            : 'Mais vendidos'}
+                            ? '✨ Novidades'
+                            : '⭐ Mais vendidos'}
                     </h1>
                     <p className="text-sm text-slate-500">
                       {isSearchMode
@@ -207,7 +202,7 @@ export default async function Home({
               <div className="border border-slate-200 bg-white px-5 py-10 text-center">
                 <p className="text-lg font-semibold text-slate-900">Nenhum produto encontrado.</p>
                 <p className="mt-2 text-sm text-slate-500">
-                  Tente buscar por nome do produto, categoria, marca, cor ou outra palavra relacionada.
+                  Tente buscar por outro termo ou navegue pelas categorias.
                 </p>
               </div>
             )}
@@ -216,7 +211,8 @@ export default async function Home({
         (() => {
           const layoutArray = normalizeHomepageLayout(
             settings.homepage_layout,
-            categorySections.map((section) => getCategorySectionId(section.key))
+            categorySections.map((section) => getCategorySectionId(section.key)),
+            settings.hidden_home_sections
           )
           
           return layoutArray.map((sectionId: string) => {
@@ -229,14 +225,14 @@ export default async function Home({
             case 'promotions':
               return promotionalProducts.length > 0 ? (
                 <div key="promotions" id="promocoes">
-                  <ProductCarouselRail title="Ofertas Especiais" href="#promocoes" products={promotionalProducts} />
+                  <ProductCarouselRail title="🔥 Ofertas Especiais" href="#promocoes" products={promotionalProducts} />
                 </div>
               ) : null
 
             case 'featured':
               return finalFeatured.length > 0 ? (
                 <div key="featured" id="produtos">
-                  <ProductCarouselRail title="Produtos em Destaque" href="#produtos" products={finalFeatured} />
+                  <ProductCarouselRail title="⭐ Produtos em Destaque" href="#produtos" products={finalFeatured} />
                 </div>
               ) : null
 
@@ -244,8 +240,8 @@ export default async function Home({
               return (
                 <section key="category-nav" className="space-y-3 sm:space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-[1.08rem] font-semibold tracking-tight text-slate-950 sm:text-[1.2rem] lg:text-[1.35rem]">Categorias</h2>
-                    <span className="text-xs text-slate-500 sm:text-sm">Navegacao rapida</span>
+                    <h2 className="text-[1.08rem] font-semibold tracking-tight text-slate-950 sm:text-[1.2rem] lg:text-[1.35rem]">🛍️ Categorias</h2>
+                    <span className="text-xs text-slate-500 sm:text-sm">Navegação rápida</span>
                   </div>
 
                   <div className="flex items-start gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -273,7 +269,7 @@ export default async function Home({
                           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 sm:h-16 sm:w-16">
                             <Grid2X2 className="h-4.5 w-4.5 text-slate-700 sm:h-5 sm:w-5" />
                           </span>
-                          <span className="mt-2 block text-[11px] font-medium leading-4 text-slate-700 sm:mt-2 sm:text-[12px]">Ver todas</span>
+                          <span className="mt-2 block text-[11px] font-medium leading-4 text-slate-700 sm:mt-2 sm:text-[12px]">Ver todas as categorias</span>
                         </a>
                       </>
                     ) : (
@@ -308,7 +304,7 @@ export default async function Home({
                           <h2 className="text-[1.08rem] font-semibold tracking-tight text-slate-950 sm:text-[1.2rem] lg:text-[1.35rem]">
                             {categorySection.label}
                           </h2>
-                          <p className="text-sm text-slate-500">Associe produtos a esta categoria para preencher a secao na home.</p>
+                          <p className="text-sm text-slate-500">Associe produtos a esta categoria para preencher a seção na home.</p>
                         </div>
                       </div>
                     )}
@@ -324,7 +320,7 @@ export default async function Home({
 
         {storefront.setupRequired ? (
           <section id="produtos-aviso" className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
-            <p className="text-lg font-semibold text-slate-900">A loja esta pronta para receber o catalogo.</p>
+            <p className="text-lg font-semibold text-slate-900">A loja está pronta para receber o catálogo.</p>
             <p className="mt-2 text-sm text-slate-500">Configure os produtos no painel para publicar a vitrine.</p>
           </section>
         ) : null}

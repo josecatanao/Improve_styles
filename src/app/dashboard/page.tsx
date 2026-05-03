@@ -217,7 +217,7 @@ function ProgressChartCard({
       <div className="mt-6 space-y-4">
         {items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-            Nenhum dado disponivel para este bloco.
+            Nenhum dado disponível para este bloco.
           </div>
         ) : (
           items.map((item) => (
@@ -258,8 +258,8 @@ function SalesTimelineCard({
     <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Vendas nos ultimos 7 dias</h2>
-          <p className="mt-1 text-sm text-slate-500">Receita e volume recente para leitura rapida da operacao.</p>
+          <h2 className="text-lg font-semibold text-slate-900">Vendas nos últimos 7 dias</h2>
+          <p className="mt-1 text-sm text-slate-500">Receita e volume recente para leitura rápida da operação.</p>
         </div>
         <div className="grid gap-2 text-right">
           <div>
@@ -267,7 +267,7 @@ function SalesTimelineCard({
             <p className="text-lg font-semibold text-slate-900">{formatMoney(totalRevenue)}</p>
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Pedidos no periodo</p>
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Pedidos no período</p>
             <p className="text-sm font-medium text-slate-600">{totalOrders}</p>
           </div>
         </div>
@@ -333,7 +333,7 @@ export default async function DashboardPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Visão Geral</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Acompanhe vendas, operacao, clientes e saude do catalogo a partir de dados reais da aplicacao.
+            Acompanhe vendas, operação, clientes e saúde do catálogo a partir de dados reais da aplicação.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -365,14 +365,14 @@ export default async function DashboardPage() {
         <MetricCard
           title="Ticket medio"
           value={formatMoney(averageTicket)}
-          helper={`${averageItemsPerOrder.toFixed(1).replace('.', ',')} itens por pedido em media.`}
+          helper={`${averageItemsPerOrder.toFixed(1).replace('.', ',')} itens por pedido em média.`}
           icon={Banknote}
           tone="blue"
         />
         <MetricCard
           title="Pedidos em andamento"
           value={String(openOrders.length)}
-          helper="Soma de pendentes, em separacao e em entrega."
+          helper="Soma de pendentes, em separação e em entrega."
           icon={ShoppingBag}
           tone="amber"
         />
@@ -431,7 +431,7 @@ export default async function DashboardPage() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-900">Resumo comercial</h2>
-              <p className="text-sm text-slate-500">Leitura rapida dos pontos mais importantes da operacao.</p>
+              <p className="text-sm text-slate-500">Leitura rápida dos pontos mais importantes da operação.</p>
             </div>
           </div>
 

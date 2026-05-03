@@ -3,8 +3,8 @@ import type { StoreSortOption } from '@/lib/storefront'
 
 const SORT_OPTIONS: Array<{ label: string; value: StoreSortOption }> = [
   { label: 'Mais populares', value: 'popular' },
-  { label: 'Menor preco', value: 'price_asc' },
-  { label: 'Maior preco', value: 'price_desc' },
+  { label: 'Menor preço', value: 'price_asc' },
+  { label: 'Maior preço', value: 'price_desc' },
 ]
 
 export function Filters({

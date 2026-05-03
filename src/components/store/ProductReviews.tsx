@@ -55,11 +55,11 @@ export function ProductReviews({
 
     try {
       await submitProductReview(productId, rating, comment)
-      setMessage({ type: 'success', text: 'Avaliacao enviada com sucesso! Obrigado.' })
+      setMessage({ type: 'success', text: 'Avaliação enviada com sucesso! Obrigado.' })
       setRating(0)
       setComment('')
     } catch (err: unknown) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Falha ao enviar avaliacao.' })
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Falha ao enviar avaliação.' })
     } finally {
       setIsSubmitting(false)
     }
@@ -69,11 +69,11 @@ export function ProductReviews({
     <section id="product-reviews" className="mt-16 rounded-xl border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-6 sm:p-10 shadow-sm">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-8">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-950 flex items-center gap-2">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-950 flex items-center gap-2">
             <MessageSquare className="h-6 w-6 text-slate-400" />
-            Avaliacoes de Clientes
+            Avaliações de Clientes
           </h2>
-          <p className="mt-2 text-slate-500">O que as pessoas estao achando deste produto.</p>
+          <p className="mt-2 text-slate-500">O que as pessoas estão achando deste produto.</p>
         </div>
 
         <div className="flex items-center gap-4 bg-slate-50 px-6 py-4 rounded-lg border border-slate-100">
@@ -88,7 +88,7 @@ export function ProductReviews({
               ))}
             </div>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              {reviews.length} {reviews.length === 1 ? 'avaliacao' : 'avaliacoes'}
+              {reviews.length} {reviews.length === 1 ? 'avaliação' : 'avaliações'}
             </p>
           </div>
         </div>
@@ -98,7 +98,7 @@ export function ProductReviews({
         <div className="space-y-6">
           {reviews.length === 0 ? (
             <div className="text-center py-10 rounded-lg border border-dashed border-slate-200 bg-slate-50">
-              <p className="text-slate-500">Ainda nao ha avaliacoes para este produto.</p>
+              <p className="text-slate-500">Ainda não há avaliações para este produto.</p>
               <p className="text-sm font-medium text-slate-700 mt-1">Seja o primeiro a avaliar!</p>
             </div>
           ) : (
@@ -118,7 +118,7 @@ export function ProductReviews({
                       )}
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-900">{review.customer?.full_name || 'Cliente Anonimo'}</p>
+                      <p className="font-semibold text-slate-900">                  {review.customer?.full_name || 'Cliente Anônimo'}</p>
                       <p className="text-xs text-slate-500">
                         {formatDate(review.created_at)}
                       </p>
@@ -142,7 +142,7 @@ export function ProductReviews({
         </div>
 
         <div className="rounded-xl bg-slate-50 p-6 border border-slate-100 h-fit">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Deixe sua avaliacao</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Deixe sua avaliação</h3>
           
           {isLoggedIn ? (
             <form onSubmit={handleSubmit} className="grid gap-4">
@@ -171,7 +171,7 @@ export function ProductReviews({
               </div>
 
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-2 block">Seu comentario (opcional)</label>
+                <label className="text-sm font-medium text-slate-700 mb-2 block">Seu comentário (opcional)</label>
                 <textarea
                   rows={4}
                   value={comment}
@@ -193,12 +193,12 @@ export function ProductReviews({
                 className="inline-flex mt-2 h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--store-button-bg)] px-4 text-sm font-bold text-[var(--store-button-fg)] transition-colors hover:opacity-90 disabled:opacity-50"
               >
                 {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-4 w-4" />}
-                Enviar Avaliacao
+                Enviar Avaliação
               </button>
             </form>
           ) : (
             <div className="text-center py-6">
-              <p className="text-sm text-slate-600 mb-4">Voce precisa estar logado para avaliar nossos produtos.</p>
+              <p className="text-sm text-slate-600 mb-4">Você precisa estar logado para avaliar nossos produtos.</p>
               <Link
                 href="/login?mode=customer"
                 className="inline-flex h-11 w-full items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"

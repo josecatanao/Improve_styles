@@ -180,25 +180,27 @@ export function OrdersOverview({
           </p>
         </div>
 
-        <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
+        <nav className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1" role="tablist" aria-label="Filtrar pedidos">
           {filters.map((item) => {
             const active = item.value === filter
             return (
               <button
                 key={item.value}
                 type="button"
+                role="tab"
+                aria-selected={active}
                 onClick={() => setFilter(item.value)}
                 className={
                   active
-                    ? 'inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-semibold text-white'
-                    : 'inline-flex h-10 shrink-0 items-center justify-center rounded-full border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950'
+                    ? 'inline-flex h-9 items-center justify-center rounded-xl bg-white px-4 text-sm font-semibold text-slate-950 shadow-sm ring-1 ring-slate-200'
+                    : 'inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-medium text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700'
                 }
               >
                 {item.label}
               </button>
             )
           })}
-        </div>
+        </nav>
       </div>
 
       {filteredOrders.length > 0 ? (

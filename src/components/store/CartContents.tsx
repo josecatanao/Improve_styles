@@ -31,13 +31,13 @@ export function CartContents({
   }, [appliedCoupon, items])
 
   if (!isReady) {
-    return <div className="rounded-none border border-slate-200 bg-white p-6 text-sm text-slate-500">Carregando carrinho...</div>
+    return <div className="rounded-none border border-slate-200 bg-white p-6 text-sm text-slate-500">Carregando carrinho…</div>
   }
 
   if (items.length === 0) {
     return (
       <div className="rounded-none border border-dashed border-slate-300 bg-white p-8 text-center">
-        <p className="text-lg font-semibold text-slate-900">Seu carrinho esta vazio</p>
+        <p className="text-lg font-semibold text-slate-900">Seu carrinho está vazio</p>
         <p className="mt-2 text-sm text-slate-500">Adicione produtos para continuar a compra.</p>
         {showActions ? (
           <Link
@@ -109,7 +109,7 @@ export function CartContents({
           <div className="mb-3 flex items-center justify-between text-sm text-emerald-600">
             <span>Desconto ({appliedCoupon.code})</span>
             <span className="font-medium">
-              {appliedCoupon.discount_type === 'free_shipping' ? 'Frete gratis' : `-${formatMoney(couponDiscount)}`}
+              {appliedCoupon.discount_type === 'free_shipping' ? 'Frete grátis' : `-${formatMoney(couponDiscount)}`}
             </span>
           </div>
         ) : null}

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Trash2, Plus, ImagePlus, Loader2, Megaphone, LayoutList, CheckCircle2, ArrowUp, ArrowDown, Link2, GripVertical, Info } from 'lucide-react'
 import { removeStoreBanner, toggleStoreBanner, updateStoreBannerLink, uploadStoreBannerAction, reorderStoreBanners } from '@/app/dashboard/marketing/actions'
-import { useToast } from '@/components/ui/feedback-provider'
+import { useConfirm, useToast } from '@/components/ui/feedback-provider'
 
 const SECTION_CONTENT: Record<string, { title: string; description: string }> = {
   banners: {
@@ -43,6 +43,7 @@ type StoreBanner = {
 
 type StoreSettings = {
   homepage_layout?: string[]
+  hidden_home_sections?: string[]
   announcement_active?: boolean
   announcement_text?: string | null
   announcement_link?: string | null
@@ -64,19 +65,23 @@ function SortableLayoutItem({
   index,
   label,
   description,
+  isHidden,
   isDragging,
   isFirst,
   isLast,
   onMove,
+  onToggleVisibility,
 }: {
   item: string
   index: number
   label: string
   description: string
+  isHidden: boolean
   isDragging: boolean
   isFirst: boolean
   isLast: boolean
   onMove: (index: number, direction: 'up' | 'down') => void
+  onToggleVisibility: (sectionId: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item })
 
@@ -87,11 +92,13 @@ function SortableLayoutItem({
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      className={`flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm transition-shadow ${
-        isDragging ? 'shadow-lg shadow-slate-300/60 ring-2 ring-sky-200' : ''
-      }`}
+      className={`flex items-start gap-3 rounded-2xl border border-slate-200 px-3 py-3 shadow-sm transition-shadow ${
+        isHidden ? 'bg-slate-50 opacity-60' : 'bg-white'
+      } ${isDragging ? 'shadow-lg shadow-slate-300/60 ring-2 ring-sky-200' : ''}`}
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-semibold text-slate-600">
+      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold ${
+        isHidden ? 'bg-slate-200 text-slate-400' : 'bg-slate-100 text-slate-600'
+      }`}>
         {index + 1}
       </div>
       <button
@@ -103,27 +110,47 @@ function SortableLayoutItem({
       >
         <GripVertical className="h-4 w-4" />
       </button>
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-slate-800">{label}</p>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className={`text-sm font-semibold ${isHidden ? 'text-slate-400' : 'text-slate-800'}`}>{label}</p>
+          {isHidden ? (
+            <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-500">Oculta</span>
+          ) : null}
+        </div>
         <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-slate-500">{description}</p>
       </div>
-      <div className="flex shrink-0 flex-col gap-1">
+      <div className="flex shrink-0 flex-col gap-2">
         <button
-          disabled={isFirst}
-          onClick={() => onMove(index, 'up')}
-          className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 disabled:opacity-30"
-          aria-label="Mover para cima"
+          type="button"
+          onClick={() => onToggleVisibility(item)}
+          className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+            isHidden
+              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+          }`}
+          aria-label={isHidden ? `Mostrar ${label}` : `Ocultar ${label}`}
+          title={isHidden ? 'Tornar visivel' : 'Ocultar secao'}
         >
-          <ArrowUp className="h-3 w-3" />
+          {isHidden ? 'Mostrar' : 'Ocultar'}
         </button>
-        <button
-          disabled={isLast}
-          onClick={() => onMove(index, 'down')}
-          className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 disabled:opacity-30"
-          aria-label="Mover para baixo"
-        >
-          <ArrowDown className="h-3 w-3" />
-        </button>
+        <div className="flex gap-1 justify-center">
+          <button
+            disabled={isFirst}
+            onClick={() => onMove(index, 'up')}
+            className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 disabled:opacity-30"
+            aria-label="Mover para cima"
+          >
+            <ArrowUp className="h-3 w-3" />
+          </button>
+          <button
+            disabled={isLast}
+            onClick={() => onMove(index, 'down')}
+            className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 disabled:opacity-30"
+            aria-label="Mover para baixo"
+          >
+            <ArrowDown className="h-3 w-3" />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -135,26 +162,20 @@ function SortableBannerItem({
   isUpdatingBannerId,
   isRemovingBannerId,
   isSavingBannerLinkId,
-  confirmDeleteBannerId,
   onLinkChange,
   onSaveLink,
   onToggle,
-  onConfirmDelete,
-  onCancelDelete,
-  onRemove,
+  onRemoveClick,
 }: {
   banner: StoreBanner
   isDragging: boolean
   isUpdatingBannerId: string | null
   isRemovingBannerId: string | null
   isSavingBannerLinkId: string | null
-  confirmDeleteBannerId: string | null
   onLinkChange: (bannerId: string, value: string) => void
   onSaveLink: (bannerId: string) => void
   onToggle: (bannerId: string, checked: boolean) => void
-  onConfirmDelete: (bannerId: string) => void
-  onCancelDelete: () => void
-  onRemove: (bannerId: string) => void
+  onRemoveClick: (bannerId: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: banner.id })
 
@@ -252,37 +273,16 @@ function SortableBannerItem({
             <p className="text-xs text-slate-500">
               Ao clicar no banner da vitrine, o cliente sera enviado para este destino.
             </p>
-            {confirmDeleteBannerId === banner.id ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-red-600">Remover?</span>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={isRemovingBannerId === banner.id}
-                  onClick={() => onRemove(banner.id)}
-                >
-                  {isRemovingBannerId === banner.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Sim'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onCancelDelete}
-                >
-                  Nao
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={isRemovingBannerId === banner.id || isUpdatingBannerId === banner.id}
-                onClick={() => onConfirmDelete(banner.id)}
-                className="text-red-500 hover:bg-red-50 hover:text-red-700"
-              >
-                {isRemovingBannerId === banner.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                Remover banner
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isRemovingBannerId === banner.id || isUpdatingBannerId === banner.id}
+              onClick={() => onRemoveClick(banner.id)}
+              className="text-red-500 hover:bg-red-50 hover:text-red-700"
+            >
+              {isRemovingBannerId === banner.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Remover banner
+            </Button>
           </div>
         </div>
       </div>
@@ -301,11 +301,13 @@ export function MarketingManager({
 }) {
   const router = useRouter()
   const showToast = useToast()
+  const confirm = useConfirm()
 
   const [layout, setLayout] = useState<string[]>(
     initialSettings.homepage_layout?.filter((sectionId) => availableSections.some((section) => section.id === sectionId)) ||
       availableSections.map((section) => section.id)
   )
+  const [hiddenSections, setHiddenSections] = useState<string[]>(initialSettings.hidden_home_sections ?? [])
   const [annActive, setAnnActive] = useState(initialSettings.announcement_active || false)
   const [annText, setAnnText] = useState(initialSettings.announcement_text || '')
   const [annLink, setAnnLink] = useState(initialSettings.announcement_link || '')
@@ -318,7 +320,6 @@ export function MarketingManager({
   const [isUpdatingBannerId, setIsUpdatingBannerId] = useState<string | null>(null)
   const [isRemovingBannerId, setIsRemovingBannerId] = useState<string | null>(null)
   const [isSavingBannerLinkId, setIsSavingBannerLinkId] = useState<string | null>(null)
-  const [confirmDeleteBannerId, setConfirmDeleteBannerId] = useState<string | null>(null)
   const [activeLayoutItemId, setActiveLayoutItemId] = useState<string | null>(null)
   const [activeBannerId, setActiveBannerId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -390,19 +391,21 @@ export function MarketingManager({
       if (existing) {
         await supabase.from('store_settings').update({
           homepage_layout: layout,
+          hidden_home_sections: hiddenSections,
           updated_at: new Date().toISOString(),
         }).eq('id', existing.id)
       } else {
         await supabase.from('store_settings').insert({
           homepage_layout: layout,
+          hidden_home_sections: hiddenSections,
         })
       }
 
       router.refresh()
       showToast({
         variant: 'success',
-        title: 'Ordem salva',
-        description: 'A ordem das secoes da pagina inicial foi atualizada.',
+        title: 'Ordem e visibilidade salvas',
+        description: 'A ordem e visibilidade das secoes da pagina inicial foram atualizadas.',
       })
     } catch (error) {
       showToast({
@@ -413,6 +416,14 @@ export function MarketingManager({
     } finally {
       setIsSavingLayout(false)
     }
+  }
+
+  function toggleSectionVisibility(sectionId: string) {
+    setHiddenSections((current) =>
+      current.includes(sectionId)
+        ? current.filter((id) => id !== sectionId)
+        : [...current, sectionId]
+    )
   }
 
   function moveLayoutItem(index: number, direction: 'up' | 'down') {
@@ -542,7 +553,17 @@ export function MarketingManager({
     }
   }
 
-  async function handleRemoveBanner(bannerId: string) {
+  async function handleConfirmRemoveBanner(bannerId: string) {
+    const confirmed = await confirm({
+      title: 'Remover banner?',
+      description: 'Tem certeza que deseja remover este banner? Esta acao nao pode ser desfeita.',
+      confirmLabel: 'Sim, remover',
+      cancelLabel: 'Cancelar',
+      variant: 'destructive',
+    })
+
+    if (!confirmed) return
+
     setIsRemovingBannerId(bannerId)
     try {
       await removeStoreBanner(bannerId)
@@ -560,7 +581,6 @@ export function MarketingManager({
       })
     } finally {
       setIsRemovingBannerId(null)
-      setConfirmDeleteBannerId(null)
     }
   }
 
@@ -599,8 +619,17 @@ export function MarketingManager({
       try {
         await reorderStoreBanners(nextBanners.map((banner) => banner.id))
         router.refresh()
+        showToast({
+          variant: 'success',
+          title: 'Ordem dos banners salva',
+          description: 'A nova ordem de exibicao dos banners foi aplicada.',
+        })
       } catch {
-        // silent failure on reorder
+        showToast({
+          variant: 'error',
+          title: 'Erro ao salvar ordem dos banners',
+          description: 'Os banners foram reordenados visualmente, mas a nova ordem nao foi salva. Tente novamente.',
+        })
       }
     }, 600)
   }
@@ -734,14 +763,14 @@ export function MarketingManager({
                   <LayoutList className="h-5 w-5" />
                 </div>
                 <div className="space-y-1">
-                  <CardTitle className="text-xl">Ordem das Secoes da Pagina Inicial</CardTitle>
+                  <CardTitle className="text-xl">Ordem e Visibilidade das Secoes</CardTitle>
                   <CardDescription>
-                    Defina a sequencia em que o cliente encontra cada bloco da vitrine. Arraste ou use os controles laterais.
+                    Defina a sequencia em que cada bloco aparece na vitrine e escolha quais secoes ficam visiveis. Arraste para reordenar ou use os controles laterais.
                   </CardDescription>
                 </div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                O topo da lista aparece primeiro na home. Use descricoes curtas para conferir a funcao de cada secao sem poluir a leitura.
+                O topo da lista aparece primeiro na home. Secoes marcadas como &quot;Oculta&quot; nao sao renderizadas na vitrine. Use o botao &quot;Ocultar&quot; para desativar uma secao sem remove-la da lista.
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -765,10 +794,12 @@ export function MarketingManager({
                           SECTION_CONTENT[item]?.description ||
                           'Sessao personalizada da pagina inicial.'
                         }
+                        isHidden={hiddenSections.includes(item)}
                         isDragging={activeLayoutItemId === item}
                         isFirst={index === 0}
                         isLast={index === layout.length - 1}
                         onMove={moveLayoutItem}
+                        onToggleVisibility={toggleSectionVisibility}
                       />
                     ))}
                   </div>
@@ -776,7 +807,7 @@ export function MarketingManager({
               </DndContext>
               <Button onClick={handleSaveLayout} disabled={isSavingLayout} className="w-full bg-[#3483fa] hover:bg-[#2968c8] sm:w-auto">
                 {isSavingLayout ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                Salvar Ordem das Secoes
+                Salvar Ordem e Visibilidade
               </Button>
             </CardContent>
           </Card>
@@ -849,7 +880,6 @@ export function MarketingManager({
                           isUpdatingBannerId={isUpdatingBannerId}
                           isRemovingBannerId={isRemovingBannerId}
                           isSavingBannerLinkId={isSavingBannerLinkId}
-                          confirmDeleteBannerId={confirmDeleteBannerId}
                           onLinkChange={(bannerId, value) =>
                             setBanners((current) =>
                               current.map((currentBanner) =>
@@ -861,9 +891,7 @@ export function MarketingManager({
                           }
                           onSaveLink={handleSaveBannerLink}
                           onToggle={handleToggleBanner}
-                          onConfirmDelete={setConfirmDeleteBannerId}
-                          onCancelDelete={() => setConfirmDeleteBannerId(null)}
-                          onRemove={handleRemoveBanner}
+                          onRemoveClick={handleConfirmRemoveBanner}
                         />
                       ))}
                     </div>

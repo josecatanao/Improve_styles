@@ -11,7 +11,6 @@ import {
   Loader2,
   MapPin,
   RefreshCw,
-  Rocket,
   Share2,
   ShieldCheck,
   Star,
@@ -295,12 +294,12 @@ export function AddToCartPanel({
         const coupon = result.coupon
         const eligibleItems = getEligibleCouponItems(currentScopedItems, coupon)
         if (eligibleItems.length === 0) {
-          setCouponError('Este cupom nao se aplica a este produto.')
+          setCouponError('Este cupom não se aplica a este produto.')
           return
         }
 
         if (!couponMeetsMinimumOrderValue(eligibleItems, coupon)) {
-          setCouponError('Este cupom ainda nao atende ao valor minimo para este produto.')
+          setCouponError('Este cupom ainda não atende ao valor mínimo para este produto.')
           return
         }
 
@@ -308,7 +307,7 @@ export function AddToCartPanel({
         setCouponInput('')
         toast({ variant: 'success', title: 'Cupom aplicado', description: `Desconto de ${coupon.code} aplicado.` })
       } else {
-        setCouponError(result.error || 'Cupom invalido.')
+        setCouponError(result.error || 'Cupom inválido.')
       }
     } catch (err) {
       setCouponError(err instanceof Error ? err.message : 'Erro ao validar cupom.')
@@ -387,13 +386,13 @@ export function AddToCartPanel({
                 ) : null}
                 {couponAppliesToSelection && appliedCoupon ? (
                   <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
-                    {appliedCoupon.discount_type === 'free_shipping' ? 'Frete gratis' : appliedCoupon.discount_type === 'percentage' ? `-${appliedCoupon.discount_value}%` : `-${formatMoney(appliedCoupon.discount_value)}`}
+                    {appliedCoupon.discount_type === 'free_shipping' ? 'Frete grátis' : appliedCoupon.discount_type === 'percentage' ? `-${appliedCoupon.discount_value}%` : `-${formatMoney(appliedCoupon.discount_value)}`}
                   </span>
                 ) : null}
               </div>
               {couponAppliesToSelection && appliedCoupon ? (
                 <p className="text-xs font-medium text-emerald-600">
-                  Preco com cupom {appliedCoupon.code}
+                  Preço com cupom {appliedCoupon.code}
                 </p>
               ) : null}
             </div>
@@ -404,16 +403,16 @@ export function AddToCartPanel({
           {displayComparePrice > displayPrice ? (
             <span className="inline-flex items-center gap-1">
               <Truck className="h-3.5 w-3.5" />
-              Frete gratis
+              Frete grátis
             </span>
           ) : null}
           <span className="inline-flex items-center gap-1">
             <CreditCard className="h-3.5 w-3.5" />
-            Ate 12x sem juros
+            Até 12x sem juros
           </span>
           <span className="inline-flex items-center gap-1">
             <RefreshCw className="h-3.5 w-3.5" />
-            Troca gratis
+            Troca grátis
           </span>
           <span className="inline-flex items-center gap-1">
             <ShieldCheck className="h-3.5 w-3.5" />
@@ -425,7 +424,7 @@ export function AddToCartPanel({
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-semibold text-slate-950">Cor do produto:</span>
-              <span className="text-slate-600">{effectiveColorName || 'Padrao'}</span>
+              <span className="text-slate-600">{effectiveColorName || 'Padrão'}</span>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -466,7 +465,7 @@ export function AddToCartPanel({
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-semibold text-slate-950">Tamanho do produto:</span>
-              <span className="text-slate-600">{effectiveSize || 'Padrao'}</span>
+              <span className="text-slate-600">{effectiveSize || 'Padrão'}</span>
             </div>
 
             <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
@@ -514,7 +513,7 @@ export function AddToCartPanel({
               }`}
             >
               <span className="inline-flex items-center gap-1.5">
-                {availableStock > 0 && availableStock <= 3 ? <Rocket className="h-3 w-3" /> : null}
+                {availableStock > 0 && availableStock <= 3 ? null : null}
                 {stockMessage}
               </span>
             </span>
@@ -578,9 +577,9 @@ export function AddToCartPanel({
                     <p className="text-sm text-slate-700">
                       {shippingResult.local.price != null && shippingResult.local.price > 0
                         ? `Frete local: ${formatMoney(shippingResult.local.price)}`
-                        : 'Frete gratis'}
+                        : 'Frete grátis'}
                       {' — '}
-                      {shippingResult.local.zoneName} — ate {shippingResult.local.days} dia{shippingResult.local.days > 1 ? 's' : ''} uteis
+                      {shippingResult.local.zoneName} — até {shippingResult.local.days} dia{shippingResult.local.days > 1 ? 's' : ''} úteis
                     </p>
                   ) : null}
                 </div>
@@ -596,7 +595,7 @@ export function AddToCartPanel({
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Digite o codigo"
+                placeholder="Digite o código"
                 value={couponInput}
                 onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(null) }}
                 disabled={!!appliedCoupon}

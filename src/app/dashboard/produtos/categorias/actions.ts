@@ -244,6 +244,23 @@ export async function removeStoreCategory(categoryId: string) {
   return { success: true }
 }
 
+export async function reorderStoreCategories(categoryIds: string[]) {
+  const { supabase, user } = await requireDashboardUser()
+
+  await Promise.all(
+    categoryIds.map((id, index) =>
+      supabase
+        .from('store_categories')
+        .update({ sort_order: index, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('owner_id', user.id)
+    )
+  )
+
+  revalidateCategorySurfaces()
+  return { success: true }
+}
+
 export async function uploadStoreCategoryImageAction(formData: FormData) {
   const file = formData.get('file')
 

@@ -54,6 +54,7 @@ import {
 } from '@/lib/product-form-utils'
 import { useProductDraft } from '@/hooks/use-product-draft'
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes'
+import { useConfirm } from '@/components/ui/feedback-provider'
 
 export type ProductFormState = {
   name: string
@@ -496,6 +497,7 @@ function CreatableField({
 
 export function ProductForm({ mode = 'create', product = null, options }: ProductFormProps) {
   const router = useRouter()
+  const confirm = useConfirm()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const initialImages = buildInitialImages(product)
   const initialGroups = buildInitialGroups(product)
@@ -721,11 +723,21 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
     handleFileSelection(event.dataTransfer.files)
   }
 
-  function removeImage(imageId: string) {
+  async function removeImage(imageId: string) {
     const image = imagesRef.current.find((item) => item.id === imageId)
     if (!image) {
       return
     }
+
+    const confirmed = await confirm({
+      title: 'Remover imagem?',
+      description: 'A imagem sera removida da galeria do produto. Salve o produto para aplicar a remocao.',
+      confirmLabel: 'Remover imagem',
+      cancelLabel: 'Cancelar',
+      variant: 'destructive',
+    })
+
+    if (!confirmed) return
 
     if (image.kind === 'new') {
       URL.revokeObjectURL(image.url)
@@ -795,20 +807,30 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
     showToast('success', `Cor ${name} adicionada.`)
   }
 
-  function removeColorGroup(groupId: string) {
+  async function removeColorGroup(groupId: string) {
     const removed = colorGroups.find((group) => group.id === groupId)
+    if (!removed) return
+
+    const confirmed = await confirm({
+      title: 'Remover grupo de cor?',
+      description: `A cor "${removed.name}" e seus ${removed.variants.length} variantes serao removidos. Esta acao nao pode ser desfeita.`,
+      confirmLabel: 'Remover cor',
+      cancelLabel: 'Cancelar',
+      variant: 'destructive',
+    })
+
+    if (!confirmed) return
+
     setColorGroups((current) => current.filter((group) => group.id !== groupId))
 
-    if (removed) {
-      updateImages(
-        imagesRef.current.map((image) =>
-          image.assignedColorHex === removed.hex
-            ? { ...image, assignedColorHex: null, assignedColorName: null }
-            : image
-        )
+    updateImages(
+      imagesRef.current.map((image) =>
+        image.assignedColorHex === removed.hex
+          ? { ...image, assignedColorHex: null, assignedColorName: null }
+          : image
       )
-      showToast('success', `Cor ${removed.name} removida.`)
-    }
+    )
+    showToast('success', `Cor ${removed.name} removida.`)
   }
 
   function addVariantToGroup(groupId: string, forcedSize?: string) {
@@ -847,11 +869,25 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
     setSizeDrafts((current) => ({ ...current, [groupId]: '' }))
   }
 
-  function removeVariantFromGroup(groupId: string, variantId: string) {
+  async function removeVariantFromGroup(groupId: string, variantId: string) {
+    const group = colorGroups.find((g) => g.id === groupId)
+    const variant = group?.variants.find((v) => v.id === variantId)
+    if (!variant) return
+
+    const confirmed = await confirm({
+      title: 'Remover variante?',
+      description: `O tamanho "${variant.size}" da cor "${group?.name ?? ''}" sera removido com seu estoque e preco.`,
+      confirmLabel: 'Remover',
+      cancelLabel: 'Cancelar',
+      variant: 'destructive',
+    })
+
+    if (!confirmed) return
+
     setColorGroups((current) =>
       current.map((group) =>
         group.id === groupId
-          ? { ...group, variants: group.variants.filter((variant) => variant.id !== variantId) }
+          ? { ...group, variants: group.variants.filter((v) => v.id !== variantId) }
           : group
       )
     )

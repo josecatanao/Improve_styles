@@ -43,7 +43,7 @@ export function WishlistClient() {
   if (loading) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-        Carregando favoritos...
+        Carregando favoritos…
       </div>
     )
   }
@@ -54,7 +54,7 @@ export function WishlistClient() {
         <Heart className="h-12 w-12 text-slate-300" />
         <div className="space-y-1">
           <h2 className="text-lg font-semibold text-slate-700">Nenhum favorito ainda</h2>
-          <p className="text-sm text-slate-500">Salve produtos que voce gostou para encontra-los depois.</p>
+          <p className="text-sm text-slate-500">Salve produtos que você gostou para encontrá-los depois.</p>
         </div>
         <Link
           href="/"
@@ -78,8 +78,8 @@ export function WishlistClient() {
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
               <th className="px-6 py-4" scope="col">Produto</th>
-              <th className="px-6 py-4" scope="col">Preco</th>
-              <th className="px-6 py-4 text-right" scope="col">Acoes</th>
+              <th className="px-6 py-4" scope="col">Preço</th>
+              <th className="px-6 py-4 text-right" scope="col">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -172,7 +172,7 @@ export function WishlistClient() {
                         ) : (
                           <>
                             <ShoppingCart className="h-4 w-4" />
-                            Carrinho
+                            Adicionar ao carrinho
                           </>
                         )}
                       </button>

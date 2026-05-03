@@ -85,7 +85,7 @@ function persistCheckout(data: { shippingZip: string; delivery_address: string; 
 
 const STEPS: { key: CheckoutStep; label: string }[] = [
   { key: 'form', label: 'Dados do pedido' },
-  { key: 'review', label: 'Revisar' },
+  { key: 'review', label: 'Revisar pedido' },
 ]
 
 function computeInstallments(total: number, count: number) {
@@ -351,19 +351,19 @@ export function CheckoutClient({
   }, [shippingZip])
 
   if (!isReady || !clientHydrated) {
-    return <div className="rounded-none border border-slate-200 bg-white p-6 text-sm text-slate-500">Carregando checkout...</div>
+    return <div className="rounded-none border border-slate-200 bg-white p-6 text-sm text-slate-500">Carregando checkout…</div>
   }
 
   if (checkoutItems.length === 0 && !submittedOrder) {
     return (
       <div className="rounded-none border border-dashed border-slate-300 bg-white p-8 text-center">
-        <p className="text-lg font-semibold text-slate-900">Nao ha itens para finalizar.</p>
+        <p className="text-lg font-semibold text-slate-900">Não há itens para finalizar.</p>
         <p className="mt-2 text-sm text-slate-500">Volte para a loja e adicione produtos ao carrinho.</p>
         <Link
           href="/"
           className="mt-5 inline-flex items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 py-2.5 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90"
         >
-          Voltar para a loja
+          Continuar comprando
         </Link>
       </div>
     )
@@ -379,9 +379,9 @@ export function CheckoutClient({
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
             <CheckCircle2 className="h-8 w-8 text-emerald-600" />
           </div>
-          <p className="mt-4 text-2xl font-bold tracking-tight text-emerald-800">Compra realizada com sucesso!</p>
+           <p className="mt-4 text-2xl font-bold tracking-tight text-emerald-800">Compra realizada com sucesso!</p>
           <p className="mt-2 text-sm leading-6 text-emerald-700">
-            Sua solicitacao ja foi enviada para a loja. Em breve voce podera acompanhar o status do pedido.
+            Sua solicitação já foi enviada para a loja. Em breve você poderá acompanhar o status do pedido.
           </p>
           <p className="mt-2 text-xs text-emerald-600">
             Pedido <span className="font-semibold">{visibleOrder.id}</span>
@@ -417,7 +417,7 @@ export function CheckoutClient({
             href="/conta/pedidos"
             className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--store-button-bg)] px-6 py-3 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90 sm:w-auto"
           >
-            Ver minha compra
+            Ver meu pedido
           </Link>
         </div>
       </div>
@@ -460,12 +460,12 @@ export function CheckoutClient({
       if (result.valid && result.coupon) {
         const eligibleItems = getEligibleCartItems(checkoutItems, result.coupon)
         if (eligibleItems.length === 0) {
-          setCouponError('Nenhum produto no carrinho e elegivel para este cupom.')
+          setCouponError('Nenhum produto no carrinho é elegível para este cupom.')
           return
         }
 
         if (!couponMeetsMinimumOrderValue(eligibleItems, result.coupon)) {
-          setCouponError('O carrinho ainda nao atende ao valor minimo para este cupom.')
+          setCouponError('O carrinho ainda não atende ao valor mínimo para este cupom.')
           return
         }
 
@@ -473,7 +473,7 @@ export function CheckoutClient({
         setCouponInput('')
         showToast({ variant: 'success', title: 'Cupom aplicado', description: `Desconto de ${result.coupon.code} aplicado.` })
       } else {
-        setCouponError(result.error || 'Cupom invalido.')
+        setCouponError(result.error || 'Cupom inválido.')
       }
     } catch (actionError) {
       setCouponError(actionError instanceof Error ? actionError.message : 'Erro ao validar cupom.')
@@ -539,10 +539,10 @@ export function CheckoutClient({
     setTouched({ name: true, phone: true, shippingZip: true })
 
     if (isDelivery && addresses.length === 0) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        delivery_address: 'Nenhum endereco cadastrado. Cadastre um endereco para continuar com a entrega.',
-      }))
+        setFieldErrors((prev) => ({
+          ...prev,
+          delivery_address: 'Nenhum endereço cadastrado. Cadastre um endereço para continuar com a entrega.',
+        }))
     }
 
     if (Object.keys(errors).length > 0) return
@@ -641,16 +641,16 @@ export function CheckoutClient({
       return (
         <div className="rounded-none border border-dashed border-slate-200 bg-white p-6 text-center">
           <MapPin className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-medium text-slate-500">Nenhum endereco cadastrado</p>
+          <p className="mt-3 text-sm font-medium text-slate-500">Nenhum endereço cadastrado</p>
           <p className="mt-1 text-xs text-slate-400">
-            Para calcular o frete e concluir a entrega, cadastre um endereco.
+            Para calcular o frete e concluir a entrega, cadastre um endereço.
           </p>
           <Link
             href="/conta/enderecos"
             className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--store-button-bg)] px-5 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90"
           >
             <Plus className="h-4 w-4" />
-            Cadastrar endereco
+            Cadastrar endereço
           </Link>
           {touched.shippingZip && fieldErrors.delivery_address ? (
             <p className="mt-3 text-xs font-medium text-red-500">{fieldErrors.delivery_address}</p>
@@ -664,7 +664,7 @@ export function CheckoutClient({
         <div className="rounded-none border border-slate-100 bg-slate-50/60 p-4">
           <div className="flex items-center gap-2 mb-3">
             <MapPin className="h-4 w-4 text-slate-400" />
-            <span className="text-sm font-semibold text-slate-700">Endereco de entrega</span>
+            <span className="text-sm font-semibold text-slate-700">Endereço de entrega</span>
           </div>
           <div className="rounded-none border border-slate-200 bg-white">
             <select
@@ -684,14 +684,14 @@ export function CheckoutClient({
           {selectedAddress ? (
             <div className="mt-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400">Endereco selecionado</span>
+                <span className="text-xs text-slate-400">Endereço selecionado</span>
                 <button
                   type="button"
                   onClick={handleToggleAlternateCep}
                   className="flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors hover:text-[var(--store-button-bg)]"
                 >
                   <Pencil className="h-3 w-3" />
-                  {showAlternateCep ? 'Usar endereco selecionado' : 'Outro CEP'}
+                  {showAlternateCep ? 'Usar endereço selecionado' : 'Outro CEP'}
                 </button>
               </div>
               {showAlternateCep ? (
@@ -754,7 +754,7 @@ export function CheckoutClient({
               className="flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors hover:text-[var(--store-button-bg)]"
             >
               <Pencil className="h-3 w-3" />
-              {showAlternateCep ? 'Usar meu endereco' : 'Outro CEP'}
+              {showAlternateCep ? 'Usar meu endereço' : 'Outro CEP'}
             </button>
           ) : null}
         </div>
@@ -813,16 +813,16 @@ export function CheckoutClient({
               : 'border-blue-200 bg-blue-50 text-blue-700'
         }`}>
           {shippingResult.notFound ? (
-            'CEP nao encontrado nas zonas de entrega disponiveis.'
+            'CEP não encontrado nas zonas de entrega disponíveis.'
           ) : shippingResult.isFree ? (
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="h-4 w-4" />
-              Frete gratis{shippingResult.estimatedDays > 0 ? ` • Entrega em ate ${shippingResult.estimatedDays} dias uteis` : ''}
+              Frete grátis{shippingResult.estimatedDays > 0 ? ` • Entrega em até ${shippingResult.estimatedDays} dias úteis` : ''}
             </span>
           ) : (
             <span className="flex items-center gap-1.5">
               <Truck className="h-4 w-4" />
-              Frete: {formatMoney(shippingResult.cost)}{shippingResult.estimatedDays > 0 ? ` • ${shippingResult.estimatedDays} dias uteis` : ''}
+              Frete: {formatMoney(shippingResult.cost)}{shippingResult.estimatedDays > 0 ? ` • ${shippingResult.estimatedDays} dias úteis` : ''}
             </span>
           )}
         </div>
@@ -873,10 +873,10 @@ export function CheckoutClient({
         {activeStep === 'form' ? (
           <>
             <h2 className="text-xl font-semibold text-slate-950">Dados do pedido</h2>
-            <p className="mt-2 text-sm text-slate-500">Preencha os dados para continuar.</p>
+            <p className="mt-2 text-sm text-slate-500">Preencha seus dados para continuar com a compra.</p>
             <div className="mt-5 grid gap-4">
               <div className="grid gap-2">
-                <span className="text-sm font-medium text-slate-700">Metodo de Entrega</span>
+                <span className="text-sm font-medium text-slate-700">Método de entrega</span>
                 <div className={`grid gap-3 ${showDeliverySelect ? 'grid-cols-2' : 'grid-cols-1 max-w-[220px]'}`}>
                   {deliverySettings.delivery_enabled ? (
                     <button
@@ -919,7 +919,7 @@ export function CheckoutClient({
                       <span className={`text-sm font-semibold ${
                         customer.delivery_method === 'pickup' ? 'text-blue-700' : 'text-slate-700'
                       }`}>
-                        Retirar na loja
+                        Retirada na loja
                       </span>
                     </button>
                   ) : null}
@@ -930,7 +930,7 @@ export function CheckoutClient({
 
               <div className="grid gap-2">
                 <div className="flex items-center gap-2">
-                  <label htmlFor="checkout-name" className="text-sm font-medium text-slate-700">Nome (Associado a conta)</label>
+                  <label htmlFor="checkout-name" className="text-sm font-medium text-slate-700">Nome (Associado à conta)</label>
                   <Link
                     href="/conta/dados"
                     className="inline-flex rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-200"
@@ -983,7 +983,7 @@ export function CheckoutClient({
                   className="h-11 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                 >
                   <option value="pix">Pix</option>
-                  <option value="credit_card">Cartao de Credito</option>
+                  <option value="credit_card">Cartão de Crédito</option>
                   <option value="cash">Dinheiro</option>
                 </select>
               </div>
@@ -1048,13 +1048,13 @@ export function CheckoutClient({
                 {appliedCoupon ? (
                   <p className="text-xs text-emerald-600">
                     Cupom <span className="font-semibold">{appliedCoupon.code}</span> aplicado
-                    ({appliedCoupon.discount_type === 'free_shipping' ? 'Frete gratis' : appliedCoupon.discount_type === 'percentage' ? `${appliedCoupon.discount_value}%` : formatMoney(appliedCoupon.discount_value)} de desconto)
+                    ({appliedCoupon.discount_type === 'free_shipping' ? 'Frete grátis' : appliedCoupon.discount_type === 'percentage' ? `${appliedCoupon.discount_value}%` : formatMoney(appliedCoupon.discount_value)} de desconto)
                   </p>
                 ) : null}
               </div>
 
               <div className="grid gap-2">
-                <label htmlFor="checkout-notes" className="text-sm font-medium text-slate-700">Observacao (Opcional)</label>
+                <label htmlFor="checkout-notes" className="text-sm font-medium text-slate-700">Observação (Opcional)</label>
                 <textarea
                   id="checkout-notes"
                   rows={2}
@@ -1072,7 +1072,7 @@ export function CheckoutClient({
                 disabled={!isFormValid}
                 className="inline-flex h-12 w-full items-center justify-center rounded-none bg-[var(--store-button-bg)] px-4 text-sm font-medium text-[var(--store-button-fg)] transition-colors hover:opacity-90 disabled:opacity-50"
               >
-                Continuar para revisao
+                Continuar para revisão
               </button>
             </div>
           </>
@@ -1099,7 +1099,7 @@ export function CheckoutClient({
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Metodo</span>
+                <span className="text-slate-500">Método</span>
                 <span className="font-medium text-slate-900">
                   {isDelivery ? 'Entrega (Delivery)' : 'Retirada na Loja'}
                 </span>
@@ -1107,7 +1107,7 @@ export function CheckoutClient({
               {isDelivery ? (
                 <div className="border-t border-slate-200 pt-4 space-y-3">
                   <div>
-                    <span className="text-xs text-slate-400">Endereco de entrega</span>
+                    <span className="text-xs text-slate-400">Endereço de entrega</span>
                     <div className="mt-1 text-sm text-slate-700">
                       {renderAddressCard()}
                     </div>
@@ -1116,14 +1116,14 @@ export function CheckoutClient({
                     <span className="text-slate-500">Frete</span>
                     <span className="font-medium text-slate-900">
                       {shippingResult && !shippingResult.notFound
-                        ? effectiveShippingCost === 0 ? 'Gratis' : formatMoney(effectiveShippingCost)
-                        : 'Nao calculado'}
+                        ? effectiveShippingCost === 0 ? 'Grátis' : formatMoney(effectiveShippingCost)
+                        : 'Não calculado'}
                     </span>
                   </div>
                   {shippingResult && !shippingResult.notFound && shippingResult.estimatedDays > 0 ? (
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500">Prazo</span>
-                      <span className="font-medium text-slate-900">Ate {shippingResult.estimatedDays} dias uteis</span>
+                      <span className="font-medium text-slate-900">Até {shippingResult.estimatedDays} dias úteis</span>
                     </div>
                   ) : null}
                 </div>
@@ -1136,7 +1136,7 @@ export function CheckoutClient({
               ) : null}
               {customer.notes ? (
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Observacao</span>
+                  <span className="text-slate-500">Observação</span>
                   <span className="max-w-[200px] text-right font-medium text-slate-900 italic">{customer.notes}</span>
                 </div>
               ) : null}
@@ -1176,8 +1176,8 @@ export function CheckoutClient({
         </div>
         <div className="mt-4 rounded-none border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-sm text-[#1d4ed8]">
           {isBuyNow
-            ? 'Compra direta. Ao confirmar, apenas este produto sera incluido no pedido.'
-            : 'Revise os dados ao lado. Ao confirmar, o pedido sera salvo neste navegador e o carrinho sera esvaziado.'}
+            ? 'Compra direta. Ao confirmar, apenas este produto será incluído no pedido.'
+            : 'Revise os dados ao lado. Ao confirmar, o pedido será salvo neste navegador e o carrinho será esvaziado.'}
         </div>
         <div className="mt-5 space-y-4">
           {checkoutItems.map((item) => (
@@ -1222,14 +1222,14 @@ export function CheckoutClient({
                 Frete{shippingResult.isFree ? ' (gratis)' : ''}
               </span>
               <span className="font-medium text-slate-900">
-                {effectiveShippingCost === 0 ? 'Gratis' : formatMoney(effectiveShippingCost)}
+                 {effectiveShippingCost === 0 ? 'Grátis' : formatMoney(effectiveShippingCost)}
               </span>
             </div>
           ) : null}
           {shippingResult && shippingResult.notFound ? (
             <div className="flex items-center gap-1 text-xs text-amber-600">
               <AlertTriangle className="h-3.5 w-3.5" />
-              CEP nao encontrado para calculo de frete.
+              CEP não encontrado para cálculo de frete.
             </div>
           ) : null}
 
@@ -1252,28 +1252,28 @@ export function CheckoutClient({
           <p className="font-medium text-slate-900">
             {isDelivery ? 'Entrega para' : deliverySettings.pickup_enabled ? 'Retirar na Loja' : 'Sem entrega definida'}
           </p>
-          <p className="mt-2">{customer.name || 'Nome ainda nao informado'}</p>
-          <p>{customer.phone || 'Telefone ainda nao informado'}</p>
+          <p className="mt-2">{customer.name || 'Nome ainda não informado'}</p>
+          <p>{customer.phone || 'Telefone ainda não informado'}</p>
           {isDelivery ? (
             <div className="mt-2">
               <div className="text-slate-500">
                 <MapPin className="mb-0.5 mr-1.5 inline-block h-3.5 w-3.5" />
-                <span className="text-xs">{customer.delivery_address || 'Endereco nao informado'}</span>
+                <span className="text-xs">{customer.delivery_address || 'Endereço não informado'}</span>
               </div>
             </div>
           ) : null}
           {shippingResult && !shippingResult.notFound ? (
             <p className="mt-2 text-slate-500">
               {FreightIcon ? <FreightIcon className={`mb-0.5 mr-1.5 inline-block h-3.5 w-3.5 ${freightIcon?.color || ''}`} /> : <Truck className="mb-0.5 mr-1.5 inline-block h-3.5 w-3.5" />}
-              {effectiveShippingCost === 0 ? 'Frete gratis' : `Frete: ${formatMoney(effectiveShippingCost)}`}
-              {shippingResult.estimatedDays > 0 ? ` \u2022 ${shippingResult.estimatedDays} dias uteis` : ''}
+              {effectiveShippingCost === 0 ? 'Frete grátis' : `Frete: ${formatMoney(effectiveShippingCost)}`}
+              {shippingResult.estimatedDays > 0 ? ` \u2022 ${shippingResult.estimatedDays} dias úteis` : ''}
             </p>
           ) : null}
           <div className="mt-3 border-t border-slate-200 pt-3">
             <p className="font-medium text-slate-900">Pagamento: {
               customer.payment_method === 'pix' ? 'Pix' :
-              customer.payment_method === 'credit_card' ? `Cartao em ${customer.installments}x` :
-              customer.payment_method === 'card_on_delivery' ? 'Cartao na Entrega' :
+              customer.payment_method === 'credit_card' ? `Cartão em ${customer.installments}x` :
+              customer.payment_method === 'card_on_delivery' ? 'Cartão na Entrega' :
               'Dinheiro'
             }</p>
           </div>
@@ -1287,15 +1287,15 @@ export function CheckoutClient({
           <div className="mx-4 w-full max-w-md rounded-none border border-slate-200 bg-white p-6 shadow-lg">
             <h3 className="text-lg font-semibold text-slate-950">Confirmar pedido</h3>
             <p className="mt-2 text-sm text-slate-500">
-              Deseja realmente finalizar este pedido? Apos a confirmacao, o pedido sera registrado e o carrinho liberado para uma nova compra.
+              Deseja realmente finalizar este pedido? Após a confirmação, o pedido será registrado e o carrinho liberado para uma nova compra.
             </p>
             <div className="mt-4 space-y-2 rounded border border-slate-100 bg-slate-50 p-3 text-sm">
               <p><span className="text-slate-500">Total:</span> <span className="font-semibold text-slate-900">{formatMoney(grandTotal)}</span></p>
               <p><span className="text-slate-500">Itens:</span> <span className="font-semibold text-slate-900">{checkoutTotalItems}</span></p>
               <p><span className="text-slate-500">Pagamento:</span> <span className="font-semibold text-slate-900">
                 {customer.payment_method === 'pix' ? 'Pix' :
-                 customer.payment_method === 'credit_card' ? `Cartao em ${customer.installments}x` :
-                 customer.payment_method === 'card_on_delivery' ? 'Cartao na Entrega' :
+                 customer.payment_method === 'credit_card' ? `Cartão em ${customer.installments}x` :
+                 customer.payment_method === 'card_on_delivery' ? 'Cartão na Entrega' :
                  'Dinheiro'}
               </span></p>
             </div>

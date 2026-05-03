@@ -189,7 +189,7 @@ export function StoreSearchBox({
             onBlur={() => {
               blurTimeoutRef.current = window.setTimeout(() => setIsOpen(false), 120)
             }}
-            placeholder="Buscar produtos, categorias, marcas..."
+            placeholder="O que você está procurando?"
             role="combobox"
             aria-expanded={isOpen}
             aria-autocomplete="list"

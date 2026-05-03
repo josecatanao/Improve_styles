@@ -13,6 +13,7 @@ export type HeaderNavigation = HeaderNavItem[]
 
 export type StoreSettings = {
   homepage_layout: string[]
+  hidden_home_sections: string[]
   announcement_active: boolean
   announcement_text: string
   announcement_link: string
@@ -50,6 +51,7 @@ const DEFAULT_HEADER_NAVIGATION: HeaderNavigation = [
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   homepage_layout: ['banners', 'promotions', 'featured', 'category-nav'],
+  hidden_home_sections: [],
   announcement_active: false,
   announcement_text: '',
   announcement_link: '',
@@ -118,11 +120,18 @@ function normalizeHeaderNavigation(input: unknown): HeaderNavigation {
   return deduped
 }
 
+function normalizeStringArray(input: unknown): string[] {
+  if (!Array.isArray(input)) return []
+  return input.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+}
+
 export function normalizeStoreSettings(input: StoreSettingsInput): StoreSettings {
   return {
     homepage_layout:
-      input?.homepage_layout?.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) ??
-      DEFAULT_STORE_SETTINGS.homepage_layout,
+      normalizeStringArray(input?.homepage_layout).length > 0
+        ? normalizeStringArray(input?.homepage_layout)
+        : DEFAULT_STORE_SETTINGS.homepage_layout,
+    hidden_home_sections: normalizeStringArray(input?.hidden_home_sections),
     announcement_active: Boolean(input?.announcement_active),
     announcement_text: input?.announcement_text?.trim() ?? '',
     announcement_link: input?.announcement_link?.trim() ?? '',

@@ -27,7 +27,13 @@ export function getCategorySectionSlug(sectionId: string) {
   return sectionId.startsWith('category:') ? sectionId.slice('category:'.length) : null
 }
 
-export function normalizeHomepageLayout(layoutInput: unknown, categorySectionIds: string[]) {
+export function normalizeHomepageLayout(
+  layoutInput: unknown,
+  categorySectionIds: string[],
+  hiddenSectionIds?: string[]
+) {
+  const hiddenSet = new Set(hiddenSectionIds ?? [])
+
   const raw =
     Array.isArray(layoutInput)
       ? layoutInput
@@ -47,6 +53,7 @@ export function normalizeHomepageLayout(layoutInput: unknown, categorySectionIds
   const normalized: string[] = []
 
   function append(sectionId: string) {
+    if (hiddenSet.has(sectionId)) return
     if (availableIdSet.has(sectionId)) {
       if (!normalized.includes(sectionId)) {
         normalized.push(sectionId)
@@ -155,15 +162,15 @@ export function getProductGallery(product: ProductListItem | ProductDetail) {
 
 export function getProductDisplayBadge(product: ProductListItem) {
   if (Number(product.compare_at_price ?? 0) > Number(product.price ?? 0)) {
-    return 'Promocao'
+    return '🔥 Oferta'
   }
 
   if (product.is_featured) {
-    return 'Destaque'
+    return '⭐ Mais vendido'
   }
 
   if (product.is_new) {
-    return 'Novo'
+    return '✨ Novo'
   }
 
   return null
@@ -379,12 +386,12 @@ export function getVariantStockMessage(stock: number) {
   const availability = getVariantAvailability(stock)
 
   if (availability === 'out_of_stock') {
-    return 'Indisponivel'
+    return 'Indisponível'
   }
 
   if (availability === 'low_stock') {
-    return `Ultimas ${stock} unidades`
+    return `🔥 Últimas ${stock} unidades`
   }
 
-  return `${stock} unidade(s) em estoque`
+  return `${stock} unidade(s) disponíveis`
 }

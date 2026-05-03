@@ -477,7 +477,7 @@ export async function getProductOverviewData(page = 1, limit = 20): Promise<Prod
       topInventoryProducts: [],
       recentProducts: [],
       setupRequired: false,
-      errorMessage: error?.message ?? 'Nao foi possivel carregar a visao geral.',
+      errorMessage: error?.message ?? 'Não foi possível carregar a visão geral.',
     }
   }
 
@@ -625,7 +625,7 @@ export async function getStorefrontData(options?: {
       selectedCategory: null,
       selectedSort: sort,
       setupRequired: false,
-      errorMessage: error?.message ?? 'Nao foi possivel carregar a vitrine.',
+      errorMessage: error?.message ?? 'Não foi possível carregar a vitrine.',
     }
   }
 
@@ -751,7 +751,7 @@ export async function getStoreCategoryBySlug(slug: string, options?: {
       products: [],
       categoryHighlights: storefront.categoryHighlights,
       setupRequired: false,
-      errorMessage: 'Categoria nao encontrada.',
+      errorMessage: 'Categoria não encontrada.',
     }
   }
 
@@ -861,7 +861,7 @@ export async function getPublicProductById(productId: string): Promise<{
       product: null,
       relatedProducts: [],
       setupRequired: false,
-      errorMessage: 'Produto indisponivel na loja.',
+      errorMessage: 'Produto indisponível na loja.',
     }
   }
 

@@ -24,8 +24,8 @@ type ComputedNavItem =
   | { type: 'category'; label: string; href: string }
 
 const NAV_ITEM_REGISTRY: Record<string, { label: string; href: string }> = {
-  home: { label: 'Inicio', href: '/' },
-  promocoes: { label: 'Promocoes', href: '/?sort=price_asc' },
+  home: { label: 'Início', href: '/' },
+  promocoes: { label: '🔥 Promoções', href: '/?sort=price_asc' },
   novidades: { label: 'Novidades', href: '/?sort=recent' },
   mais_vendidos: { label: 'Mais vendidos', href: '/?sort=popular' },
 }

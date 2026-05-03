@@ -57,7 +57,7 @@ export default async function ProductDetailPage({
       <StoreShell categories={categories}>
         <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="rounded-none border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-            Produto indisponivel.
+            Produto indisponível.
           </div>
         </main>
       </StoreShell>
@@ -75,7 +75,7 @@ export default async function ProductDetailPage({
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
           <Link href="/" className="transition-colors hover:text-slate-900">
-            Inicio
+              Início
           </Link>
           {product.category?.trim() ? (
             <>
@@ -93,7 +93,7 @@ export default async function ProductDetailPage({
 
         {product.short_description?.trim() || product.description?.trim() ? (
           <section className="rounded-none border border-slate-200 bg-white p-6">
-            <h2 className="text-xl font-semibold text-slate-950">Descricao do produto</h2>
+            <h2 className="text-xl font-semibold text-slate-950">Descrição do produto</h2>
             {product.short_description?.trim() ? (
               <p className="mt-3 text-base font-medium text-slate-900">{product.short_description.trim()}</p>
             ) : null}
@@ -105,7 +105,7 @@ export default async function ProductDetailPage({
 
         {product.show_specs && (product.weight != null || product.width != null || product.height != null || product.length != null) ? (
           <section className="rounded-none border border-slate-200 bg-white p-6">
-            <h2 className="text-xl font-semibold text-slate-950">Especificacoes tecnicas</h2>
+            <h2 className="text-xl font-semibold text-slate-950">Especificações técnicas</h2>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {product.weight != null ? (
                 <div className="rounded-none border border-slate-100 bg-slate-50 p-3">
@@ -140,7 +140,7 @@ export default async function ProductDetailPage({
         <section className="space-y-4">
           <div>
             <h2 className="text-xl font-semibold text-slate-950">Produtos relacionados</h2>
-            <p className="text-sm text-slate-500">Mais opcoes da mesma categoria ou marca.</p>
+            <p className="text-sm text-slate-500">Mais opções da mesma categoria ou marca.</p>
           </div>
 
           {productResult.relatedProducts.length > 0 ? (
@@ -151,7 +151,7 @@ export default async function ProductDetailPage({
             </div>
           ) : (
             <div className="rounded-none border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-              Ainda nao ha produtos relacionados publicados.
+              Ainda não há produtos relacionados publicados.
             </div>
           )}
         </section>

@@ -10,6 +10,7 @@ import {
   deleteCustomerAddress,
   setPrimaryAddress,
 } from '@/lib/customer-addresses'
+import { useConfirm } from '@/components/ui/feedback-provider'
 
 function formatZipCode(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 8)
@@ -18,7 +19,7 @@ function formatZipCode(value: string) {
 }
 
 function formatGpsDate(value: string | null) {
-  if (!value) return 'Ainda nao capturada'
+  if (!value)     return 'Ainda não capturada'
   return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',
     timeStyle: 'short',
@@ -26,6 +27,7 @@ function formatGpsDate(value: string | null) {
 }
 
 export function AddressBookForm({ initialAddresses }: { initialAddresses: CustomerAddress[] }) {
+  const confirm = useConfirm()
   const formRef = useRef<HTMLDivElement>(null)
   const [addresses, setAddresses] = useState<CustomerAddress[]>(initialAddresses)
   const [showForm, setShowForm] = useState(false)
@@ -111,7 +113,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
 
   async function handleLocate() {
     if (!navigator.geolocation) {
-      setMessage({ type: 'error', text: 'Geolocalizacao nao suportada neste navegador.' })
+      setMessage({ type: 'error', text: 'Geolocalização não suportada neste navegador.' })
       return
     }
 
@@ -126,12 +128,12 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
         setIsLocating(false)
         setMessage({
           type: 'success',
-          text: 'Localizacao capturada com sucesso. Agora revise os dados e salve.',
+          text: 'Localização capturada com sucesso. Agora revise os dados e salve.',
         })
       },
       () => {
         setIsLocating(false)
-        setMessage({ type: 'error', text: 'Nao foi possivel capturar sua localizacao.' })
+        setMessage({ type: 'error', text: 'Não foi possível capturar sua localização.' })
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
@@ -145,7 +147,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
     const { data: authData } = await supabase.auth.getUser()
     if (!authData.user) {
       setIsSaving(false)
-      setMessage({ type: 'error', text: 'Sessao expirada. Entre novamente.' })
+      setMessage({ type: 'error', text: 'Sessão expirada. Entre novamente.' })
       return
     }
 
@@ -172,21 +174,32 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
       setAddresses((prev) => [...prev, result.address!])
       resetForm()
       setShowForm(false)
-      setMessage({ type: 'success', text: 'Endereco salvo com sucesso.' })
+      setMessage({ type: 'success', text: 'Endereço salvo com sucesso.' })
     } else {
-      setMessage({ type: 'error', text: result.error || 'Nao foi possivel salvar o endereco.' })
+      setMessage({ type: 'error', text: result.error || 'Não foi possível salvar o endereço.' })
     }
   }
 
   async function handleDelete(addressId: string) {
     if (deletingId) return
+
+    const confirmed = await confirm({
+      title: 'Excluir endereco?',
+      description: 'Tem certeza que deseja excluir este endereco? Esta acao nao pode ser desfeita.',
+      confirmLabel: 'Excluir endereco',
+      cancelLabel: 'Cancelar',
+      variant: 'destructive',
+    })
+
+    if (!confirmed) return
+
     setDeletingId(addressId)
     setMessage(null)
 
     const { data: authData } = await supabase.auth.getUser()
     if (!authData.user) {
       setDeletingId(null)
-      setMessage({ type: 'error', text: 'Sessao expirada.' })
+      setMessage({ type: 'error', text: 'Sessão expirada.' })
       return
     }
 
@@ -194,9 +207,9 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
 
     if (result.success) {
       setAddresses((prev) => prev.filter((a) => a.id !== addressId))
-      setMessage({ type: 'success', text: 'Endereco excluido com sucesso.' })
+      setMessage({ type: 'success', text: 'Endereço excluído com sucesso.' })
     } else {
-      setMessage({ type: 'error', text: result.error || 'Nao foi possivel excluir o endereco.' })
+      setMessage({ type: 'error', text: result.error || 'Não foi possível excluir o endereço.' })
     }
 
     setDeletingId(null)
@@ -210,7 +223,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
     const { data: authData } = await supabase.auth.getUser()
     if (!authData.user) {
       setSettingPrimaryId(null)
-      setMessage({ type: 'error', text: 'Sessao expirada.' })
+      setMessage({ type: 'error', text: 'Sessão expirada.' })
       return
     }
 
@@ -223,7 +236,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
           .sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
       )
     } else {
-      setMessage({ type: 'error', text: result.error || 'Nao foi possivel definir endereco principal.' })
+      setMessage({ type: 'error', text: result.error || 'Não foi possível definir endereço principal.' })
     }
 
     setSettingPrimaryId(null)
@@ -235,10 +248,10 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
     <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_16px_40px_-36px_rgba(15,23,42,0.35)] sm:p-6">
       <div className="flex flex-col gap-4 border-b border-slate-100 pb-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">Enderecos</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Meus enderecos</h2>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">Endereços</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Meus endereços</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-            Gerencie seus enderecos para facilitar o checkout e a entrega dos seus pedidos.
+            Gerencie seus endereços para facilitar o checkout e a entrega dos seus pedidos.
           </p>
         </div>
 
@@ -249,7 +262,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
             className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#0b2f6f] px-4 text-sm font-semibold text-white shadow-[0_18px_32px_-22px_rgba(11,47,111,0.85)] transition-colors hover:bg-[#0a285f]"
           >
             <Plus className="h-4 w-4" />
-            Adicionar novo endereco
+            Adicionar novo endereço
           </button>
         ) : null}
       </div>
@@ -286,7 +299,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(220px,0.8fr)] lg:items-center">
                 <div>
                   <h3 className="text-[1.1rem] font-semibold tracking-tight text-slate-950">
-                    {addr.label || 'Endereco'}
+                    {addr.label || 'Endereço'}
                   </h3>
                   <div className="mt-2 space-y-1 text-sm leading-6 text-slate-600">
                     <p className="font-medium text-slate-800">
@@ -306,7 +319,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
                         <MapPin className="h-5 w-5" />
                       </span>
                       <div>
-                        <p className="text-base font-semibold text-slate-900">Localizacao capturada</p>
+                        <p className="text-base font-semibold text-slate-900">Localização capturada</p>
                         <p className="mt-1 text-sm text-slate-500">{formatGpsDate(addr.gps_captured_at)}</p>
                       </div>
                     </div>
@@ -315,7 +328,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
                       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
                         <MapPin className="h-5 w-5" />
                       </span>
-                      <p className="text-sm text-slate-400">Sem localizacao GPS</p>
+                      <p className="text-sm text-slate-400">Sem localização GPS</p>
                     </div>
                   )}
 
@@ -359,8 +372,8 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
       ) : showForm ? null : (
         <div className="mt-6 rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
           <MapPin className="mx-auto h-10 w-10 text-slate-300" />
-          <p className="mt-4 text-sm font-medium text-slate-500">Nenhum endereco cadastrado ainda.</p>
-          <p className="mt-1 text-sm text-slate-400">Adicione seu primeiro endereco para facilitar o checkout.</p>
+          <p className="mt-4 text-sm font-medium text-slate-500">Nenhum endereço cadastrado ainda.</p>
+          <p className="mt-1 text-sm text-slate-400">Adicione seu primeiro endereço para facilitar o checkout.</p>
         </div>
       )}
 
@@ -373,8 +386,8 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
           >
             <div className="mb-5 flex items-start justify-between">
               <div>
-                <h3 className="text-[1.35rem] font-semibold tracking-tight text-slate-950">Novo endereco</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-500">Preencha as informacoes do novo endereco.</p>
+                <h3 className="text-[1.35rem] font-semibold tracking-tight text-slate-950">Novo endereço</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-500">Preencha as informações do novo endereço.</p>
               </div>
               <button
                 type="button"
@@ -425,7 +438,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
 
               <div className="grid gap-3.5 sm:grid-cols-2">
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-slate-700">Numero</span>
+                  <span className="text-sm font-medium text-slate-700">Número</span>
                   <input
                     required
                     type="text"
@@ -489,7 +502,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
               </div>
 
               <label className="grid gap-2">
-                <span className="text-sm font-medium text-slate-700">Referencia (opcional)</span>
+                  <span className="text-sm font-medium text-slate-700">Referência (opcional)</span>
                 <input
                   type="text"
                   value={reference}
@@ -502,7 +515,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
               <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-4 py-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">Localizacao GPS (opcional)</p>
+                    <p className="text-sm font-semibold text-slate-900">Localização GPS (opcional)</p>
                     <p className="mt-1 text-sm text-slate-500">
                       {hasMap
                         ? `${latitude?.toFixed(6)}, ${longitude?.toFixed(6)}`
@@ -517,7 +530,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
                     className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-[#0b2f6f] transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
                   >
                     {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation2 className="h-4 w-4" />}
-                    Capturar localizacao
+                    Capturar localização
                   </button>
                 </div>
               </div>
@@ -525,7 +538,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
               {hasMap ? (
                 <div className="overflow-hidden rounded-[1rem] border border-slate-200">
                   <iframe
-                    title="Mapa do endereco"
+                    title="Mapa do endereço"
                     width="100%"
                     height="220"
                     style={{ border: 0, display: 'block' }}
@@ -552,7 +565,7 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
                 className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#0b2f6f] px-6 text-sm font-semibold text-white shadow-[0_18px_32px_-22px_rgba(11,47,111,0.85)] transition-colors hover:bg-[#0a285f] disabled:opacity-60"
               >
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Salvar endereco
+                Salvar endereço
               </button>
             </div>
           </div>

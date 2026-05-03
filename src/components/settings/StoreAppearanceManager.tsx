@@ -5,7 +5,7 @@ import { AlertTriangle, Check, ChevronRight, ImagePlus, Info, Loader2, ShoppingC
 import { saveStoreAppearance, uploadStoreLogoAction } from '@/app/dashboard/configuracoes/actions'
 import type { DashboardTheme, StoreSettings } from '@/lib/store-settings'
 import { getContrastingTextColor, getContrastRatio, getWcagStatus } from '@/lib/store-settings'
-import { useToast } from '@/components/ui/feedback-provider'
+import { useConfirm, useToast } from '@/components/ui/feedback-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -44,6 +44,7 @@ export function StoreAppearanceManager({
   schemaReady: boolean
 }) {
   const showToast = useToast()
+  const confirm = useConfirm()
   const [form, setForm] = useState<AppearanceFormState>({
     storeName: initialSettings.store_name,
     storeLogoUrl: initialSettings.store_logo_url ?? '',
@@ -139,7 +140,17 @@ export function StoreAppearanceManager({
     setPreviewLogoUrl(objectUrl)
   }
 
-  function handleRemoveLogo() {
+  async function handleRemoveLogo() {
+    const confirmed = await confirm({
+      title: 'Remover logo?',
+      description: 'Tem certeza que deseja remover a logo da loja? A logo atual sera excluida apos salvar as alteracoes.',
+      confirmLabel: 'Remover logo',
+      cancelLabel: 'Cancelar',
+      variant: 'destructive',
+    })
+
+    if (!confirmed) return
+
     if (previewObjectUrlRef.current) {
       URL.revokeObjectURL(previewObjectUrlRef.current)
       previewObjectUrlRef.current = null
