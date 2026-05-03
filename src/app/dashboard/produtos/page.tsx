@@ -1,71 +1,17 @@
 import Link from 'next/link'
-import { ArrowRight, BarChart3, ChartColumn, FolderKanban, PackageSearch, Tags, TriangleAlert } from 'lucide-react'
+import { ArrowRight, BarChart3, ChartColumn, FolderKanban, TriangleAlert } from 'lucide-react'
 import { ProductMetricsGrid } from '@/components/products/ProductMetricsGrid'
 import { ProductSetupNotice } from '@/components/products/ProductSetupNotice'
 import { ProductWorkspaceHeader } from '@/components/products/ProductWorkspaceHeader'
 import { getProductMetrics, getProductOverviewData, getLowStockProducts } from '@/lib/products'
 import { getProductStatusClasses, getProductStatusLabel } from '@/lib/product-shared'
+import { HorizontalBarChart } from '@/components/ui/chart-components'
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   }).format(value)
-}
-
-function BarChartCard({
-  title,
-  description,
-  icon: Icon,
-  items,
-  tone = 'dark',
-}: {
-  title: string
-  description: string
-  icon: typeof ChartColumn
-  items: Array<{ label: string; value: number }>
-  tone?: 'dark' | 'blue'
-}) {
-  const maxValue = Math.max(...items.map((item) => item.value), 1)
-  const barClass = tone === 'blue' ? 'bg-blue-600' : 'bg-slate-900'
-  const iconClass = tone === 'blue' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700'
-
-  return (
-    <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${iconClass}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-          <p className="text-sm text-slate-500">{description}</p>
-        </div>
-      </div>
-
-      <div className="mt-6 space-y-4">
-        {items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-            Nenhum dado disponivel para este grafico.
-          </div>
-        ) : (
-          items.map((item) => (
-            <div key={item.label} className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
-                <span className="text-sm text-slate-500">{item.value}</span>
-              </div>
-              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-full rounded-full ${barClass}`}
-                  style={{ width: `${Math.max((item.value / maxValue) * 100, 8)}%` }}
-                />
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </section>
-  )
 }
 
 export default async function ProductsPage() {
@@ -76,7 +22,7 @@ export default async function ProductsPage() {
   ])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <ProductWorkspaceHeader
         title="Produtos"
         description="Gerencie o cadastro e acompanhe o catalogo da sua loja em uma area organizada."
@@ -123,88 +69,90 @@ export default async function ProductsPage() {
           ) : null}
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <BarChartCard
+            <HorizontalBarChart
               title="Produtos por categoria"
-              description="Mostra onde o catalogo esta mais concentrado hoje."
-              icon={Tags}
+              description="Onde o catalogo esta mais concentrado hoje."
               items={overview.categoryBreakdown}
             />
-            <BarChartCard
+            <HorizontalBarChart
               title="Faixas de estoque"
-              description="Ajuda a identificar distribuicao entre ruptura, baixo volume e estoque saudavel."
-              icon={PackageSearch}
+              description="Distribuicao entre ruptura, baixo volume e estoque saudavel."
               items={overview.stockBands}
-              tone="blue"
             />
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-            <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+            <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                  <BarChart3 className="h-5 w-5" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <BarChart3 className="h-4 w-4" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Produtos com maior valor em estoque</h2>
-                  <p className="text-sm text-slate-500">Produtos que concentram mais capital parado no catalogo.</p>
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Maior valor em estoque</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Produtos que concentram mais capital parado.</p>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-4 space-y-2">
                 {overview.topInventoryProducts.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
                     Nenhum produto disponivel para analise.
                   </div>
                 ) : (
-                  overview.topInventoryProducts.map((product, index) => (
+                  overview.topInventoryProducts.slice(0, 3).map((product, index) => (
                     <div
                       key={product.id}
-                      className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 md:grid-cols-[auto_minmax(0,1fr)_auto_auto]"
+                      className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 md:grid-cols-[auto_minmax(0,1fr)_auto_auto] dark:border-slate-700 dark:bg-slate-800/50"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-semibold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600">
                         {index + 1}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">{product.name}</p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {product.stock} un. • {formatMoney(product.price)} por unidade
+                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">{product.name}</p>
+                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          {product.stock} un. • {formatMoney(product.price)} por un.
                         </p>
                       </div>
-                      <div className="text-sm text-slate-500">
-                        <span className="font-medium text-slate-900">{formatMoney(product.value)}</span>
+                      <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+                        {formatMoney(product.value)}
                       </div>
                       <Link
                         href={`/dashboard/produtos/${product.id}/editar`}
-                        className="inline-flex items-center justify-center rounded-lg bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100"
+                        className="inline-flex items-center justify-center rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700"
                       >
                         Abrir
                       </Link>
                     </div>
                   ))
                 )}
+                {overview.topInventoryProducts.length > 3 && (
+                  <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                    +{overview.topInventoryProducts.length - 3} outros produtos
+                  </p>
+                )}
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-                  <ChartColumn className="h-5 w-5" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  <ChartColumn className="h-4 w-4" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Status do catalogo</h2>
-                  <p className="text-sm text-slate-500">Distribuicao real entre itens ativos, ocultos e em rascunho.</p>
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Status do catalogo</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Distribuicao entre ativos, ocultos e rascunho.</p>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-4 space-y-1.5">
                 {overview.statusBreakdown.map((item) => (
                   <div
                     key={item.label}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/50"
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getProductStatusClasses(
+                        className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${getProductStatusClasses(
                           item.label === 'Ativos'
                             ? 'active'
                             : item.label === 'Rascunhos'
@@ -223,80 +171,79 @@ export default async function ProductsPage() {
                               : getProductStatusLabel('hidden')}
                       </span>
                     </div>
-                    <span className="text-lg font-semibold text-slate-900">{item.value}</span>
+                    <span className="text-base font-semibold text-slate-900 dark:text-slate-50">{item.value}</span>
                   </div>
                 ))}
               </div>
             </section>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <BarChartCard
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <HorizontalBarChart
               title="Marcas com mais itens"
-              description="Ajuda a entender o peso de cada marca no sortimento."
-              icon={FolderKanban}
+              description="Peso de cada marca no sortimento do catalogo."
               items={overview.brandBreakdown}
             />
 
-            <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                    <FolderKanban className="h-5 w-5" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    <FolderKanban className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Ultimos produtos cadastrados</h2>
-                    <p className="text-sm text-slate-500">Acompanhamento rapido dos itens mais recentes.</p>
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Ultimos produtos cadastrados</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Acompanhamento rapido dos itens mais recentes.</p>
                   </div>
                 </div>
                 <Link
                   href="/dashboard/produtos/catalogo"
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600"
                 >
                   Ver catalogo
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-4 space-y-2">
                 {overview.recentProducts.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
                     Nenhum produto cadastrado ainda.
                   </div>
                 ) : (
-                  overview.recentProducts.map((product) => {
+                  overview.recentProducts.slice(0, 3).map((product) => {
                     const cover = product.product_images?.[0]?.public_url
 
                     return (
                       <div
                         key={product.id}
-                        className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                        className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/50"
                       >
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white dark:bg-slate-700">
                           {cover ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={cover} alt={product.name} className="h-full w-full object-cover" />
                           ) : (
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
                               sem foto
                             </span>
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-slate-900">{product.name}</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">{product.name}</p>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                             <span>{formatMoney(Number(product.price ?? 0))}</span>
-                            <span className="text-slate-300">•</span>
+                            <span className="text-slate-300 dark:text-slate-600">•</span>
                             <span>{product.stock} em estoque</span>
                           </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                             <span
-                              className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${getProductStatusClasses(product.status)}`}
+                              className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${getProductStatusClasses(product.status)}`}
                             >
                               {getProductStatusLabel(product.status)}
                             </span>
                             {product.product_variants?.length ? (
-                              <span className="text-[11px] text-slate-500">
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400">
                                 {product.product_variants.length} variacao(oes)
                               </span>
                             ) : null}
@@ -305,6 +252,11 @@ export default async function ProductsPage() {
                       </div>
                     )
                   })
+                )}
+                {overview.recentProducts.length > 3 && (
+                  <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                    +{overview.recentProducts.length - 3} outros produtos
+                  </p>
                 )}
               </div>
             </section>

@@ -90,7 +90,8 @@ export async function saveStoreAppearance(input: {
 
   revalidatePath('/')
   revalidatePath('/dashboard')
-  revalidatePath('/dashboard/configuracoes')
+  revalidatePath('/dashboard/configuracoes', 'layout')
+  revalidatePath('/dashboard/configuracoes/loja')
   revalidateTag('store-branding', 'max')
   refresh()
   return { success: true }
@@ -134,7 +135,7 @@ export async function saveDashboardAppearance(input: {
   }
 
   revalidatePath('/dashboard')
-  revalidatePath('/dashboard/configuracoes')
+  revalidatePath('/dashboard/configuracoes', 'layout')
   revalidatePath('/dashboard/configuracoes/dashboard')
   revalidateTag('store-branding', 'max')
   refresh()
@@ -182,7 +183,8 @@ export async function saveDeliverySettings(input: {
   }
 
   revalidatePath('/dashboard')
-  revalidatePath('/dashboard/configuracoes')
+  revalidatePath('/dashboard/configuracoes', 'layout')
+  revalidatePath('/dashboard/configuracoes/entrega')
   revalidatePath('/checkout')
   revalidateTag('store-branding', 'max')
   refresh()
@@ -217,7 +219,8 @@ export async function saveHeaderNavigation(input: HeaderNavigation) {
 
   revalidatePath('/')
   revalidatePath('/dashboard')
-  revalidatePath('/dashboard/configuracoes')
+  revalidatePath('/dashboard/configuracoes', 'layout')
+  revalidatePath('/dashboard/configuracoes/loja')
   revalidateTag('store-branding', 'max')
   refresh()
   return { success: true }

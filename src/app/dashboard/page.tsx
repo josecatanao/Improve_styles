@@ -19,18 +19,12 @@ import { getProductStatusClasses, getProductStatusLabel } from '@/lib/product-sh
 import { getCustomerProfiles } from '@/lib/customers'
 import { getStoreOrders, type StoreOrder } from '@/lib/orders'
 import { getProductMetrics, getProductOverviewData, getLowStockProducts } from '@/lib/products'
+import { HorizontalBarChart, TimelineBarChart } from '@/components/ui/chart-components'
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  }).format(value)
-}
-
-function formatCompactNumber(value: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
   }).format(value)
 }
 
@@ -178,120 +172,16 @@ function MetricCard({
   }
 
   return (
-    <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
-          <p className="mt-2 text-sm text-slate-500">{helper}</p>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{title}</p>
+          <p className="mt-1.5 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">{value}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{helper}</p>
         </div>
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${toneStyles[tone]}`}>
-          <Icon className="h-5 w-5" />
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${toneStyles[tone]}`}>
+          <Icon className="h-4 w-4" />
         </div>
-      </div>
-    </section>
-  )
-}
-
-function ProgressChartCard({
-  title,
-  description,
-  items,
-  tone = 'slate',
-}: {
-  title: string
-  description: string
-  items: Array<{ label: string; value: number; helper?: string }>
-  tone?: 'slate' | 'blue'
-}) {
-  const maxValue = Math.max(...items.map((item) => item.value), 1)
-  const barClass = tone === 'blue' ? 'bg-blue-600' : 'bg-slate-900'
-
-  return (
-    <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-        <p className="mt-1 text-sm text-slate-500">{description}</p>
-      </div>
-
-      <div className="mt-6 space-y-4">
-        {items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-            Nenhum dado disponível para este bloco.
-          </div>
-        ) : (
-          items.map((item) => (
-            <div key={item.label} className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
-                  {item.helper ? <p className="text-xs text-slate-500">{item.helper}</p> : null}
-                </div>
-                <span className="text-sm font-medium text-slate-600">{formatCompactNumber(item.value)}</span>
-              </div>
-              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-full rounded-full ${barClass}`}
-                  style={{ width: `${Math.max((item.value / maxValue) * 100, 6)}%` }}
-                />
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </section>
-  )
-}
-
-function SalesTimelineCard({
-  items,
-  totalRevenue,
-  totalOrders,
-}: {
-  items: Array<{ key: string; label: string; revenue: number; orders: number }>
-  totalRevenue: number
-  totalOrders: number
-}) {
-  const maxRevenue = Math.max(...items.map((item) => item.revenue), 1)
-
-  return (
-    <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">Vendas nos últimos 7 dias</h2>
-          <p className="mt-1 text-sm text-slate-500">Receita e volume recente para leitura rápida da operação.</p>
-        </div>
-        <div className="grid gap-2 text-right">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Receita total</p>
-            <p className="text-lg font-semibold text-slate-900">{formatMoney(totalRevenue)}</p>
-          </div>
-          <div>
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Pedidos no período</p>
-            <p className="text-sm font-medium text-slate-600">{totalOrders}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 grid h-[220px] grid-cols-7 items-end gap-3">
-        {items.map((item) => (
-          <div key={item.key} className="flex h-full flex-col justify-end gap-3">
-            <div className="text-center">
-              <p className="text-[11px] font-medium text-slate-500">{item.orders} pedidos</p>
-            </div>
-            <div className="flex h-full items-end">
-              <div
-                className="w-full rounded-t-2xl bg-slate-900 transition-all"
-                style={{ height: `${Math.max((item.revenue / maxRevenue) * 100, item.revenue > 0 ? 14 : 2)}%` }}
-                title={`${item.label}: ${formatMoney(item.revenue)}`}
-              />
-            </div>
-            <div className="space-y-1 text-center">
-              <p className="text-xs font-semibold text-slate-700">{item.label}</p>
-              <p className="text-[11px] text-slate-500">{formatMoney(item.revenue)}</p>
-            </div>
-          </div>
-        ))}
       </div>
     </section>
   )
@@ -328,7 +218,7 @@ export default async function DashboardPage() {
     productMetrics.setupRequired || productOverview.setupRequired || ordersResult.setupRequired || customersResult.setupRequired
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Visão Geral</h2>
@@ -418,158 +308,157 @@ export default async function DashboardPage() {
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)]">
-        <SalesTimelineCard
+        <TimelineBarChart
+          title="Vendas nos ultimos 7 dias"
+          description="Receita diaria para leitura rapida da operacao."
           items={salesTimeline}
-          totalRevenue={salesTimeline.reduce((sum, item) => sum + item.revenue, 0)}
-          totalOrders={salesTimeline.reduce((sum, item) => sum + item.orders, 0)}
         />
 
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-              <TrendingUp className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <TrendingUp className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">Resumo comercial</h2>
-              <p className="text-sm text-slate-500">Leitura rápida dos pontos mais importantes da operação.</p>
+              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Resumo comercial</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Leitura rapida dos pontos mais importantes da operacao.</p>
             </div>
           </div>
 
-          <div className="mt-6 space-y-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <p className="text-sm text-slate-500">Receita de pedidos concluidos</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{formatMoney(completedRevenue)}</p>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/50">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Receita concluida</p>
+              <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">{formatMoney(completedRevenue)}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <p className="text-sm text-slate-500">Base com endereco preenchido</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/50">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Endereco preenchido</p>
+              <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">
                 {customersWithAddressRate.toFixed(0).replace('.', ',')}%
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <p className="text-sm text-slate-500">Produtos ativos</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{productMetrics.activeProducts}</p>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/50">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Produtos ativos</p>
+              <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">{productMetrics.activeProducts}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <p className="text-sm text-slate-500">Capital estimado em estoque</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{formatMoney(productMetrics.inventoryValue)}</p>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/50">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Capital em estoque</p>
+              <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">{formatMoney(productMetrics.inventoryValue)}</p>
             </div>
           </div>
         </section>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <ProgressChartCard
+        <HorizontalBarChart
           title="Pedidos por status"
-          description="Mostra onde a operacao esta concentrada no fluxo atual."
+          description="Distribuicao dos pedidos no fluxo operacional atual."
           items={orderStatusBreakdown}
         />
-        <ProgressChartCard
+        <HorizontalBarChart
           title="Formas de pagamento"
-          description="Ajuda a entender como os clientes estao comprando."
+          description="Como os clientes estao preferindo pagar."
           items={paymentBreakdown}
-          tone="blue"
         />
-        <ProgressChartCard
+        <HorizontalBarChart
           title="Metodo de entrega"
-          description="Comparativo entre entrega e retirada."
+          description="Comparativo entre delivery e retirada na loja."
           items={deliveryBreakdown}
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-                <ShoppingBag className="h-5 w-5" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                <ShoppingBag className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">Produtos mais vendidos</h2>
-                <p className="text-sm text-slate-500">Itens que mais geraram volume e faturamento nos pedidos.</p>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Produtos mais vendidos</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Itens que mais geraram faturamento.</p>
               </div>
             </div>
             <Link
               href="/dashboard/pedidos"
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700"
             >
-              Abrir pedidos
-              <ArrowRight className="h-3.5 w-3.5" />
+              Pedidos
+              <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 space-y-2">
             {topSellingProducts.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                Ainda nao existem pedidos suficientes para rankear produtos vendidos.
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
+                Ainda nao existem pedidos suficientes.
               </div>
             ) : (
               topSellingProducts.map((product, index) => (
                 <div
                   key={`${product.name}-${index}`}
-                  className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 md:grid-cols-[auto_minmax(0,1fr)_auto]"
+                  className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 md:grid-cols-[auto_minmax(0,1fr)_auto] dark:border-slate-700 dark:bg-slate-800/50"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-semibold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600">
                     {index + 1}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900">{product.name}</p>
-                    <p className="mt-1 text-xs text-slate-500">{product.quantity} unidades vendidas</p>
+                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">{product.name}</p>
+                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{product.quantity} un. vendidas</p>
                   </div>
-                  <div className="text-sm font-semibold text-slate-900">{formatMoney(product.revenue)}</div>
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">{formatMoney(product.revenue)}</div>
                 </div>
               ))
             )}
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                <Truck className="h-5 w-5" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <Truck className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">Ultimos pedidos</h2>
-                <p className="text-sm text-slate-500">Pedidos mais recentes para acompanhamento imediato.</p>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Ultimos pedidos</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Acompanhamento imediato dos pedidos recentes.</p>
               </div>
             </div>
             <Link
               href="/dashboard/pedidos"
-              className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600"
             >
               Ver tudo
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 space-y-2">
             {recentOrders.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
                 Nenhum pedido registrado ainda.
               </div>
             ) : (
-              recentOrders.map((order) => (
+              recentOrders.slice(0, 4).map((order) => (
                 <div
                   key={order.id}
-                  className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 md:grid-cols-[minmax(0,1fr)_auto]"
+                  className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto] dark:border-slate-700 dark:bg-slate-800/50"
                 >
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-slate-900">{order.customer_name}</p>
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${getOrderStatusClasses(order.status)}`}>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">{order.customer_name}</p>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${getOrderStatusClasses(order.status)}`}>
                         {getOrderStatusLabel(order.status)}
                       </span>
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                       <span>{formatDate(order.created_at)}</span>
-                      <span className="text-slate-300">•</span>
+                      <span className="text-slate-300 dark:text-slate-600">•</span>
                       <span>{order.total_items} itens</span>
-                      <span className="text-slate-300">•</span>
+                      <span className="text-slate-300 dark:text-slate-600">•</span>
                       <span>{getPaymentLabel(order.payment_method)}</span>
                     </div>
                   </div>
-                  <div className="text-sm font-semibold text-slate-900">{formatMoney(order.total_price)}</div>
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">{formatMoney(order.total_price)}</div>
                 </div>
               ))
             )}
@@ -577,107 +466,111 @@ export default async function DashboardPage() {
         </section>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <ProgressChartCard
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <HorizontalBarChart
           title="Categorias com mais itens"
-          description="Mostra em quais frentes o catalogo esta mais concentrado."
+          description="Em quais frentes o catalogo esta mais concentrado."
           items={productOverview.categoryBreakdown}
-          tone="blue"
         />
 
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-                <AlertTriangle className="h-5 w-5" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                <AlertTriangle className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">Alertas operacionais</h2>
-                <p className="text-sm text-slate-500">Itens que pedem atencao rapida na operacao.</p>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Alertas operacionais</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Itens que pedem atencao rapida.</p>
               </div>
             </div>
             <Link
               href="/dashboard/produtos/catalogo"
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700"
             >
-              Ver catalogo
-              <ArrowRight className="h-3.5 w-3.5" />
+              Catalogo
+              <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
 
-          <div className="mt-6 space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="mt-4 space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-500">Estoque baixo</p>
-                  <Boxes className="h-4 w-4 text-slate-400" />
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Estoque baixo</p>
+                  <Boxes className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                 </div>
-                <p className="mt-2 text-2xl font-semibold text-slate-900">{productMetrics.lowStockCount}</p>
-                <p className="mt-1 text-xs text-slate-500">Produtos com 3 unidades ou menos.</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-50">{productMetrics.lowStockCount}</p>
+                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">3 un. ou menos.</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-500">Clientes sem WhatsApp</p>
-                  <UserRound className="h-4 w-4 text-slate-400" />
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Sem WhatsApp</p>
+                  <UserRound className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                 </div>
-                <p className="mt-2 text-2xl font-semibold text-slate-900">
+                <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-50">
                   {Math.max(customersResult.summary.total - customersResult.summary.withWhatsapp, 0)}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">Base ainda sem canal direto de contato.</p>
+                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Sem canal de contato.</p>
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="max-h-[180px] space-y-1.5 overflow-y-auto">
               {lowStockProducts.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                  Nenhum produto critico de estoque no momento.
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
+                  Nenhum produto critico no momento.
                 </div>
               ) : (
-                lowStockProducts.map((product) => (
+                lowStockProducts.slice(0, 6).map((product) => (
                   <div
                     key={product.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                    className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/50"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">{product.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">Status: {product.status}</p>
+                      <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-50">{product.name}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Status: {product.status}</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
                       {product.stock} un.
                     </span>
                   </div>
                 ))
+              )}
+              {lowStockProducts.length > 6 && (
+                <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                  +{lowStockProducts.length - 6} outros produtos
+                </p>
               )}
             </div>
           </div>
         </section>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+        <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                <Package className="h-5 w-5" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <Package className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">Status do catalogo</h2>
-                <p className="text-sm text-slate-500">Distribuicao real entre ativos, rascunhos e itens ocultos.</p>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Status do catalogo</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Distribuicao entre ativos, rascunhos e ocultos.</p>
               </div>
             </div>
             <Link
               href="/dashboard/produtos"
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700"
             >
               Gerenciar
-              <ArrowRight className="h-3.5 w-3.5" />
+              <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 space-y-1.5">
             {productOverview.statusBreakdown.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                Nenhum dado de status disponivel.
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
+                Nenhum dado disponivel.
               </div>
             ) : (
               productOverview.statusBreakdown.map((item) => {
@@ -693,12 +586,12 @@ export default async function DashboardPage() {
                 return (
                   <div
                     key={item.label}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/50"
                   >
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getProductStatusClasses(statusKey)}`}>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${getProductStatusClasses(statusKey)}`}>
                       {getProductStatusLabel(statusKey)}
                     </span>
-                    <span className="text-lg font-semibold text-slate-900">{item.value}</span>
+                    <span className="text-base font-semibold text-slate-900 dark:text-slate-50">{item.value}</span>
                   </div>
                 )
               })
@@ -706,59 +599,59 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-                <FolderKanban className="h-5 w-5" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                <FolderKanban className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">Ultimos produtos cadastrados</h2>
-                <p className="text-sm text-slate-500">Acompanhamento rapido do que entrou por ultimo no catalogo.</p>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Ultimos produtos cadastrados</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Itens que entraram por ultimo no catalogo.</p>
               </div>
             </div>
             <Link
               href="/dashboard/produtos/catalogo"
-              className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600"
             >
-              Abrir catalogo
-              <ArrowRight className="h-4 w-4" />
+              Catalogo
+              <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 space-y-2">
             {productOverview.recentProducts.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
                 Nenhum produto cadastrado ainda.
               </div>
             ) : (
-              productOverview.recentProducts.map((product) => {
+              productOverview.recentProducts.slice(0, 3).map((product) => {
                 const cover = product.product_images?.[0]?.public_url
 
                 return (
                   <div
                     key={product.id}
-                    className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/50"
                   >
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white dark:bg-slate-700">
                       {cover ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={cover} alt={product.name} className="h-full w-full object-cover" />
                       ) : (
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">sem foto</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">sem foto</span>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">{product.name}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">{product.name}</p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                         <span>{formatMoney(Number(product.price ?? 0))}</span>
-                        <span className="text-slate-300">•</span>
+                        <span className="text-slate-300 dark:text-slate-600">•</span>
                         <span>{product.stock} em estoque</span>
                       </div>
                     </div>
                     <Link
                       href={`/dashboard/produtos/${product.id}/editar`}
-                      className="inline-flex shrink-0 items-center justify-center rounded-lg bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100"
+                      className="inline-flex shrink-0 items-center justify-center rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700"
                     >
                       Abrir
                     </Link>
@@ -766,42 +659,47 @@ export default async function DashboardPage() {
                 )
               })
             )}
+            {productOverview.recentProducts.length > 3 && (
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                +{productOverview.recentProducts.length - 3} outros produtos
+              </p>
+            )}
           </div>
         </section>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-5 xl:grid-cols-3">
         <Link
           href="/dashboard/pedidos"
-          className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+          className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-800"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white">
-            <ShoppingBag className="h-5 w-5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white dark:bg-slate-700">
+            <ShoppingBag className="h-4 w-4" />
           </div>
-          <p className="mt-5 text-base font-semibold text-slate-900">Central de pedidos</p>
-          <p className="mt-2 text-sm text-slate-500">Acompanhe status, confirme entregas e opere o fluxo comercial.</p>
+          <p className="mt-4 text-base font-semibold text-slate-900 dark:text-slate-50">Central de pedidos</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Acompanhe status, confirme entregas e opere o fluxo comercial.</p>
         </Link>
 
         <Link
           href="/dashboard/clientes"
-          className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+          className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-800"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-            <Users className="h-5 w-5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+            <Users className="h-4 w-4" />
           </div>
-          <p className="mt-5 text-base font-semibold text-slate-900">Base de clientes</p>
-          <p className="mt-2 text-sm text-slate-500">Veja quem compra, quem precisa de contato e como esta a base ativa.</p>
+          <p className="mt-4 text-base font-semibold text-slate-900 dark:text-slate-50">Base de clientes</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Veja quem compra e como esta a base ativa.</p>
         </Link>
 
         <Link
           href="/dashboard/produtos"
-          className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+          className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-800"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-            <FolderKanban className="h-5 w-5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            <FolderKanban className="h-4 w-4" />
           </div>
-          <p className="mt-5 text-base font-semibold text-slate-900">Operacao de catalogo</p>
-          <p className="mt-2 text-sm text-slate-500">Gerencie estoque, cobertura de categorias e saude do mix de produtos.</p>
+          <p className="mt-4 text-base font-semibold text-slate-900 dark:text-slate-50">Operacao de catalogo</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Gerencie estoque e saude do mix de produtos.</p>
         </Link>
       </div>
     </div>

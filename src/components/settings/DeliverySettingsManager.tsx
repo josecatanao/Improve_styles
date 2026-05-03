@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Check, Loader2, MapPin, Search, Truck, Package as PackageIcon } from 'lucide-react'
 import { saveDeliverySettings } from '@/app/dashboard/configuracoes/actions'
 import { lookupCep } from '@/app/dashboard/configuracoes/cep-actions'
@@ -9,6 +10,55 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { StoreLocationMap } from '@/components/settings/StoreLocationMap'
+
+type AddressParts = {
+  logradouro: string
+  numero: string
+  complemento: string
+  bairro: string
+  cidade: string
+  estado: string
+}
+
+function parseDisplayAddress(displayAddress: string | undefined): AddressParts {
+  const empty = { logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '' }
+  if (!displayAddress?.trim()) return empty
+
+  const segments = displayAddress.split(' - ').map((s) => s.trim()).filter(Boolean)
+  if (segments.length === 0) return empty
+
+  const result = { ...empty }
+  const last = segments.pop()!
+
+  if (last.includes('/')) {
+    const [c, e] = last.split('/')
+    result.cidade = c.trim()
+    result.estado = e.trim()
+  } else {
+    result.cidade = last
+  }
+
+  if (segments.length > 0) {
+    result.bairro = segments.pop()!
+  }
+
+  if (segments.length > 0) {
+    const first = segments.shift()!
+    const commaIdx = first.lastIndexOf(',')
+    if (commaIdx > 0 && /^\d+$/.test(first.slice(commaIdx + 1).trim())) {
+      result.logradouro = first.slice(0, commaIdx).trim()
+      result.numero = first.slice(commaIdx + 1).trim()
+    } else {
+      result.logradouro = first
+    }
+
+    if (segments.length > 0) {
+      result.complemento = segments.join(' - ')
+    }
+  }
+
+  return result
+}
 
 export function DeliverySettingsManager({
   initialSettings,
@@ -23,17 +73,22 @@ export function DeliverySettingsManager({
   }
   schemaReady: boolean
 }) {
+  const router = useRouter()
   const showToast = useToast()
   const [deliveryEnabled, setDeliveryEnabled] = useState(initialSettings.delivery_enabled)
   const [pickupEnabled, setPickupEnabled] = useState(initialSettings.pickup_enabled)
 
+  const initialAddress = useMemo(
+    () => parseDisplayAddress(initialSettings.store_address),
+    [initialSettings.store_address]
+  )
   const [cep, setCep] = useState('')
-  const [logradouro, setLogradouro] = useState('')
-  const [numero, setNumero] = useState('')
-  const [complemento, setComplemento] = useState('')
-  const [bairro, setBairro] = useState('')
-  const [cidade, setCidade] = useState('')
-  const [estado, setEstado] = useState('')
+  const [logradouro, setLogradouro] = useState(initialAddress.logradouro)
+  const [numero, setNumero] = useState(initialAddress.numero)
+  const [complemento, setComplemento] = useState(initialAddress.complemento)
+  const [bairro, setBairro] = useState(initialAddress.bairro)
+  const [cidade, setCidade] = useState(initialAddress.cidade)
+  const [estado, setEstado] = useState(initialAddress.estado)
   const [mapLat, setMapLat] = useState(initialSettings.store_address_lat ?? -23.5505)
   const [mapLng, setMapLng] = useState(initialSettings.store_address_lng ?? -46.6333)
 
@@ -129,6 +184,8 @@ export function DeliverySettingsManager({
         title: 'Salvo',
         description: 'Opcoes de entrega atualizadas.',
       })
+
+      router.refresh()
     } catch (error) {
       showToast({
         variant: 'error',

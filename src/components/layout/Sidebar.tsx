@@ -27,25 +27,25 @@ import { logout } from '@/app/login/actions'
 
 const productNavigation = [
   { name: 'Visao geral', href: '/dashboard/produtos', icon: Grid2X2 },
-  { name: 'Estoque', href: '/dashboard/produtos/catalogo', icon: FolderKanban },
+  { name: 'Catalogo', href: '/dashboard/produtos/catalogo', icon: FolderKanban },
   { name: 'Categorias', href: '/dashboard/produtos/categorias', icon: Tags },
-  { name: 'Cupons', href: '/dashboard/cupons', icon: TicketPercent },
   { name: 'Cadastrar produto', href: '/dashboard/produtos/novo', icon: PlusCircle },
 ]
 
 const settingsNavigation = [
-  { name: 'Configurações da loja', href: '/dashboard/configuracoes/loja', icon: ShoppingBag },
-  { name: 'Configurações do dashboard', href: '/dashboard/configuracoes/dashboard', icon: LayoutDashboard },
-  { name: 'Configurações de entrega', href: '/dashboard/configuracoes/entrega', icon: Truck },
+  { name: 'Configuracoes da loja', href: '/dashboard/configuracoes/loja', icon: ShoppingBag },
+  { name: 'Aparencia do dashboard', href: '/dashboard/configuracoes/dashboard', icon: LayoutDashboard },
+  { name: 'Metodos de entrega', href: '/dashboard/configuracoes/entrega', icon: Truck },
 ]
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Pedidos', href: '/dashboard/pedidos', icon: ShoppingBag },
   { name: 'Marketing', href: '/dashboard/marketing', icon: Grid2X2 },
-  { name: 'Entrega', href: '/dashboard/entrega', icon: Truck },
+  { name: 'Cupons', href: '/dashboard/cupons', icon: TicketPercent },
+  { name: 'Zonas de entrega', href: '/dashboard/entrega', icon: Truck },
   { name: 'Clientes', href: '/dashboard/clientes', icon: UserIcon },
-  { name: 'Usuários', href: '/dashboard/usuarios', icon: Users },
+  { name: 'Usuarios', href: '/dashboard/usuarios', icon: Users },
 ]
 
 type SidebarProps = {

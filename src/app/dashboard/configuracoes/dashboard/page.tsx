@@ -17,8 +17,8 @@ export default async function DashboardSettingsPage() {
   return (
     <div className="space-y-6">
       <ProductWorkspaceHeader
-        title="Configurações do dashboard"
-        description="Defina a aparência visual do painel administrativo sem alterar a loja."
+        title="Aparencia do dashboard"
+        description="Personalize o tema e as cores do painel administrativo."
       />
 
       <DashboardAppearanceManager

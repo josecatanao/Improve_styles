@@ -18,8 +18,8 @@ export default async function StoreSettingsPage() {
   return (
     <div className="space-y-6">
       <ProductWorkspaceHeader
-        title="Configurações da loja"
-        description="Ajuste a identidade visual e a aparência pública da sua vitrine."
+        title="Configuracoes da loja"
+        description="Ajuste a identidade visual e a aparencia publica da sua vitrine."
       />
 
       <StoreAppearanceManager
@@ -39,7 +39,11 @@ export default async function StoreSettingsPage() {
         schemaReady={schemaReady}
       />
 
-      <StoreNavigationManager initialNavigation={settings.header_navigation} />
+      <div className="pt-2">
+        <h2 className="text-lg font-semibold text-slate-900">Navegacao e estrutura</h2>
+        <p className="mt-1 mb-4 text-sm text-slate-500">Configure a navegacao principal e a estrutura de paginas da loja.</p>
+        <StoreNavigationManager initialNavigation={settings.header_navigation} />
+      </div>
     </div>
   )
 }

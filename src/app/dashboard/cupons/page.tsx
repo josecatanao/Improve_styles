@@ -1,4 +1,5 @@
 import { CouponManagement } from '@/components/coupons/CouponManagement'
+import { ProductWorkspaceHeader } from '@/components/products/ProductWorkspaceHeader'
 import { getManagedCoupons } from '@/lib/store-coupons.server'
 
 export default async function CouponManagementPage() {
@@ -6,6 +7,11 @@ export default async function CouponManagementPage() {
 
   return (
     <div className="space-y-6">
+      <ProductWorkspaceHeader
+        title="Cupons"
+        description="Crie e gerencie cupons de desconto para campanhas promocionais."
+      />
+
       {setupRequired ? (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
           <h2 className="text-lg font-semibold text-amber-900">Configuracao necessaria</h2>

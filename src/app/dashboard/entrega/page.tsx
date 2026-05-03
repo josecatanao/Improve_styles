@@ -8,8 +8,8 @@ export default async function EntregaPage() {
   return (
     <div className="space-y-6">
       <ProductWorkspaceHeader
-        title="Entrega"
-        description="Cadastre zonas de entrega por faixa de CEP e configure o calculo de frete."
+        title="Zonas de entrega"
+        description="Cadastre zonas de entrega por faixa de CEP, precos de frete e prazos estimados."
       />
 
       {setupRequired ? (
