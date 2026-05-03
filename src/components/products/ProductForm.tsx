@@ -14,7 +14,6 @@ import {
   Package2,
   Plus,
   ShieldCheck,
-  Sparkles,
   SwatchBook,
   Trash2,
   Upload,
@@ -152,14 +151,8 @@ const stepItems = [
   {
     key: 'basic',
     title: 'Informacoes basicas',
-    description: 'Nome, categoria, marca, preco e status.',
+    description: 'Nome, descricao, categoria, marca e preco.',
     icon: Package2,
-  },
-  {
-    key: 'description',
-    title: 'Descricao',
-    description: 'Resumo curto e texto completo.',
-    icon: Sparkles,
   },
   {
     key: 'variations',
@@ -549,6 +542,9 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
   const [hasSubmittedSuccessfully, setHasSubmittedSuccessfully] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{ completed: number; total: number } | null>(null)
   const [showDraftRestoreDialog, setShowDraftRestoreDialog] = useState(draft.hasDraft)
+  const [showMeasures, setShowMeasures] = useState(
+    mode === 'edit' && product ? !!(product.weight || product.width || product.height || product.length) : false
+  )
 
   const imagesRef = useRef<ImageItem[]>(initialImages)
   const removedExistingImageIdsRef = useRef<string[]>([])
@@ -603,8 +599,9 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       sizeDrafts,
       imageUrlDraft,
       mode,
+      showMeasures,
     })
-  }, [form, step, productType, colorGroups, categoryDraft, brandDraft, sizeDrafts, imageUrlDraft, mode, isSubmitting, hasSubmittedSuccessfully])
+  }, [form, step, productType, colorGroups, categoryDraft, brandDraft, sizeDrafts, imageUrlDraft, mode, showMeasures, isSubmitting, hasSubmittedSuccessfully])
 
   useEffect(() => {
     if (!toast) {
@@ -627,6 +624,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
     setBrandDraft(saved.brandDraft)
     setSizeDrafts(saved.sizeDrafts)
     setImageUrlDraft(saved.imageUrlDraft)
+    setShowMeasures(saved.showMeasures ?? false)
     setShowDraftRestoreDialog(false)
     showToast('success', 'Rascunho restaurado com sucesso.')
   }
@@ -637,7 +635,6 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
   }
 
 
-  const generatedSku = mode === 'edit' && product?.sku ? product.sku : createSku(form.name, 'PREVIEW')
   const colors = colorGroups.map<ProductColor>((group) => ({ name: group.name, hex: group.hex }))
   const totalStock = colorGroups.reduce(
     (total, group) => total + group.variants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0),
@@ -925,7 +922,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       }
     }
 
-    if (targetStep === 2) {
+    if (targetStep === 1) {
       if (colorGroups.length === 0) {
         return 'Adicione uma cor para comecar.'
       }
@@ -951,7 +948,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       }
     }
 
-    if (targetStep === 3 && images.length === 0) {
+    if (targetStep === 2 && images.length === 0) {
       return 'Adicione pelo menos uma imagem ao produto.'
     }
 
@@ -963,12 +960,10 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       case 0:
         return validateStep(0) == null
       case 1:
-        return form.shortDescription.trim().length > 0 && form.description.trim().length > 0
+        return validateStep(1) == null
       case 2:
         return validateStep(2) == null
       case 3:
-        return validateStep(3) == null
-      case 4:
         return hasSubmittedSuccessfully
       default:
         return false
@@ -995,7 +990,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       return
     }
 
-    const reviewIssue = validateStep(0) ?? validateStep(2) ?? validateStep(3)
+    const reviewIssue = validateStep(0) ?? validateStep(1) ?? validateStep(2)
     if (reviewIssue) {
       showToast('error', reviewIssue)
       return
@@ -1542,10 +1537,10 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
             {step === 0 ? (
               <StepShell
                 title="Informacoes basicas do produto"
-                description="Organize o essencial em uma grade de 2 colunas no desktop e mantenha o cadastro objetivo."
+                description="Preencha os dados essenciais para o cadastro."
               >
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FieldGroup label="Nome do produto" hint="Campo principal que sera usado em listagens e SKU.">
+                <div className="space-y-5">
+                  <FieldGroup label="Nome do produto" hint="Campo principal usado em listagens, buscas e SKU.">
                     <Input
                       value={form.name}
                       onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
@@ -1554,178 +1549,178 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                     />
                   </FieldGroup>
 
-                  <CreatableField
-                    label="Categoria"
-                    hint="Use as categorias criadas em Produtos > Categorias para manter a vitrine organizada."
-                    value={form.category}
-                    draft={categoryDraft}
-                    options={options.categories}
-                    placeholder="Ex.: Camisetas"
-                    onDraftChange={setCategoryDraft}
-                    onSelect={(value) => setForm((current) => ({ ...current, category: value }))}
-                  />
-
-                  <CreatableField
-                    label="Marca"
-                    value={form.brand}
-                    draft={brandDraft}
-                    options={options.brands}
-                    placeholder="Ex.: Pow jeans"
-                    onDraftChange={setBrandDraft}
-                    onSelect={(value) => setForm((current) => ({ ...current, brand: value }))}
-                  />
-
-                  <FieldGroup label="Colecao" hint="Nome da colecao a que este produto pertence.">
-                    <Input
-                      value={form.collection}
-                      onChange={(event) => setForm((current) => ({ ...current, collection: event.target.value }))}
-                      placeholder="Ex.: Verao 2025"
-                      className="h-11"
-                    />
-                  </FieldGroup>
-
-                  <FieldGroup label="Publico" hint="Segmento de publico-alvo. Deixe em branco para nenhum.">
-                    <select
-                      value={form.audience}
-                      onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))}
-                      className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:border-slate-600 dark:focus-visible:ring-slate-800"
-                    >
-                      <option value="">Nenhum</option>
-                      <option value="Masculino">Masculino</option>
-                      <option value="Feminino">Feminino</option>
-                      <option value="Infantil">Infantil</option>
-                      <option value="Unissex">Unissex</option>
-                    </select>
-                  </FieldGroup>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FieldGroup label="Peso (kg)" hint="Usado para calculo de frete">
-                      <Input type="number" step="0.01" min="0" value={form.weight} onChange={(e) => setForm(f => ({ ...f, weight: e.target.value }))} placeholder="0.30" className="h-11" />
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <FieldGroup label="Descricao resumida" hint="Texto curto usado em cards, listas e destaques.">
+                      <Textarea
+                        value={form.shortDescription}
+                        onChange={(event) => setForm((current) => ({ ...current, shortDescription: event.target.value }))}
+                        placeholder="Resumo curto para lista e card."
+                        className="min-h-28 bg-white dark:bg-slate-950"
+                      />
                     </FieldGroup>
-                    <FieldGroup label="Largura (cm)" hint="Usado para calculo de frete">
-                      <Input type="number" step="0.1" min="0" value={form.width} onChange={(e) => setForm(f => ({ ...f, width: e.target.value }))} placeholder="20" className="h-11" />
-                    </FieldGroup>
-                    <FieldGroup label="Altura (cm)" hint="Usado para calculo de frete">
-                      <Input type="number" step="0.1" min="0" value={form.height} onChange={(e) => setForm(f => ({ ...f, height: e.target.value }))} placeholder="30" className="h-11" />
-                    </FieldGroup>
-                    <FieldGroup label="Comprimento (cm)" hint="Usado para calculo de frete">
-                      <Input type="number" step="0.1" min="0" value={form.length} onChange={(e) => setForm(f => ({ ...f, length: e.target.value }))} placeholder="5" className="h-11" />
+                    <FieldGroup label="Descricao completa" hint="Detalhes, materiais, modelagem e cuidados.">
+                      <Textarea
+                        value={form.description}
+                        onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+                        placeholder="Descreva o produto com mais profundidade."
+                        className="min-h-28"
+                      />
                     </FieldGroup>
                   </div>
 
-                  <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <CreatableField
+                      label="Categoria"
+                      hint="Use as categorias criadas em Produtos > Categorias."
+                      value={form.category}
+                      draft={categoryDraft}
+                      options={options.categories}
+                      placeholder="Ex.: Camisetas"
+                      onDraftChange={setCategoryDraft}
+                      onSelect={(value) => setForm((current) => ({ ...current, category: value }))}
+                    />
+                    <CreatableField
+                      label="Marca"
+                      value={form.brand}
+                      draft={brandDraft}
+                      options={options.brands}
+                      placeholder="Ex.: Pow jeans"
+                      onDraftChange={setBrandDraft}
+                      onSelect={(value) => setForm((current) => ({ ...current, brand: value }))}
+                    />
+                    <FieldGroup label="Colecao" hint="Nome da colecao a que pertence.">
+                      <Input
+                        value={form.collection}
+                        onChange={(event) => setForm((current) => ({ ...current, collection: event.target.value }))}
+                        placeholder="Ex.: Verao 2025"
+                        className="h-11"
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Publico" hint="Segmento de publico-alvo.">
+                      <select
+                        value={form.audience}
+                        onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))}
+                        className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:border-slate-600 dark:focus-visible:ring-slate-800"
+                      >
+                        <option value="">Nenhum</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Feminino">Feminino</option>
+                        <option value="Infantil">Infantil</option>
+                        <option value="Unissex">Unissex</option>
+                      </select>
+                    </FieldGroup>
+                  </div>
+
+                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200 dark:bg-slate-950/70 dark:ring-slate-800">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Preco</CardTitle>
+                      <CardDescription>Defina o valor de venda e, opcionalmente, um preco anterior para promocao.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 px-5 pb-5 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+                      <FieldGroup label="Preco de venda" hint="Valor que o cliente pagara.">
+                        <Input
+                          inputMode="decimal"
+                          value={form.price}
+                          onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
+                          placeholder="89.90"
+                          className="h-11 bg-white text-lg font-semibold dark:bg-slate-900"
+                        />
+                      </FieldGroup>
+                      <div className="hidden items-center pt-6 text-sm text-slate-400 dark:text-slate-500 sm:flex">ou</div>
+                      <FieldGroup label="Preco promocional (De/Por)" hint="Preco anterior para destacar desconto. Opcional.">
+                        <Input
+                          inputMode="decimal"
+                          value={form.compare_at_price}
+                          onChange={(event) => setForm((current) => ({ ...current, compare_at_price: event.target.value }))}
+                          placeholder="119.90"
+                          className="h-11 bg-white dark:bg-slate-900"
+                        />
+                      </FieldGroup>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+                    <CardContent className="flex items-center justify-between gap-4 px-5 py-4">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Deseja informar medidas do produto?</p>
+                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Peso, altura, largura e comprimento para calculo de frete.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowMeasures((current) => !current)}
+                        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                          showMeasures ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'
+                        }`}
+                        role="switch"
+                        aria-checked={showMeasures}
+                        aria-label="Informar medidas"
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                            showMeasures ? 'translate-x-[22px]' : 'translate-x-[2px]'
+                          }`}
+                        />
+                      </button>
+                    </CardContent>
+                    {showMeasures ? (
+                      <CardContent className="grid gap-4 border-t border-slate-100 px-5 pb-5 sm:grid-cols-2 dark:border-slate-800">
+                        <FieldGroup label="Peso (kg)">
+                          <Input type="number" step="0.01" min="0" value={form.weight} onChange={(e) => setForm(f => ({ ...f, weight: e.target.value }))} placeholder="0.30" className="h-11" />
+                        </FieldGroup>
+                        <FieldGroup label="Largura (cm)">
+                          <Input type="number" step="0.1" min="0" value={form.width} onChange={(e) => setForm(f => ({ ...f, width: e.target.value }))} placeholder="20" className="h-11" />
+                        </FieldGroup>
+                        <FieldGroup label="Altura (cm)">
+                          <Input type="number" step="0.1" min="0" value={form.height} onChange={(e) => setForm(f => ({ ...f, height: e.target.value }))} placeholder="30" className="h-11" />
+                        </FieldGroup>
+                        <FieldGroup label="Comprimento (cm)">
+                          <Input type="number" step="0.1" min="0" value={form.length} onChange={(e) => setForm(f => ({ ...f, length: e.target.value }))} placeholder="5" className="h-11" />
+                        </FieldGroup>
+                      </CardContent>
+                    ) : null}
+                  </Card>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FieldGroup label="Destaque na Loja" hint="Exibe na secao principal de destaques da Home.">
+                      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900/80">
+                        <input
+                          type="checkbox"
+                          checked={form.is_featured}
+                          onChange={(e) => setForm(current => ({...current, is_featured: e.target.checked}))}
+                          className="h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:border-slate-600 dark:bg-slate-950"
+                        />
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-100">Sim, destacar este produto</span>
+                      </label>
+                    </FieldGroup>
+
+                    <FieldGroup label="Status" hint="Como o produto entra no catalogo.">
+                      <select
+                        value={form.status}
+                        onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as ProductStatus }))}
+                        className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:border-slate-600 dark:focus-visible:ring-slate-800"
+                      >
+                        <option value="draft">Rascunho</option>
+                        <option value="active">Ativo</option>
+                        <option value="out_of_stock">Esgotado</option>
+                        <option value="hidden">Oculto</option>
+                      </select>
+                    </FieldGroup>
+                  </div>
+
+                  <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors dark:border-slate-700 dark:bg-slate-950/70 dark:hover:bg-slate-900">
                     <input
                       type="checkbox"
                       checked={form.show_specs}
                       onChange={(e) => setForm((f) => ({ ...f, show_specs: e.target.checked }))}
                       className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-sm font-medium text-slate-700">Exibir especificacoes tecnicas na pagina do produto</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-100">Exibir especificacoes tecnicas na pagina do produto</span>
                   </label>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FieldGroup label="Preco" hint="Valor de venda padrao.">
-                      <Input
-                        inputMode="decimal"
-                        value={form.price}
-                        onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
-                        placeholder="89.90"
-                        className="h-11"
-                      />
-                    </FieldGroup>
-                    <FieldGroup label="Preco Antigo (Promocao)" hint="Preco original para exibir oferta (De/Por). Opcional.">
-                      <Input
-                        inputMode="decimal"
-                        value={form.compare_at_price}
-                        onChange={(event) => setForm((current) => ({ ...current, compare_at_price: event.target.value }))}
-                        placeholder="119.90"
-                        className="h-11"
-                      />
-                    </FieldGroup>
-                  </div>
-
-                  <FieldGroup label="Destaque na Loja" hint="Exibe este produto na secao principal de destaques da Home.">
-                    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900/80">
-                      <input 
-                        type="checkbox"
-                        checked={form.is_featured}
-                        onChange={(e) => setForm(current => ({...current, is_featured: e.target.checked}))}
-                        className="h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:border-slate-600 dark:bg-slate-950"
-                      />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-100">Sim, destacar este produto</span>
-                    </label>
-                  </FieldGroup>
-
-                  <FieldGroup label="Status" hint="Defina como o produto entra no catalogo.">
-                    <select
-                      value={form.status}
-                      onChange={(event) =>
-                        setForm((current) => ({ ...current, status: event.target.value as ProductStatus }))
-                      }
-                      className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-slate-700 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:border-slate-600 dark:focus-visible:ring-slate-800"
-                    >
-                      <option value="draft">Rascunho</option>
-                      <option value="active">Ativo</option>
-                      <option value="out_of_stock">Esgotado</option>
-                      <option value="hidden">Oculto</option>
-                    </select>
-                  </FieldGroup>
-
-                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200 md:col-span-2 dark:bg-slate-950/70 dark:ring-slate-800">
-                    <CardContent className="grid gap-2 px-5 py-5 sm:grid-cols-[1fr_auto] sm:items-center">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">SKU principal</p>
-                        <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-50">{generatedSku}</p>
-                      </div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Gerado automaticamente a partir do nome do produto.</p>
-                    </CardContent>
-                  </Card>
                 </div>
               </StepShell>
             ) : null}
 
             {step === 1 ? (
-              <StepShell
-                title="Descricao do produto"
-                description="Separe um resumo curto para cards e um texto completo para pagina de detalhes."
-              >
-                <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-                  <Card className="border-0 bg-slate-50 ring-1 ring-slate-200 dark:bg-slate-950/70 dark:ring-slate-800">
-                    <CardHeader>
-                      <CardTitle>Resumo</CardTitle>
-                      <CardDescription>Texto curto usado em cards, listas e destaques rapidos.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="px-5 pb-5">
-                      <Textarea
-                        value={form.shortDescription}
-                        onChange={(event) =>
-                          setForm((current) => ({ ...current, shortDescription: event.target.value }))
-                        }
-                        placeholder="Resumo curto para lista e card."
-                        className="min-h-40 bg-white dark:bg-slate-950"
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 bg-white ring-1 ring-slate-200 dark:bg-slate-950/70 dark:ring-slate-800">
-                    <CardHeader>
-                      <CardTitle>Descricao completa</CardTitle>
-                      <CardDescription>Detalhes, materiais, modelagem, cuidados e informacoes importantes.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="px-5 pb-5">
-                      <Textarea
-                        value={form.description}
-                        onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                        placeholder="Descreva o produto com mais profundidade."
-                        className="min-h-56"
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
-              </StepShell>
-            ) : null}
-
-            {step === 2 ? (
               <StepShell
                 title="Variacoes por cor e tamanho"
                 description="Defina o tipo de produto primeiro. Se houver variacoes, a estrutura segue produto, cor e tamanhos."
@@ -2019,7 +2014,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
               </StepShell>
             ) : null}
 
-            {step === 3 ? (
+            {step === 2 ? (
               <StepShell
                 title="Galeria de imagens do produto"
                 description="Mantenha o upload separado das variacoes, com drag and drop, preview e ordenacao por arraste."
@@ -2193,7 +2188,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
               </StepShell>
             ) : null}
 
-            {step === 4 ? (
+            {step === 3 ? (
               <StepShell
                 title="Revisao final"
                 description="Verifique como o produto sera exibido na sua loja online."

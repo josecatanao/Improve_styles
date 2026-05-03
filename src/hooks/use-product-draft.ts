@@ -15,6 +15,7 @@ type DraftData = {
   sizeDrafts: Record<string, string>
   imageUrlDraft: string
   mode: 'create' | 'edit'
+  showMeasures: boolean
 }
 
 const DRAFT_KEY_PREFIX = 'product-form-draft'
