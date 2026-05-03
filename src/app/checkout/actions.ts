@@ -30,6 +30,7 @@ type CheckoutPayload = {
   shippingZoneId?: string
   shippingZoneName?: string
   shippingZip?: string
+  deliveryAddressId?: string
 }
 
 export type ValidateCouponResult = {
@@ -97,6 +98,46 @@ export async function submitOrder(payload: CheckoutPayload) {
 
   const { data: authData } = await supabase.auth.getUser()
   const customerId = authData.user ? authData.user.id : null
+
+  let resolvedDeliveryAddress = payload.customer.delivery_address
+  let resolvedDeliveryLat = payload.customer.delivery_lat
+  let resolvedDeliveryLng = payload.customer.delivery_lng
+
+  if (payload.deliveryAddressId && customerId) {
+    try {
+      const { data: addressData } = await supabase
+        .from('customer_addresses')
+        .select('*')
+        .eq('id', payload.deliveryAddressId)
+        .eq('customer_id', customerId)
+        .single()
+
+      if (addressData) {
+        const addr = addressData as Record<string, unknown>
+        const parts: string[] = []
+        const addrStreet = String(addr.street ?? '').trim()
+        const addrNumber = String(addr.number ?? '').trim()
+        const addrNeighborhood = String(addr.neighborhood ?? '').trim()
+        const addrComplement = String(addr.complement ?? '').trim()
+        const addrCity = String(addr.city ?? '').trim()
+        const addrState = String(addr.state ?? '').trim()
+        const addrZipCode = String(addr.zip_code ?? '').trim()
+        const addrReference = String(addr.reference ?? '').trim()
+        const line1 = [addrStreet, addrNumber].filter(Boolean).join(', ')
+        if (line1) parts.push(line1)
+        const line2 = [addrNeighborhood, addrComplement].filter(Boolean).join(' - ')
+        if (line2) parts.push(line2)
+        const line3 = [addrCity, addrState, addrZipCode].filter(Boolean).join(' • ')
+        if (line3) parts.push(line3)
+        if (addrReference) parts.push(`Ref.: ${addrReference}`)
+        resolvedDeliveryAddress = parts.filter(Boolean).join('\n') || addrStreet || payload.customer.delivery_address
+        resolvedDeliveryLat = (addr.latitude ? Number(addr.latitude) : null) ?? payload.customer.delivery_lat
+        resolvedDeliveryLng = (addr.longitude ? Number(addr.longitude) : null) ?? payload.customer.delivery_lng
+      }
+    } catch {
+      // Use client-provided address as fallback
+    }
+  }
 
   let customerEmail = null
 
@@ -232,9 +273,6 @@ export async function submitOrder(payload: CheckoutPayload) {
       await supabase.from('customer_profiles').update({
         default_delivery_method: payload.customer.delivery_method,
         default_payment_method: payload.customer.payment_method,
-        delivery_address: payload.customer.delivery_address || null,
-        delivery_lat: payload.customer.delivery_lat,
-        delivery_lng: payload.customer.delivery_lng,
       }).eq('id', customerId)
     }
   } catch {
@@ -246,12 +284,13 @@ export async function submitOrder(payload: CheckoutPayload) {
     customer_name: payload.customer.name,
     customer_email: customerEmail,
     customer_phone: payload.customer.phone,
-    delivery_address: payload.customer.delivery_address || null,
+    delivery_address: resolvedDeliveryAddress || null,
     delivery_method: payload.customer.delivery_method,
     payment_method: payload.customer.payment_method,
     installments: payload.customer.installments,
-    delivery_lat: payload.customer.delivery_lat,
-    delivery_lng: payload.customer.delivery_lng,
+    delivery_lat: resolvedDeliveryLat,
+    delivery_lng: resolvedDeliveryLng,
+    delivery_address_id: payload.deliveryAddressId || null,
     notes: payload.customer.notes,
     status: 'pending',
     total_price: finalTotalPrice,

@@ -5,6 +5,7 @@ import { slugifyStoreValue } from '@/lib/storefront'
 import { getPublicStoreSettings } from '@/lib/store-branding'
 import { createClient } from '@/utils/supabase/server'
 import { calculateShipping } from '@/lib/shipping'
+import { getCustomerAddresses } from '@/lib/customer-addresses'
 import { redirect } from 'next/navigation'
 import type { DeliverySettings } from '@/components/store/CheckoutClient'
 
@@ -26,12 +27,14 @@ export default async function CheckoutPage({
   const orderId = params.orderId
   const queryCep = params.cep?.replace(/\D/g, '').slice(0, 8) || null
 
-  const [{ data: profile }, settings] = await Promise.all([
+  const [{ data: profile }, settings, addresses] = await Promise.all([
     supabase.from('customer_profiles').select('*').eq('id', user.id).single(),
     getPublicStoreSettings(),
+    getCustomerAddresses(user.id),
   ])
 
-  const profileCep = (profile as any)?.delivery_zip_code?.replace(/\D/g, '').slice(0, 8) || null
+  const primaryAddress = addresses.find((a) => a.is_primary) ?? addresses[0] ?? null
+  const profileCep = primaryAddress?.zip_code?.replace(/\D/g, '').slice(0, 8) || null
   const effectiveCep = queryCep || profileCep
 
   let initialShippingCep: string | null = null
@@ -67,6 +70,7 @@ export default async function CheckoutPage({
 
         <CheckoutClient
           initialProfile={profile}
+          initialAddresses={addresses}
           orderId={orderId}
           initialCoupon={params.coupon ?? null}
           deliverySettings={deliverySettings}

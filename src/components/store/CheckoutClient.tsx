@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronLeft, Loader2, MapPin, Pencil, ShoppingCart, TicketPercent, Truck, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronLeft, Loader2, MapPin, Pencil, Plus, ShoppingCart, Store, TicketPercent, Truck, X } from 'lucide-react'
 import { useCart } from '@/components/store/CartProvider'
 import { useDirectCheckout, clearDirectCheckout } from '@/lib/direct-checkout'
 import { useToast } from '@/components/ui/feedback-provider'
@@ -17,6 +17,8 @@ import { formatMoney } from '@/lib/storefront'
 import { submitOrder, validateCoupon } from '@/app/checkout/actions'
 import { calculateShipping, type ShippingCalculation } from '@/lib/shipping'
 import { readStoredOrders, saveStoreOrder, type StoreOrder, type StoreOrderCustomer } from '@/lib/store-orders'
+import type { CustomerAddress } from '@/lib/customer-addresses-shared'
+import { formatAddressShort } from '@/lib/customer-addresses-shared'
 
 const SESSION_ORDER_KEY = 'improve-styles-last-order-id'
 const CHECKOUT_PERSIST_KEY = 'improve-styles-checkout-data'
@@ -66,7 +68,7 @@ type FieldErrors = {
   shippingZip?: string
 }
 
-function readPersistedCheckout(): { shippingZip: string; delivery_address: string } | null {
+function readPersistedCheckout(): { shippingZip: string; delivery_address: string; addressId?: string } | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = window.localStorage.getItem(CHECKOUT_PERSIST_KEY)
@@ -76,7 +78,7 @@ function readPersistedCheckout(): { shippingZip: string; delivery_address: strin
   }
 }
 
-function persistCheckout(data: { shippingZip: string; delivery_address: string }) {
+function persistCheckout(data: { shippingZip: string; delivery_address: string; addressId?: string }) {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(CHECKOUT_PERSIST_KEY, JSON.stringify(data))
 }
@@ -99,6 +101,7 @@ function resolveShippingIcon(result: { isFree: boolean; notFound: boolean }) {
 
 export function CheckoutClient({
   initialProfile,
+  initialAddresses,
   orderId,
   initialCoupon,
   deliverySettings,
@@ -109,6 +112,7 @@ export function CheckoutClient({
   storeAddressLng,
 }: {
   initialProfile?: CheckoutInitialProfile | null
+  initialAddresses?: CustomerAddress[]
   orderId?: string
   initialCoupon?: string | null
   deliverySettings: DeliverySettings
@@ -129,78 +133,26 @@ export function CheckoutClient({
   const defaultMethod = resolveDefaultDeliveryMethod(deliverySettings)
   const showDeliverySelect = deliverySettings.delivery_enabled && deliverySettings.pickup_enabled
 
+  const addresses = useMemo(() => initialAddresses ?? [], [initialAddresses])
+  const hasMultipleAddresses = addresses.length > 1
+  const primaryAddress = useMemo(() => addresses.find((a) => a.is_primary) ?? addresses[0] ?? null, [addresses])
+
   const persisted = readPersistedCheckout()
 
-  const profileZip = useMemo(() => {
-    const raw = (initialProfile as CheckoutInitialProfile)?.delivery_zip_code
-    return raw?.replace(/\D/g, '').slice(0, 8) || ''
-  }, [initialProfile])
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    persisted?.addressId ?? primaryAddress?.id ?? null
+  )
 
-  const profileFormattedAddress = useMemo(() => {
-    const p = initialProfile as CheckoutInitialProfile | null | undefined
-    if (!p) return null
-    const isLegacy = Boolean(p.delivery_address && !p.delivery_house_number)
-    if (isLegacy) {
-      const legacyText = p.delivery_address as string
-      const zipMatch = legacyText.match(/\b(\d{5})[-]?(\d{3})\b/)
-      const legacyZip = zipMatch ? `${zipMatch[1]}${zipMatch[2]}` : ''
-      return {
-        display: legacyText,
-        local: false,
-        zip: legacyZip || null,
-        street: null,
-        number: null,
-        neighborhood: null,
-        city: null,
-        state: null,
-      }
-    }
-    const parts: string[] = []
-    const street = p.delivery_address || ''
-    const number = p.delivery_house_number || ''
-    const neighborhood = p.delivery_neighborhood || ''
-    const city = p.delivery_city || ''
-    const state = p.delivery_state || ''
-    const zip = p.delivery_zip_code || ''
-    if (!city && !zip) {
-      return street
-        ? {
-            display: street,
-            local: false,
-            zip: null,
-            street: street,
-            number: null,
-            neighborhood: null,
-            city: null,
-            state: null,
-          }
-        : null
-    }
-    if (number) parts.push(`${street}, ${number}`)
-    else if (street) parts.push(street)
-    if (neighborhood) parts.push(neighborhood)
-    if (city && state) parts.push(`${city}/${state}`)
-    else if (city) parts.push(city)
-    return {
-      street: street || null,
-      number: number || null,
-      neighborhood: neighborhood || null,
-      city: city || null,
-      state: state || null,
-      zip: zip || null,
-      display: parts.join(' — ') + (zip ? ` — ${zip}` : ''),
-      local: true,
-    }
-  }, [initialProfile])
+  const selectedAddress = useMemo(
+    () => addresses.find((a) => a.id === selectedAddressId) ?? primaryAddress,
+    [addresses, selectedAddressId, primaryAddress]
+  )
 
-  const addressHasUsableCep = profileFormattedAddress?.zip?.length === 8
+  const addressDisplayText = useMemo(() => {
+    return selectedAddress ? formatAddressShort(selectedAddress) : ''
+  }, [selectedAddress])
 
-  const initialAddressText = useMemo(() => {
-    if (profileFormattedAddress?.local) {
-      return profileFormattedAddress.display
-    }
-    return initialProfile?.delivery_address || persisted?.delivery_address || ''
-  }, [profileFormattedAddress, initialProfile, persisted])
+  const addressZip = selectedAddress?.zip_code?.replace(/\D/g, '').slice(0, 8) || null
 
   const [customer, setCustomer] = useState<StoreOrderCustomer>({
     name: initialProfile?.full_name || '',
@@ -209,9 +161,9 @@ export function CheckoutClient({
     delivery_method: defaultMethod,
     payment_method: 'pix',
     installments: 1,
-    delivery_address: initialAddressText,
-    delivery_lat: initialProfile?.delivery_lat || null,
-    delivery_lng: initialProfile?.delivery_lng || null,
+    delivery_address: addressDisplayText,
+    delivery_lat: selectedAddress?.latitude ?? null,
+    delivery_lng: selectedAddress?.longitude ?? null,
   })
   const [activeStep, setActiveStep] = useState<CheckoutStep>('form')
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -219,7 +171,7 @@ export function CheckoutClient({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submittedOrder, setSubmittedOrder] = useState<StoreOrder | null>(null)
   const [shippingZip, setShippingZip] = useState(
-    initialShippingCep || persisted?.shippingZip || profileZip || (profileFormattedAddress?.local === false ? profileFormattedAddress?.zip : null) || ''
+    initialShippingCep || persisted?.shippingZip || addressZip || ''
   )
   const [showAlternateCep, setShowAlternateCep] = useState(false)
   const [alternateCep, setAlternateCep] = useState('')
@@ -297,14 +249,18 @@ export function CheckoutClient({
   }, [])
 
   const persistCustomerData = useCallback(() => {
-    persistCheckout({ shippingZip, delivery_address: customer.delivery_address })
-  }, [shippingZip, customer.delivery_address])
+    persistCheckout({
+      shippingZip,
+      delivery_address: customer.delivery_address,
+      addressId: selectedAddressId ?? undefined,
+    })
+  }, [shippingZip, customer.delivery_address, selectedAddressId])
 
   useEffect(() => {
     if (clientHydrated) {
       persistCustomerData()
     }
-  }, [shippingZip, customer.delivery_address, clientHydrated, persistCustomerData])
+  }, [shippingZip, customer.delivery_address, selectedAddressId, clientHydrated, persistCustomerData])
 
   const couponDiscount = useMemo(() => {
     if (!appliedCoupon) return 0
@@ -330,9 +286,9 @@ export function CheckoutClient({
   const validateField = useCallback((field: string, value: string): string | undefined => {
     switch (field) {
       case 'name':
-        return value.trim().length === 0 ? 'Nome e obrigatorio.' : undefined
+        return value.trim().length === 0 ? 'Informe seu nome para continuar.' : undefined
       case 'phone':
-        return value.trim().length === 0 ? 'Telefone e obrigatorio.' : undefined
+        return value.trim().length === 0 ? 'Informe seu telefone/WhatsApp para continuar.' : undefined
       case 'shippingZip': {
         if (!isDelivery) return undefined
         const clean = value.replace(/\D/g, '')
@@ -535,12 +491,13 @@ export function CheckoutClient({
     if (showAlternateCep) {
       setShowAlternateCep(false)
       setAlternateCep('')
-      const profileCep = profileZip
-      if (profileCep.length === 8) {
-        setShippingZip(profileCep)
-        handleCalculateShipping(profileCep)
+      if (selectedAddress?.zip_code) {
+        const clean = selectedAddress.zip_code.replace(/\D/g, '').slice(0, 8)
+        if (clean.length === 8) {
+          setShippingZip(clean)
+          handleCalculateShipping(clean)
+        }
       }
-      setCustomer((c) => ({ ...c, delivery_address: initialAddressText }))
     } else {
       setShowAlternateCep(true)
       setAlternateCep('')
@@ -557,11 +514,39 @@ export function CheckoutClient({
     setShowAlternateCep(false)
   }
 
+  function handleAddressChange(addressId: string) {
+    setSelectedAddressId(addressId)
+    const addr = addresses.find((a) => a.id === addressId)
+    if (addr) {
+      setShowAlternateCep(false)
+      setCustomer((c) => ({
+        ...c,
+        delivery_address: formatAddressShort(addr),
+        delivery_lat: addr.latitude,
+        delivery_lng: addr.longitude,
+      }))
+      const clean = addr.zip_code?.replace(/\D/g, '').slice(0, 8) || ''
+      setShippingZip(clean)
+      if (clean.length === 8) {
+        handleCalculateShipping(clean)
+      }
+    }
+  }
+
   function handleGoToReview() {
     const errors = validateAll()
     setFieldErrors(errors)
     setTouched({ name: true, phone: true, shippingZip: true })
+
+    if (isDelivery && addresses.length === 0) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        delivery_address: 'Nenhum endereco cadastrado. Cadastre um endereco para continuar com a entrega.',
+      }))
+    }
+
     if (Object.keys(errors).length > 0) return
+    if (isDelivery && addresses.length === 0) return
     if (isDelivery && (!shippingResult || shippingResult.notFound)) return
     setActiveStep('review')
   }
@@ -580,6 +565,7 @@ export function CheckoutClient({
         shippingZoneName: shippingResult?.zoneName || undefined,
         shippingZip: shippingResult?.notFound ? undefined : shippingZip,
         couponCode: appliedCoupon?.code || null,
+        deliveryAddressId: selectedAddressId ?? undefined,
       })
 
       const order: StoreOrder = {
@@ -628,23 +614,229 @@ export function CheckoutClient({
   }
 
   function renderAddressCard() {
-    const addr = profileFormattedAddress
-    if (!addr?.local) return null
+    if (!selectedAddress) return null
     return (
       <div className="space-y-0.5 text-sm text-slate-700">
-        {addr.street && addr.number ? (
-          <p className="font-medium text-slate-900">{addr.street}, {addr.number}</p>
-        ) : addr.street ? (
-          <p className="font-medium text-slate-900">{addr.street}</p>
-        ) : null}
-        {addr.neighborhood ? (
-          <p className="text-slate-500">{addr.neighborhood}</p>
+        <p className="font-medium text-slate-900">
+          {selectedAddress.street}{selectedAddress.number ? `, ${selectedAddress.number}` : ''}
+        </p>
+        {selectedAddress.neighborhood ? (
+          <p className="text-slate-500">{selectedAddress.neighborhood}</p>
         ) : null}
         <p className="text-slate-500">
-          {addr.city}{addr.state ? `/${addr.state}` : ''}{addr.zip ? ` — ${addr.zip.replace(/^(\d{5})(\d{3})$/, '$1-$2')}` : ''}
+          {selectedAddress.city}{selectedAddress.state ? `/${selectedAddress.state}` : ''}
+          {selectedAddress.zip_code ? ` — ${selectedAddress.zip_code.replace(/^(\d{5})(\d{3})$/, '$1-$2')}` : ''}
         </p>
+        {selectedAddress.reference ? (
+          <p className="text-xs text-slate-400">Ref.: {selectedAddress.reference}</p>
+        ) : null}
       </div>
     )
+  }
+
+  function renderAddressSelector() {
+    if (!isDelivery) return null
+
+    if (addresses.length === 0) {
+      return (
+        <div className="rounded-none border border-dashed border-slate-200 bg-white p-6 text-center">
+          <MapPin className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-3 text-sm font-medium text-slate-500">Nenhum endereco cadastrado</p>
+          <p className="mt-1 text-xs text-slate-400">
+            Para calcular o frete e concluir a entrega, cadastre um endereco.
+          </p>
+          <Link
+            href="/conta/enderecos"
+            className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--store-button-bg)] px-5 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" />
+            Cadastrar endereco
+          </Link>
+          {touched.shippingZip && fieldErrors.delivery_address ? (
+            <p className="mt-3 text-xs font-medium text-red-500">{fieldErrors.delivery_address}</p>
+          ) : null}
+        </div>
+      )
+    }
+
+    if (hasMultipleAddresses) {
+      return (
+        <div className="rounded-none border border-slate-100 bg-slate-50/60 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <MapPin className="h-4 w-4 text-slate-400" />
+            <span className="text-sm font-semibold text-slate-700">Endereco de entrega</span>
+          </div>
+          <div className="rounded-none border border-slate-200 bg-white">
+            <select
+              value={selectedAddressId ?? ''}
+              onChange={(e) => handleAddressChange(e.target.value)}
+              className="h-11 w-full rounded-none border-0 bg-transparent px-3 text-sm text-slate-900 outline-none"
+            >
+              {addresses.map((addr) => (
+                <option key={addr.id} value={addr.id}>
+                  {addr.street}{addr.number ? `, ${addr.number}` : ''}
+                  {addr.neighborhood ? ` - ${addr.neighborhood}` : ''}
+                  {addr.is_primary ? ' (Principal)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedAddress ? (
+            <div className="mt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-400">Endereco selecionado</span>
+                <button
+                  type="button"
+                  onClick={handleToggleAlternateCep}
+                  className="flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors hover:text-[var(--store-button-bg)]"
+                >
+                  <Pencil className="h-3 w-3" />
+                  {showAlternateCep ? 'Usar endereco selecionado' : 'Outro CEP'}
+                </button>
+              </div>
+              {showAlternateCep ? (
+                <div className="mt-2 space-y-3">
+                  <div className="rounded-none border border-slate-200 bg-slate-50 p-3 opacity-50">
+                    {renderAddressCard()}
+                  </div>
+                  <div>
+                    <label htmlFor="alternate-cep" className="text-xs font-medium text-slate-500 mb-1 block">Informe o CEP de entrega</label>
+                    <div className="flex gap-2">
+                      <input
+                        id="alternate-cep"
+                        type="text"
+                        inputMode="numeric"
+                        value={alternateCep}
+                        onChange={(e) => setAlternateCep(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                        placeholder="00000-000"
+                        maxLength={9}
+                        className="h-10 flex-1 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyAlternateCep}
+                        disabled={calculatingShipping || alternateCep.replace(/\D/g, '').length < 8}
+                        className="inline-flex h-10 items-center gap-1.5 rounded-none border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        {calculatingShipping ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                        Aplicar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 rounded-none border border-slate-100 bg-white p-3">
+                  {renderAddressCard()}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {renderShippingResult()}
+        </div>
+      )
+    }
+
+    // Single address (or none)
+    return (
+      <div className="rounded-none border border-slate-100 bg-slate-50/60 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-slate-400" />
+            <span className="text-sm font-semibold text-slate-700">
+              {addresses.length === 1 ? 'Entregar em' : 'Endereco de entrega'}
+            </span>
+          </div>
+          {addresses.length === 1 ? (
+            <button
+              type="button"
+              onClick={handleToggleAlternateCep}
+              className="flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors hover:text-[var(--store-button-bg)]"
+            >
+              <Pencil className="h-3 w-3" />
+              {showAlternateCep ? 'Usar meu endereco' : 'Outro CEP'}
+            </button>
+          ) : null}
+        </div>
+
+        {showAlternateCep ? (
+          <div className="space-y-3">
+            <div className="rounded-none border border-slate-200 bg-white p-3 opacity-50">
+              {renderAddressCard()}
+            </div>
+            <div>
+              <label htmlFor="alternate-cep" className="text-xs font-medium text-slate-500 mb-1 block">Informe o CEP de entrega</label>
+              <div className="flex gap-2">
+                <input
+                  id="alternate-cep"
+                  type="text"
+                  inputMode="numeric"
+                  value={alternateCep}
+                  onChange={(e) => setAlternateCep(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="00000-000"
+                  maxLength={9}
+                  className="h-10 flex-1 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyAlternateCep}
+                  disabled={calculatingShipping || alternateCep.replace(/\D/g, '').length < 8}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-none border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {calculatingShipping ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                  Aplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            {addresses.length === 1 ? (
+              renderAddressCard()
+            ) : null}
+          </div>
+        )}
+
+        {renderShippingResult()}
+      </div>
+    )
+  }
+
+  function renderShippingResult() {
+    if (shippingResult) {
+      return (
+        <div className={`mt-3 rounded-none border px-3 py-2.5 text-sm ${
+          shippingResult.notFound
+            ? 'border-amber-200 bg-amber-50 text-amber-700'
+            : shippingResult.isFree
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-blue-200 bg-blue-50 text-blue-700'
+        }`}>
+          {shippingResult.notFound ? (
+            'CEP nao encontrado nas zonas de entrega disponiveis.'
+          ) : shippingResult.isFree ? (
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4" />
+              Frete gratis{shippingResult.estimatedDays > 0 ? ` • Entrega em ate ${shippingResult.estimatedDays} dias uteis` : ''}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <Truck className="h-4 w-4" />
+              Frete: {formatMoney(shippingResult.cost)}{shippingResult.estimatedDays > 0 ? ` • ${shippingResult.estimatedDays} dias uteis` : ''}
+            </span>
+          )}
+        </div>
+      )
+    }
+    if (calculatingShipping) {
+      return (
+        <div className="mt-3 flex items-center gap-2 rounded-none border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Calculando frete...
+        </div>
+      )
+    }
+    return null
   }
 
   const grandTotal = finalTotalPrice + effectiveShippingCost
@@ -683,198 +875,58 @@ export function CheckoutClient({
             <h2 className="text-xl font-semibold text-slate-950">Dados do pedido</h2>
             <p className="mt-2 text-sm text-slate-500">Preencha os dados para continuar.</p>
             <div className="mt-5 grid gap-4">
-              {isDelivery ? (
-                <div className="rounded-none border border-slate-100 bg-slate-50/60 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm font-semibold text-slate-700">
-                        {profileFormattedAddress ? 'Entregar em' : 'Endereco de entrega'}
+              <div className="grid gap-2">
+                <span className="text-sm font-medium text-slate-700">Metodo de Entrega</span>
+                <div className={`grid gap-3 ${showDeliverySelect ? 'grid-cols-2' : 'grid-cols-1 max-w-[220px]'}`}>
+                  {deliverySettings.delivery_enabled ? (
+                    <button
+                      type="button"
+                      onClick={() => showDeliverySelect && setCustomer((c) => ({ ...c, delivery_method: 'delivery' }))}
+                      className={`flex flex-col items-center gap-3 rounded-xl border-2 p-5 transition-all ${
+                        customer.delivery_method === 'delivery'
+                          ? 'border-blue-500 bg-blue-50 shadow-sm'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      } ${!showDeliverySelect ? 'cursor-default' : 'cursor-pointer'}`}
+                    >
+                      <div className={`flex h-14 w-14 items-center justify-center rounded-full ${
+                        customer.delivery_method === 'delivery' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        <Truck className="h-6 w-6" />
+                      </div>
+                      <span className={`text-sm font-semibold ${
+                        customer.delivery_method === 'delivery' ? 'text-blue-700' : 'text-slate-700'
+                      }`}>
+                        Entrega
                       </span>
-                    </div>
-                    {profileFormattedAddress?.local ? (
-                      <button
-                        type="button"
-                        onClick={handleToggleAlternateCep}
-                        className="flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors hover:text-[var(--store-button-bg)]"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        {showAlternateCep ? 'Usar meu endereco' : 'Outro CEP'}
-                      </button>
-                    ) : null}
-                  </div>
+                    </button>
+                  ) : null}
 
-                  {showAlternateCep ? (
-                    <div className="space-y-3">
-                      <div className="rounded-none border border-slate-200 bg-white p-3 opacity-50">
-                        <p className="text-xs font-medium text-slate-500 mb-1">Endereco cadastrado</p>
-                        {renderAddressCard()}
+                  {deliverySettings.pickup_enabled ? (
+                    <button
+                      type="button"
+                      onClick={() => showDeliverySelect && setCustomer((c) => ({ ...c, delivery_method: 'pickup' }))}
+                      className={`flex flex-col items-center gap-3 rounded-xl border-2 p-5 transition-all ${
+                        customer.delivery_method === 'pickup'
+                          ? 'border-blue-500 bg-blue-50 shadow-sm'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      } ${!showDeliverySelect ? 'cursor-default' : 'cursor-pointer'}`}
+                    >
+                      <div className={`flex h-14 w-14 items-center justify-center rounded-full ${
+                        customer.delivery_method === 'pickup' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        <Store className="h-6 w-6" />
                       </div>
-                      <div>
-                        <label htmlFor="alternate-cep" className="text-xs font-medium text-slate-500 mb-1 block">Informe o CEP de entrega</label>
-                        <div className="flex gap-2">
-                          <input
-                            id="alternate-cep"
-                            type="text"
-                            inputMode="numeric"
-                            value={alternateCep}
-                            onChange={(e) => setAlternateCep(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                            placeholder="00000-000"
-                            maxLength={9}
-                            className="h-10 flex-1 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleApplyAlternateCep}
-                            disabled={calculatingShipping || alternateCep.replace(/\D/g, '').length < 8}
-                            className="inline-flex h-10 items-center gap-1.5 rounded-none border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
-                          >
-                            {calculatingShipping ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                            Aplicar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      {profileFormattedAddress ? (
-                        <>
-                          {profileFormattedAddress.local ? renderAddressCard() : (
-                            <div className="text-sm text-slate-700">
-                              <p className="font-medium text-slate-900">{profileFormattedAddress.display}</p>
-                            </div>
-                          )}
-                          {!addressHasUsableCep ? (
-                            <div className="mt-3">
-                              <label htmlFor="checkout-cep" className="text-xs font-medium text-slate-500 mb-1 block">Informe o CEP para calcular o frete</label>
-                              <div className="flex gap-2">
-                                <input
-                                  id="checkout-cep"
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={shippingZip}
-                                  onChange={(event) => {
-                                    const val = event.target.value.replace(/\D/g, '').slice(0, 8)
-                                    setShippingZip(val)
-                                    if (val.length !== 8) setShippingResult(null)
-                                  }}
-                                  onBlur={() => handleFieldBlur('shippingZip')}
-                                  placeholder="00000-000"
-                                  maxLength={9}
-                                  className={`h-10 w-40 rounded-none border px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200 ${
-                                    touched.shippingZip && fieldErrors.shippingZip ? 'border-red-300 bg-red-50' : 'border-slate-200'
-                                  }`}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleCalculateShipping()}
-                                  disabled={calculatingShipping || shippingZip.replace(/\D/g, '').length < 8}
-                                  className="inline-flex h-10 items-center gap-1.5 rounded-none border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
-                                >
-                                  {calculatingShipping ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
-                                  Calcular
-                                </button>
-                              </div>
-                              {touched.shippingZip && fieldErrors.shippingZip ? (
-                                <p className="mt-1 text-xs text-red-500">{fieldErrors.shippingZip}</p>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </>
-                      ) : (
-                        <div className="rounded-none border border-dashed border-slate-200 bg-white p-4 text-center">
-                          <p className="text-sm text-slate-400">Nenhum endereco cadastrado.</p>
-                          <p className="mt-1 text-xs text-slate-400">
-                            Cadastre seu endereco em <Link href="/conta/enderecos" className="underline hover:text-slate-600">Minha Conta &gt; Enderecos</Link>
-                          </p>
-                          <div className="mt-3">
-                            <label htmlFor="checkout-cep-fallback" className="text-xs font-medium text-slate-500 mb-1 block">Informe o CEP para calcular o frete</label>
-                            <div className="flex gap-2 justify-center">
-                              <input
-                                id="checkout-cep-fallback"
-                                type="text"
-                                inputMode="numeric"
-                                value={shippingZip}
-                                onChange={(event) => {
-                                  const val = event.target.value.replace(/\D/g, '').slice(0, 8)
-                                  setShippingZip(val)
-                                  if (val.length !== 8) setShippingResult(null)
-                                }}
-                                onBlur={() => handleFieldBlur('shippingZip')}
-                                placeholder="00000-000"
-                                maxLength={9}
-                                className={`h-10 w-40 rounded-none border px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200 ${
-                                  touched.shippingZip && fieldErrors.shippingZip ? 'border-red-300 bg-red-50' : 'border-slate-200'
-                                }`}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleCalculateShipping()}
-                                disabled={calculatingShipping || shippingZip.replace(/\D/g, '').length < 8}
-                                className="inline-flex h-10 items-center gap-1.5 rounded-none border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
-                              >
-                                {calculatingShipping ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
-                                Calcular
-                              </button>
-                            </div>
-                            {touched.shippingZip && fieldErrors.shippingZip ? (
-                              <p className="mt-1 text-xs text-red-500">{fieldErrors.shippingZip}</p>
-                            ) : null}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {shippingResult ? (
-                    <div className={`mt-3 rounded-none border px-3 py-2.5 text-sm ${
-                      shippingResult.notFound
-                        ? 'border-amber-200 bg-amber-50 text-amber-700'
-                        : shippingResult.isFree
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                          : 'border-blue-200 bg-blue-50 text-blue-700'
-                    }`}>
-                      {shippingResult.notFound ? (
-                        'CEP nao encontrado nas zonas de entrega disponiveis.'
-                      ) : shippingResult.isFree ? (
-                        <span className="flex items-center gap-1.5">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Frete gratis{shippingResult.estimatedDays > 0 ? ` • Entrega em ate ${shippingResult.estimatedDays} dias uteis` : ''}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1.5">
-                          <Truck className="h-4 w-4" />
-                          Frete: {formatMoney(shippingResult.cost)}{shippingResult.estimatedDays > 0 ? ` • ${shippingResult.estimatedDays} dias uteis` : ''}
-                        </span>
-                      )}
-                    </div>
-                  ) : calculatingShipping ? (
-                    <div className="mt-3 flex items-center gap-2 rounded-none border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Calculando frete...
-                    </div>
+                      <span className={`text-sm font-semibold ${
+                        customer.delivery_method === 'pickup' ? 'text-blue-700' : 'text-slate-700'
+                      }`}>
+                        Retirar na loja
+                      </span>
+                    </button>
                   ) : null}
                 </div>
-              ) : null}
+              </div>
 
-              {showDeliverySelect ? (
-                <div className="grid gap-2">
-                  <label htmlFor="checkout-delivery-method" className="text-sm font-medium text-slate-700">Metodo de Entrega</label>
-                  <select
-                    id="checkout-delivery-method"
-                    value={customer.delivery_method}
-                    onChange={(event) => setCustomer((current) => ({ ...current, delivery_method: event.target.value }))}
-                    className="h-11 rounded-none border border-slate-200 px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                  >
-                    {deliverySettings.delivery_enabled ? <option value="delivery">Entrega (Delivery)</option> : null}
-                    {deliverySettings.pickup_enabled ? <option value="pickup">Retirar na Loja</option> : null}
-                  </select>
-                </div>
-              ) : (
-                <div className="rounded-none border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                  {deliverySettings.delivery_enabled ? 'Entrega (Delivery)' : deliverySettings.pickup_enabled ? 'Retirada na Loja' : 'Metodo indisponivel'}
-                </div>
-              )}
+              {isDelivery ? renderAddressSelector() : null}
 
               <div className="grid gap-2">
                 <div className="flex items-center gap-2">
@@ -891,8 +943,13 @@ export function CheckoutClient({
                   required
                   readOnly
                   value={customer.name}
-                  className="h-11 rounded-none border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none cursor-not-allowed"
+                  className={`h-11 rounded-none border px-3 text-sm text-slate-500 outline-none cursor-not-allowed ${
+                    touched.name && fieldErrors.name ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-50'
+                  }`}
                 />
+                {touched.name && fieldErrors.name ? (
+                  <p className="text-xs text-red-500">{fieldErrors.name}</p>
+                ) : null}
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center gap-2">
@@ -909,8 +966,13 @@ export function CheckoutClient({
                   required
                   readOnly
                   value={customer.phone}
-                  className="h-11 rounded-none border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none cursor-not-allowed"
+                  className={`h-11 rounded-none border px-3 text-sm text-slate-500 outline-none cursor-not-allowed ${
+                    touched.phone && fieldErrors.phone ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-50'
+                  }`}
                 />
+                {touched.phone && fieldErrors.phone ? (
+                  <p className="text-xs text-red-500">{fieldErrors.phone}</p>
+                ) : null}
               </div>
               <div className="grid gap-2">
                 <label htmlFor="checkout-payment" className="text-sm font-medium text-slate-700">Forma de Pagamento</label>
@@ -923,7 +985,6 @@ export function CheckoutClient({
                   <option value="pix">Pix</option>
                   <option value="credit_card">Cartao de Credito</option>
                   <option value="cash">Dinheiro</option>
-                  <option value="card_on_delivery">Cartao na Entrega</option>
                 </select>
               </div>
 
@@ -945,32 +1006,6 @@ export function CheckoutClient({
                       )
                     })}
                   </select>
-
-                  {grandTotal > 0 ? (
-                    <div className="mt-1 rounded-none border border-slate-200 bg-slate-50">
-                      <table className="w-full text-xs text-slate-600">
-                        <thead>
-                          <tr className="border-b border-slate-200">
-                            <th className="px-3 py-2 text-left font-medium text-slate-700">Parcelas</th>
-                            <th className="px-3 py-2 text-right font-medium text-slate-700">Valor</th>
-                            <th className="px-3 py-2 text-right font-medium text-slate-700">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => {
-                            const inst = computeInstallments(grandTotal, num)
-                            return (
-                              <tr key={num} className={`border-b border-slate-100 last:border-0 ${num === customer.installments ? 'bg-blue-50 font-semibold text-blue-700' : ''}`}>
-                                <td className="px-3 py-1.5">{num}x</td>
-                                <td className="px-3 py-1.5 text-right">{inst.formatted}</td>
-                                <td className="px-3 py-1.5 text-right">{formatMoney(grandTotal)}</td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : null}
                 </div>
               ) : null}
 
@@ -1060,7 +1095,6 @@ export function CheckoutClient({
                 <span className="font-medium text-slate-900">
                   {customer.payment_method === 'pix' ? 'Pix' :
                    customer.payment_method === 'credit_card' ? `Cartao em ${customer.installments}x` :
-                   customer.payment_method === 'card_on_delivery' ? 'Cartao na Entrega' :
                    'Dinheiro'}
                 </span>
               </div>
@@ -1074,13 +1108,9 @@ export function CheckoutClient({
                 <div className="border-t border-slate-200 pt-4 space-y-3">
                   <div>
                     <span className="text-xs text-slate-400">Endereco de entrega</span>
-                    {profileFormattedAddress?.local ? (
-                      <div className="mt-1 text-sm text-slate-700">
-                        {renderAddressCard()}
-                      </div>
-                    ) : (
-                      <p className="mt-1 text-sm font-medium text-slate-900">{customer.delivery_address || '-'}</p>
-                    )}
+                    <div className="mt-1 text-sm text-slate-700">
+                      {renderAddressCard()}
+                    </div>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Frete</span>
@@ -1161,9 +1191,9 @@ export function CheckoutClient({
                 <p className="text-sm font-medium text-slate-900 truncate">{item.name}</p>
                 <p className="mt-1 text-xs text-slate-500">
                   {item.colorName ? `Cor: ${item.colorName}` : ''}
-                  {item.colorName && item.size ? ' • ' : ''}
+                  {item.colorName && item.size ? ' \u2022 ' : ''}
                   {item.size ? `Tam: ${item.size}` : ''}
-                  {item.colorName || item.size ? ' • ' : ''}
+                  {item.colorName || item.size ? ' \u2022 ' : ''}
                   Qtd: {item.quantity}
                 </p>
               </div>
@@ -1226,26 +1256,17 @@ export function CheckoutClient({
           <p>{customer.phone || 'Telefone ainda nao informado'}</p>
           {isDelivery ? (
             <div className="mt-2">
-              {profileFormattedAddress?.local ? (
-                <div className="text-slate-500">
-                  <MapPin className="mb-0.5 mr-1.5 inline-block h-3.5 w-3.5" />
-                  <span className="text-xs">{profileFormattedAddress.display}</span>
-                </div>
-              ) : customer.delivery_address ? (
-                <p className="text-slate-500">
-                  <MapPin className="mb-0.5 mr-1.5 inline-block h-3.5 w-3.5" />
-                  {customer.delivery_address}
-                </p>
-              ) : (
-                <p className="text-slate-400">Endereco nao informado</p>
-              )}
+              <div className="text-slate-500">
+                <MapPin className="mb-0.5 mr-1.5 inline-block h-3.5 w-3.5" />
+                <span className="text-xs">{customer.delivery_address || 'Endereco nao informado'}</span>
+              </div>
             </div>
           ) : null}
           {shippingResult && !shippingResult.notFound ? (
             <p className="mt-2 text-slate-500">
               {FreightIcon ? <FreightIcon className={`mb-0.5 mr-1.5 inline-block h-3.5 w-3.5 ${freightIcon?.color || ''}`} /> : <Truck className="mb-0.5 mr-1.5 inline-block h-3.5 w-3.5" />}
               {effectiveShippingCost === 0 ? 'Frete gratis' : `Frete: ${formatMoney(effectiveShippingCost)}`}
-              {shippingResult.estimatedDays > 0 ? ` • ${shippingResult.estimatedDays} dias uteis` : ''}
+              {shippingResult.estimatedDays > 0 ? ` \u2022 ${shippingResult.estimatedDays} dias uteis` : ''}
             </p>
           ) : null}
           <div className="mt-3 border-t border-slate-200 pt-3">
