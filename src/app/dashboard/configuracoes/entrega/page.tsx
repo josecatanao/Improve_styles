@@ -17,8 +17,8 @@ export default async function DeliverySettingsPage() {
   return (
     <div className="space-y-6">
       <ProductWorkspaceHeader
-        title="Metodos de entrega"
-        description="Ative ou desative opcoes de delivery e retirada na loja, e configure o endereco de retirada."
+        title="Métodos de entrega"
+        description="Ative ou desative opções de delivery e retirada na loja, e configure o endereço de retirada."
       />
 
       <DeliverySettingsManager

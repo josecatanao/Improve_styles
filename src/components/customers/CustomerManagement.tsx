@@ -31,7 +31,7 @@ export function CustomerManagement({ customers, summary }: CustomerManagementPro
   async function handleDelete(id: string) {
     const confirmed = await confirm({
       title: 'Excluir cliente?',
-      description: 'Essa exclusao e definitiva e nao pode ser desfeita.',
+      description: 'Essa exclusão é definitiva e não pode ser desfeita.',
       confirmLabel: 'Excluir cliente',
       cancelLabel: 'Cancelar',
       variant: 'destructive',
@@ -46,7 +46,7 @@ export function CustomerManagement({ customers, summary }: CustomerManagementPro
       await deleteCustomer(id)
       showToast({
         variant: 'success',
-        title: 'Cliente excluido',
+        title: 'Cliente excluído',
       })
     } catch (error) {
       showToast({
@@ -66,7 +66,7 @@ export function CustomerManagement({ customers, summary }: CustomerManagementPro
           { label: 'Clientes cadastrados', value: summary.total, helper: 'Base total da loja.', icon: Users },
           { label: 'Ativos', value: summary.active, helper: 'Contas prontas para compra.', icon: UserRound },
           { label: 'Com WhatsApp', value: summary.withWhatsapp, helper: 'Canal principal de contato.', icon: Phone },
-          { label: 'Com endereco', value: summary.withAddress, helper: 'Dados prontos para entrega.', icon: MapPin },
+          { label: 'Com endereço', value: summary.withAddress, helper: 'Dados prontos para entrega.', icon: MapPin },
         ].map((item) => {
           const Icon = item.icon
 
@@ -89,7 +89,7 @@ export function CustomerManagement({ customers, summary }: CustomerManagementPro
         <div className="border-b border-slate-100 px-6 py-5">
           <h2 className="text-lg font-semibold text-slate-900">Clientes da loja</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Acompanhe quem ja criou conta, com foco em contato e entrega.
+            Acompanhe quem já criou conta, com foco em contato e entrega.
           </p>
         </div>
 
@@ -104,8 +104,8 @@ export function CustomerManagement({ customers, summary }: CustomerManagementPro
                   <th scope="col" className="px-6 py-3">Contato</th>
                   <th scope="col" className="px-6 py-3">Entrega</th>
                   <th scope="col" className="px-6 py-3">Status</th>
-                  <th scope="col" className="px-6 py-3">Ultimo acesso</th>
-                  <th scope="col" className="px-6 py-3 text-right">Acoes</th>
+                  <th scope="col" className="px-6 py-3">Último acesso</th>
+                  <th scope="col" className="px-6 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -138,7 +138,7 @@ export function CustomerManagement({ customers, summary }: CustomerManagementPro
                         </div>
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-slate-400" />
-                          <span>{customer.whatsapp?.trim() || 'Nao informado'}</span>
+                          <span>{customer.whatsapp?.trim() || 'Não informado'}</span>
                         </div>
                       </div>
                     </td>
@@ -146,7 +146,7 @@ export function CustomerManagement({ customers, summary }: CustomerManagementPro
                       {customer.delivery_address?.trim() ? (
                         <p className="max-w-sm leading-6">{customer.delivery_address}</p>
                       ) : (
-                        <span className="text-slate-400">Nao informado</span>
+                        <span className="text-slate-400">Não informado</span>
                       )}
                     </td>
                     <td className="px-6 py-4">

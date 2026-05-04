@@ -49,6 +49,7 @@ export type ProductListItem = {
   collection?: string | null
   audience?: string | null
   tags: string[] | null
+  is_promotion?: boolean
   is_featured?: boolean
   is_new?: boolean
   sales_count?: number | null
@@ -62,6 +63,7 @@ export type ProductDetail = ProductListItem & {
   collection: string | null
   audience: string | null
   cost_price: number | null
+  is_promotion: boolean
   is_featured: boolean
   is_new: boolean
   show_specs: boolean

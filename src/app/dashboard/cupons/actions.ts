@@ -2,18 +2,16 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import { requirePermission } from '@/lib/permissions-server'
 
 async function requireDashboardUser() {
+  await requirePermission('settings:manage')
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user || user.user_metadata.account_type === 'customer') {
-    throw new Error('Usuario sem permissao para gerenciar cupons.')
-  }
-
-  return { supabase, user }
+  return { supabase, user: user! }
 }
 
 function revalidateCouponSurfaces() {

@@ -1,5 +1,6 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient } from '@/utils/supabase/server'
+import { requirePermission } from '@/lib/permissions-server'
 import type { StaffRole, StaffStatus } from '@/lib/staff-shared'
 
 type InvitePayload = {
@@ -27,6 +28,12 @@ export async function POST(request: Request) {
 
   if (userError || !user) {
     return Response.json({ error: 'Usuario nao autenticado.' }, { status: 401 })
+  }
+
+  try {
+    await requirePermission('team:manage')
+  } catch (err) {
+    return Response.json({ error: (err as Error).message }, { status: 403 })
   }
 
   const body = (await request.json()) as Partial<InvitePayload>

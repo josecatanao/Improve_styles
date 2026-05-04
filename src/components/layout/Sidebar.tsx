@@ -25,27 +25,30 @@ import {
 import { useSyncExternalStore } from 'react'
 import { logout } from '@/app/login/actions'
 
+import type { StaffPermission } from '@/lib/staff-shared'
+import { hasPermission } from '@/lib/permissions'
+
 const productNavigation = [
-  { name: 'Visao geral', href: '/dashboard/produtos', icon: Grid2X2 },
-  { name: 'Catalogo', href: '/dashboard/produtos/catalogo', icon: FolderKanban },
-  { name: 'Categorias', href: '/dashboard/produtos/categorias', icon: Tags },
-  { name: 'Cadastrar produto', href: '/dashboard/produtos/novo', icon: PlusCircle },
+  { name: 'Visao geral', href: '/dashboard/produtos', icon: Grid2X2, permission: 'products:view' as StaffPermission },
+  { name: 'Catalogo', href: '/dashboard/produtos/catalogo', icon: FolderKanban, permission: 'products:view' as StaffPermission },
+  { name: 'Categorias', href: '/dashboard/produtos/categorias', icon: Tags, permission: 'products:manage' as StaffPermission },
+  { name: 'Cadastrar produto', href: '/dashboard/produtos/novo', icon: PlusCircle, permission: 'products:manage' as StaffPermission },
 ]
 
 const settingsNavigation = [
-  { name: 'Configuracoes da loja', href: '/dashboard/configuracoes/loja', icon: ShoppingBag },
-  { name: 'Aparencia do dashboard', href: '/dashboard/configuracoes/dashboard', icon: LayoutDashboard },
-  { name: 'Metodos de entrega', href: '/dashboard/configuracoes/entrega', icon: Truck },
+  { name: 'Configuracoes da loja', href: '/dashboard/configuracoes/loja', icon: ShoppingBag, permission: 'settings:manage' as StaffPermission },
+  { name: 'Aparencia do dashboard', href: '/dashboard/configuracoes/dashboard', icon: LayoutDashboard, permission: 'settings:manage' as StaffPermission },
+  { name: 'Metodos de entrega', href: '/dashboard/configuracoes/entrega', icon: Truck, permission: 'settings:manage' as StaffPermission },
 ]
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Pedidos', href: '/dashboard/pedidos', icon: ShoppingBag },
-  { name: 'Marketing', href: '/dashboard/marketing', icon: Grid2X2 },
-  { name: 'Cupons', href: '/dashboard/cupons', icon: TicketPercent },
-  { name: 'Zonas de entrega', href: '/dashboard/entrega', icon: Truck },
-  { name: 'Clientes', href: '/dashboard/clientes', icon: UserIcon },
-  { name: 'Usuarios', href: '/dashboard/usuarios', icon: Users },
+  { name: 'Dashboard', href: '/dashboard', icon: Home, permission: 'dashboard:view' as StaffPermission },
+  { name: 'Pedidos', href: '/dashboard/pedidos', icon: ShoppingBag, permission: 'dashboard:view' as StaffPermission },
+  { name: 'Marketing', href: '/dashboard/marketing', icon: Grid2X2, permission: 'settings:manage' as StaffPermission },
+  { name: 'Cupons', href: '/dashboard/cupons', icon: TicketPercent, permission: 'settings:manage' as StaffPermission },
+  { name: 'Zonas de entrega', href: '/dashboard/entrega', icon: Truck, permission: 'settings:manage' as StaffPermission },
+  { name: 'Clientes', href: '/dashboard/clientes', icon: UserIcon, permission: 'dashboard:view' as StaffPermission },
+  { name: 'Usuarios', href: '/dashboard/usuarios', icon: Users, permission: 'team:manage' as StaffPermission },
 ]
 
 type SidebarProps = {
@@ -58,17 +61,24 @@ type SidebarProps = {
     id: string
     createdAt: string
   }>
+  permissions?: StaffPermission[]
+  userDisplayName?: string
+  userRoleLabel?: string
 }
 
 const ORDER_NOTIFICATIONS_VIEWED_KEY = 'dashboard-orders-viewed-at'
 
-export function Sidebar({ onNavigate, branding, recentOrders = [] }: SidebarProps) {
+export function Sidebar({ onNavigate, branding, recentOrders = [], permissions = [], userDisplayName, userRoleLabel }: SidebarProps) {
   const pathname = usePathname()
   const isProductsSectionActive = pathname === '/dashboard/produtos' || pathname.startsWith('/dashboard/produtos/')
   const isSettingsSectionActive = pathname === '/dashboard/configuracoes' || pathname.startsWith('/dashboard/configuracoes/')
   const [isProductsOpen, setIsProductsOpen] = useState(isProductsSectionActive)
   const [isSettingsOpen, setIsSettingsOpen] = useState(isSettingsSectionActive)
   const [isCollapsed, setIsCollapsed] = useState(false)
+
+  const filteredNavigation = navigation.filter((item) => hasPermission(permissions, item.permission))
+  const filteredProductNav = productNavigation.filter((item) => hasPermission(permissions, item.permission))
+  const filteredSettingsNav = settingsNavigation.filter((item) => hasPermission(permissions, item.permission))
 
   const latestRecentOrderAt = useMemo(() => recentOrders[0]?.createdAt ?? null, [recentOrders])
   const recentOrderCount = useSyncExternalStore(
@@ -163,7 +173,7 @@ export function Sidebar({ onNavigate, branding, recentOrders = [] }: SidebarProp
         ) : null}
 
         <div className="space-y-2">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             if (item.href === '/dashboard') {
               const isActive = pathname === item.href
               return (
@@ -187,59 +197,61 @@ export function Sidebar({ onNavigate, branding, recentOrders = [] }: SidebarProp
             return null
           })}
 
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={handleProductsToggle}
-              title="Produtos"
-              className={`${getPrimaryItemClasses(isProductsSectionActive)} w-full justify-between ${isCollapsed ? 'justify-center' : ''}`}
-            >
-              <span className={`flex items-center ${isCollapsed ? 'justify-center' : ''}`}>
-                <Package
-                  className={`h-5 w-5 shrink-0 ${
-                    isProductsSectionActive ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
-                  } ${isCollapsed ? '' : 'mr-3'}`}
-                />
-                {!isCollapsed ? 'Produtos' : null}
-              </span>
-              {!isCollapsed ? (
-                <ChevronRight
-                  className={`h-4 w-4 text-slate-400 transition-transform ${
-                    isProductsOpen ? 'rotate-90 text-slate-700' : isProductsSectionActive ? 'text-slate-700' : ''
-                  }`}
-                />
-              ) : null}
-            </button>
+          {filteredProductNav.length > 0 ? (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={handleProductsToggle}
+                title="Produtos"
+                className={`${getPrimaryItemClasses(isProductsSectionActive)} w-full justify-between ${isCollapsed ? 'justify-center' : ''}`}
+              >
+                <span className={`flex items-center ${isCollapsed ? 'justify-center' : ''}`}>
+                  <Package
+                    className={`h-5 w-5 shrink-0 ${
+                      isProductsSectionActive ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
+                    } ${isCollapsed ? '' : 'mr-3'}`}
+                  />
+                  {!isCollapsed ? 'Produtos' : null}
+                </span>
+                {!isCollapsed ? (
+                  <ChevronRight
+                    className={`h-4 w-4 text-slate-400 transition-transform ${
+                      isProductsOpen ? 'rotate-90 text-slate-700' : isProductsSectionActive ? 'text-slate-700' : ''
+                    }`}
+                  />
+                ) : null}
+              </button>
 
-            {!isCollapsed && isProductsOpen ? (
-              <div className="rounded-[1.5rem] bg-slate-50/90 p-2 ring-1 ring-slate-200/80 dark:bg-slate-900/80 dark:ring-slate-800">
-                <div className="space-y-1.5">
-                  {productNavigation.map((item) => {
-                    const isActive = pathname === item.href
-                    const ItemIcon = item.icon
+              {!isCollapsed && isProductsOpen ? (
+                <div className="rounded-[1.5rem] bg-slate-50/90 p-2 ring-1 ring-slate-200/80 dark:bg-slate-900/80 dark:ring-slate-800">
+                  <div className="space-y-1.5">
+                    {filteredProductNav.map((item) => {
+                      const isActive = pathname === item.href
+                      const ItemIcon = item.icon
 
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={onNavigate}
-                        className={`flex items-center rounded-xl px-3 py-2.5 text-sm transition-all ${
-                          isActive
-                            ? 'bg-white font-medium text-slate-950 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-700'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50'
-                        }`}
-                      >
-                        <ItemIcon className="mr-2.5 h-4 w-4" />
-                        {item.name}
-                      </Link>
-                    )
-                  })}
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={onNavigate}
+                          className={`flex items-center rounded-xl px-3 py-2.5 text-sm transition-all ${
+                            isActive
+                              ? 'bg-white font-medium text-slate-950 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-700'
+                              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50'
+                          }`}
+                        >
+                          <ItemIcon className="mr-2.5 h-4 w-4" />
+                          {item.name}
+                        </Link>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
+          ) : null}
 
-          {navigation.filter((item) => item.href !== '/dashboard').map((item) => {
+          {filteredNavigation.filter((item) => item.href !== '/dashboard').map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
             return (
               <Link
@@ -270,57 +282,59 @@ export function Sidebar({ onNavigate, branding, recentOrders = [] }: SidebarProp
             )
           })}
 
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={handleSettingsToggle}
-              title="Configurações"
-              className={`${getPrimaryItemClasses(isSettingsSectionActive)} w-full justify-between ${isCollapsed ? 'justify-center' : ''}`}
-            >
-              <span className={`flex items-center ${isCollapsed ? 'justify-center' : ''}`}>
-                <Settings
-                  className={`h-5 w-5 shrink-0 ${
-                    isSettingsSectionActive ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
-                  } ${isCollapsed ? '' : 'mr-3'}`}
-                />
-                {!isCollapsed ? 'Configurações' : null}
-              </span>
-              {!isCollapsed ? (
-                <ChevronRight
-                  className={`h-4 w-4 text-slate-400 transition-transform ${
-                    isSettingsOpen ? 'rotate-90 text-slate-700' : isSettingsSectionActive ? 'text-slate-700' : ''
-                  }`}
-                />
-              ) : null}
-            </button>
+          {filteredSettingsNav.length > 0 ? (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={handleSettingsToggle}
+                title="Configuracoes"
+                className={`${getPrimaryItemClasses(isSettingsSectionActive)} w-full justify-between ${isCollapsed ? 'justify-center' : ''}`}
+              >
+                <span className={`flex items-center ${isCollapsed ? 'justify-center' : ''}`}>
+                  <Settings
+                    className={`h-5 w-5 shrink-0 ${
+                      isSettingsSectionActive ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
+                    } ${isCollapsed ? '' : 'mr-3'}`}
+                  />
+                  {!isCollapsed ? 'Configuracoes' : null}
+                </span>
+                {!isCollapsed ? (
+                  <ChevronRight
+                    className={`h-4 w-4 text-slate-400 transition-transform ${
+                      isSettingsOpen ? 'rotate-90 text-slate-700' : isSettingsSectionActive ? 'text-slate-700' : ''
+                    }`}
+                  />
+                ) : null}
+              </button>
 
-            {!isCollapsed && isSettingsOpen ? (
-              <div className="rounded-[1.5rem] bg-slate-50/90 p-2 ring-1 ring-slate-200/80 dark:bg-slate-900/80 dark:ring-slate-800">
-                <div className="space-y-1.5">
-                  {settingsNavigation.map((item) => {
-                    const isActive = pathname === item.href
-                    const ItemIcon = item.icon
+              {!isCollapsed && isSettingsOpen ? (
+                <div className="rounded-[1.5rem] bg-slate-50/90 p-2 ring-1 ring-slate-200/80 dark:bg-slate-900/80 dark:ring-slate-800">
+                  <div className="space-y-1.5">
+                    {filteredSettingsNav.map((item) => {
+                      const isActive = pathname === item.href
+                      const ItemIcon = item.icon
 
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={onNavigate}
-                        className={`flex items-center rounded-xl px-3 py-2.5 text-sm transition-all ${
-                          isActive
-                            ? 'bg-white font-medium text-slate-950 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-700'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50'
-                        }`}
-                      >
-                        <ItemIcon className="mr-2.5 h-4 w-4" />
-                        {item.name}
-                      </Link>
-                    )
-                  })}
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={onNavigate}
+                          className={`flex items-center rounded-xl px-3 py-2.5 text-sm transition-all ${
+                            isActive
+                              ? 'bg-white font-medium text-slate-950 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-700'
+                              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50'
+                          }`}
+                        >
+                          <ItemIcon className="mr-2.5 h-4 w-4" />
+                          {item.name}
+                        </Link>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </nav>
 
@@ -332,8 +346,8 @@ export function Sidebar({ onNavigate, branding, recentOrders = [] }: SidebarProp
             </div>
             {!isCollapsed ? (
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">Admin</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Painel administrativo</p>
+                <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">{userDisplayName || 'Usuário'}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{userRoleLabel || 'Painel'}</p>
               </div>
             ) : null}
           </div>

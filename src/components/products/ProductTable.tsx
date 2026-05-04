@@ -7,6 +7,8 @@ import { LoaderCircle, Pencil, Trash2, TriangleAlert } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { createClient } from '@/utils/supabase/client'
 import { useConfirm, useToast } from '@/components/ui/feedback-provider'
+import { usePermissions } from '@/components/permissions-provider'
+import { translateError } from '@/lib/permissions'
 import {
   getProductStatusClasses,
   getProductStatusLabel,
@@ -53,6 +55,7 @@ export function ProductTable({
   const supabase = useMemo(() => createClient(), [])
   const showToast = useToast()
   const confirm = useConfirm()
+  const { guard } = usePermissions()
   const [busyProductId, setBusyProductId] = useState<string | null>(null)
 
   if (products.length === 0) {
@@ -87,6 +90,7 @@ export function ProductTable({
   }
 
   async function handleStatusChange(productId: string, nextStatus: ProductStatus) {
+    if (!guard('products:manage')) return
     setBusyProductId(productId)
 
     const { error: updateError } = await supabase
@@ -102,7 +106,7 @@ export function ProductTable({
       showToast({
         variant: 'error',
         title: 'Falha ao atualizar status',
-        description: updateError.message,
+        description: translateError(updateError, updateError.message),
       })
       return
     }
@@ -116,6 +120,7 @@ export function ProductTable({
   }
 
   async function handleFeaturedChange(productId: string, isFeatured: boolean) {
+    if (!guard('products:manage')) return
     setBusyProductId(productId)
 
     const { error: updateError } = await supabase
@@ -128,7 +133,7 @@ export function ProductTable({
       showToast({
         variant: 'error',
         title: 'Falha ao atualizar destaque',
-        description: updateError.message,
+        description: translateError(updateError, updateError.message),
       })
       return
     }
@@ -141,7 +146,35 @@ export function ProductTable({
     await refreshTable()
   }
 
+  async function handlePromotionChange(productId: string, isPromotion: boolean) {
+    if (!guard('products:manage')) return
+    setBusyProductId(productId)
+
+    const { error: updateError } = await supabase
+      .from('products')
+      .update({ is_promotion: isPromotion })
+      .eq('id', productId)
+
+    if (updateError) {
+      setBusyProductId(null)
+      showToast({
+        variant: 'error',
+        title: 'Falha ao atualizar oferta',
+        description: translateError(updateError, updateError.message),
+      })
+      return
+    }
+
+    setBusyProductId(null)
+    showToast({
+      variant: 'success',
+      title: isPromotion ? 'Produto adicionado as ofertas' : 'Produto removido das ofertas',
+    })
+    await refreshTable()
+  }
+
   async function handleDelete(productId: string, productName: string) {
+    if (!guard('products:manage')) return
     const confirmed = await confirm({
       title: 'Excluir produto?',
       description: `O produto "${productName}" sera apagado permanentemente.`,
@@ -165,7 +198,7 @@ export function ProductTable({
       showToast({
         variant: 'error',
         title: 'Falha ao buscar imagens',
-        description: imagesError.message,
+        description: translateError(imagesError, imagesError.message),
       })
       return
     }
@@ -180,7 +213,7 @@ export function ProductTable({
       showToast({
         variant: 'error',
         title: 'Falha ao apagar produto',
-        description: deleteError.message,
+        description: translateError(deleteError, deleteError.message),
       })
       return
     }
@@ -206,12 +239,13 @@ export function ProductTable({
               <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 <th scope="col" className="px-4 py-3">Produto</th>
                 <th scope="col" className="px-4 py-3">Comercial</th>
-                <th scope="col" className="px-4 py-3">Variacoes</th>
+                <th scope="col" className="px-4 py-3">Variações</th>
                 <th scope="col" className="px-4 py-3">Estoque</th>
-                <th scope="col" className="px-4 py-3 text-center">Vitrine</th>
+                <th scope="col" className="px-4 py-3 text-center">Oferta</th>
+                <th scope="col" className="px-4 py-3 text-center">Destaque</th>
                 <th scope="col" className="px-4 py-3">Status</th>
                 <th scope="col" className="px-4 py-3">Criado em</th>
-                <th scope="col" className="px-4 py-3 text-right">Acoes</th>
+                <th scope="col" className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -237,7 +271,7 @@ export function ProductTable({
                         <div className="min-w-0">
                           <p className="font-semibold text-slate-900">{product.name}</p>
                           <p className="mt-1 max-w-md text-sm text-slate-500">
-                            {product.short_description || product.description || 'Sem descricao cadastrada.'}
+                            {product.short_description || product.description || 'Sem descrição cadastrada.'}
                           </p>
                           <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
                             {product.category ? (
@@ -298,8 +332,20 @@ export function ProductTable({
                         {product.stock} un.
                       </p>
                       <p className={`mt-1 text-xs ${product.stock <= 3 ? 'font-semibold text-amber-600' : product.stock < 10 ? 'text-amber-600' : 'text-slate-500'}`}>
-                        {product.stock <= 3 ? 'Estoque critico' : product.stock < 10 ? 'Estoque baixo' : 'Estoque regular'}
+                        {product.stock <= 3 ? 'Estoque crítico' : product.stock < 10 ? 'Estoque baixo' : 'Estoque regular'}
                       </p>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <Switch 
+                          checked={product.is_promotion || false}
+                          disabled={isBusy}
+                          onCheckedChange={(checked) => handlePromotionChange(product.id, checked)}
+                        />
+                        <span className="text-[10px] uppercase font-semibold text-slate-400">
+                          {product.is_promotion ? 'Oferta' : 'Normal'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">
@@ -391,7 +437,7 @@ export function ProductTable({
                 : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
             }`}
           >
-            Proxima
+            Próxima
           </Link>
         </div>
       </div>

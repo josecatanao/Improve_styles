@@ -28,7 +28,7 @@ import {
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pendente' },
-  { value: 'processing', label: 'Em preparacao' },
+  { value: 'processing', label: 'Em preparação' },
   { value: 'shipped', label: 'Saiu para entrega' },
   { value: 'completed', label: 'Entregue' },
   { value: 'cancelled', label: 'Cancelado' },
@@ -116,14 +116,14 @@ function buildWhatsAppMessage(order: StoreOrder, template: string) {
 
   switch (template) {
     case 'processing':
-      return `Ola, ${customerName}! Seu pedido ${orderCode} esta em preparacao.`
+      return `Olá, ${customerName}! Seu pedido ${orderCode} está em preparação.`
     case 'shipped':
-      return `Ola, ${customerName}! Seu pedido ${orderCode} saiu para entrega.`
+      return `Olá, ${customerName}! Seu pedido ${orderCode} saiu para entrega.`
     case 'completed':
-      return `Ola, ${customerName}! Seu pedido ${orderCode} foi entregue. Obrigado pela compra.`
+      return `Olá, ${customerName}! Seu pedido ${orderCode} foi entregue. Obrigado pela compra.`
     case 'pending':
     default:
-      return `Ola, ${customerName}! Recebemos seu pedido ${orderCode} e ja estamos acompanhando tudo por aqui.`
+      return `Olá, ${customerName}! Recebemos seu pedido ${orderCode} e já estamos acompanhando tudo por aqui.`
   }
 }
 
@@ -185,8 +185,8 @@ export function OrderDetailView({ order }: { order: StoreOrder }) {
     if (!phone) {
       showToast({
         variant: 'error',
-        title: 'WhatsApp indisponivel',
-        description: 'Esse pedido nao possui telefone para contato.',
+        title: 'WhatsApp indisponível',
+        description: 'Esse pedido não possui telefone para contato.',
       })
       return
     }
@@ -206,7 +206,7 @@ export function OrderDetailView({ order }: { order: StoreOrder }) {
   async function copyOrderCode() {
     try {
       await navigator.clipboard.writeText(orderCode)
-      showToast({ variant: 'success', title: 'Numero do pedido copiado' })
+      showToast({ variant: 'success', title: 'Número do pedido copiado' })
     } catch {
       showToast({ variant: 'error', title: 'Falha ao copiar' })
     }
@@ -301,7 +301,7 @@ export function OrderDetailView({ order }: { order: StoreOrder }) {
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-emerald-800">Mensagem da etapa atual</p>
                   <p className="text-sm text-emerald-700">
-                    Envie ao cliente a mensagem padrao de {getStatusLabel(status).toLowerCase()}.
+                    Envie ao cliente a mensagem padrão de {getStatusLabel(status).toLowerCase()}.
                   </p>
                   <div className="rounded-lg border border-emerald-100 bg-white/70 px-3 py-2 text-sm leading-6 text-emerald-900">
                     {buildWhatsAppMessage(order, currentWhatsAppTemplate.key)}
@@ -336,7 +336,7 @@ export function OrderDetailView({ order }: { order: StoreOrder }) {
               {getDeliveryLabel(order)}
             </span>
             <p className="text-sm leading-6 text-slate-600">
-              {order.delivery_address || 'Endereco nao informado.'}
+              {order.delivery_address || 'Endereço não informado.'}
             </p>
             {order.delivery_lat && order.delivery_lng ? (
               <a
@@ -355,7 +355,7 @@ export function OrderDetailView({ order }: { order: StoreOrder }) {
         <InfoCard title="Resumo do pedido" icon={<ClipboardList className="h-5 w-5 text-[#3483fa]" />}>
           <div className="space-y-3 text-sm text-slate-600">
             <div className="flex items-center justify-between gap-3">
-              <span>Numero do pedido</span>
+              <span>Número do pedido</span>
               <button type="button" className="inline-flex items-center gap-2 font-semibold text-slate-900" onClick={copyOrderCode}>
                 {orderCode}
                 <Copy className="h-4 w-4 text-slate-400" />
@@ -445,7 +445,7 @@ export function OrderDetailView({ order }: { order: StoreOrder }) {
                     <span className={`mt-1 h-3.5 w-3.5 rounded-full ring-4 ${done ? 'bg-emerald-500 ring-emerald-100' : 'bg-slate-200 ring-slate-100'}`} />
                     <div>
                       <p className="font-medium text-slate-900">{step.label}</p>
-                      <p className="text-sm text-slate-500">{done ? 'Etapa concluida ou atual.' : 'Etapa aguardando andamento.'}</p>
+                      <p className="text-sm text-slate-500">{done ? 'Etapa concluída ou atual.' : 'Etapa aguardando andamento.'}</p>
                     </div>
                   </div>
                 )
@@ -468,13 +468,13 @@ export function OrderDetailView({ order }: { order: StoreOrder }) {
             </div>
           </InfoCard>
 
-          <InfoCard title="Observacoes" icon={<ClipboardList className="h-5 w-5 text-[#3483fa]" />}>
+          <InfoCard title="Observações" icon={<ClipboardList className="h-5 w-5 text-[#3483fa]" />}>
             <p className="text-sm leading-6 text-slate-600">
-              {order.notes?.trim() || 'Nenhuma observacao enviada pelo cliente.'}
+              {order.notes?.trim() || 'Nenhuma observação enviada pelo cliente.'}
             </p>
           </InfoCard>
 
-          <InfoCard title="Acoes rapidas" icon={<MessageCircleMore className="h-5 w-5 text-[#3483fa]" />}>
+          <InfoCard title="Ações rápidas" icon={<MessageCircleMore className="h-5 w-5 text-[#3483fa]" />}>
             <div className="grid gap-2">
                 {WHATSAPP_TEMPLATES.map((template) => (
                   <Button

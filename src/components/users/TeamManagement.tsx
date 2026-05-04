@@ -2,7 +2,7 @@
 
 import { startTransition, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LoaderCircle, Mail, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
+import { Eye, EyeOff, LoaderCircle, Mail, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import {
   getRoleLabel,
@@ -18,6 +18,8 @@ import {
   type StaffSummary,
 } from '@/lib/staff-shared'
 import { useConfirm, useToast } from '@/components/ui/feedback-provider'
+import { usePermissions } from '@/components/permissions-provider'
+import { translateError } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -26,36 +28,37 @@ import { Label } from '@/components/ui/label'
 type TeamManagementProps = {
   initialStaff: StaffMember[]
   summary: StaffSummary
-  inviteEnabled: boolean
 }
 
 type StaffFormState = {
   fullName: string
   email: string
+  password: string
   role: StaffRole
   permissions: StaffPermission[]
   notes: string
-  sendInvite: boolean
 }
 
 const initialFormState: StaffFormState = {
   fullName: '',
   email: '',
+  password: '',
   role: 'viewer',
   permissions: ['dashboard:view', 'products:view'],
   notes: '',
-  sendInvite: false,
 }
 
-export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamManagementProps) {
+export function TeamManagement({ initialStaff, summary }: TeamManagementProps) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const showToast = useToast()
   const confirm = useConfirm()
+  const { guard } = usePermissions()
   const [staff] = useState(initialStaff)
   const [form, setForm] = useState<StaffFormState>(initialFormState)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   function updateForm<K extends keyof StaffFormState>(key: K, value: StaffFormState[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -78,72 +81,58 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
 
   async function handleCreateStaff(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!guard('team:manage')) return
     setIsCreating(true)
 
-    if (!form.fullName.trim() || !form.email.trim()) {
+    if (!form.fullName.trim() || !form.email.trim() || !form.password.trim()) {
       showToast({
         variant: 'error',
         title: 'Dados incompletos',
-        description: 'Informe nome e e-mail do funcionario.',
+        description: 'Informe nome, e-mail e senha do funcionario.',
       })
       setIsCreating(false)
       return
     }
 
-    const payload = {
-      full_name: form.fullName.trim(),
-      email: form.email.trim().toLowerCase(),
-      role: form.role,
-      permissions: form.permissions,
-      notes: form.notes.trim() || null,
-      status: form.sendInvite && inviteEnabled ? 'invited' : 'inactive',
+    if (form.password.trim().length < 6) {
+      showToast({
+        variant: 'error',
+        title: 'Senha muito curta',
+        description: 'A senha deve ter pelo menos 6 caracteres.',
+      })
+      setIsCreating(false)
+      return
     }
 
-    const { data: createdStaff, error: insertError } = await supabase
-      .from('staff_members')
-      .insert(payload)
-      .select('id')
-      .single()
+    const response = await fetch('/api/staff/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: form.fullName.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password.trim(),
+        role: form.role,
+        permissions: form.permissions,
+        notes: form.notes.trim() || null,
+      }),
+    })
 
-    if (insertError || !createdStaff) {
+    const result = (await response.json()) as { success?: boolean; error?: string }
+
+    if (!response.ok || !result.success) {
       showToast({
         variant: 'error',
         title: 'Falha ao cadastrar funcionario',
-        description: insertError?.message ?? 'Nao foi possivel cadastrar o funcionario.',
+        description: result.error ?? 'Nao foi possivel cadastrar o funcionario.',
       })
       setIsCreating(false)
       return
-    }
-
-    if (form.sendInvite && inviteEnabled) {
-      const response = await fetch('/api/staff/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          staffId: createdStaff.id,
-          email: payload.email,
-          fullName: payload.full_name,
-          role: payload.role,
-        }),
-      })
-
-      if (!response.ok) {
-        const result = (await response.json()) as { error?: string }
-        showToast({
-          variant: 'error',
-          title: 'Convite nao enviado',
-          description: result.error ?? 'Funcionario criado, mas o convite nao foi enviado.',
-        })
-        setIsCreating(false)
-        refreshPage()
-        return
-      }
     }
 
     setForm(initialFormState)
     showToast({
       variant: 'success',
-      title: form.sendInvite && inviteEnabled ? 'Funcionario cadastrado e convite enviado' : 'Funcionario cadastrado',
+      title: 'Funcionario cadastrado com sucesso',
     })
     setIsCreating(false)
     refreshPage()
@@ -153,6 +142,7 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
     staffId: string,
     payload: Partial<Pick<StaffMember, 'role' | 'status' | 'permissions'>>
   ) {
+    if (!guard('team:manage')) return
     setBusyId(staffId)
 
     const { error: updateError } = await supabase.from('staff_members').update(payload).eq('id', staffId)
@@ -162,7 +152,7 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
       showToast({
         variant: 'error',
         title: 'Falha ao atualizar equipe',
-        description: updateError.message,
+        description: translateError(updateError, updateError.message),
       })
       return
     }
@@ -176,6 +166,7 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
   }
 
   async function handleDelete(staffId: string, fullName: string) {
+    if (!guard('team:manage')) return
     const confirmed = await confirm({
       title: 'Remover funcionario?',
       description: `${fullName} perdera acesso ao painel da loja.`,
@@ -196,7 +187,7 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
       showToast({
         variant: 'error',
         title: 'Falha ao remover funcionario',
-        description: deleteError.message,
+        description: translateError(deleteError, deleteError.message),
       })
       return
     }
@@ -209,46 +200,13 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
     refreshPage()
   }
 
-  async function handleResendInvite(member: StaffMember) {
-    setBusyId(member.id)
-
-    const response = await fetch('/api/staff/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        staffId: member.id,
-        email: member.email,
-        fullName: member.full_name,
-        role: member.role,
-      }),
-    })
-
-    if (!response.ok) {
-      const result = (await response.json()) as { error?: string }
-      setBusyId(null)
-      showToast({
-        variant: 'error',
-        title: 'Falha ao reenviar convite',
-        description: result.error ?? 'Nao foi possivel reenviar o convite.',
-      })
-      return
-    }
-
-    setBusyId(null)
-    showToast({
-      variant: 'success',
-      title: 'Convite reenviado',
-    })
-    refreshPage()
-  }
-
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           { label: 'Equipe total', value: summary.total, helper: 'Funcionarios cadastrados.', icon: Users },
           { label: 'Ativos', value: summary.active, helper: 'Acesso liberado ao painel.', icon: ShieldCheck },
-          { label: 'Convites pendentes', value: summary.invited, helper: 'Ainda aguardando aceite.', icon: Mail },
+          { label: 'Inativos', value: summary.inactive, helper: 'Acesso bloqueado ao painel.', icon: Mail },
           { label: 'Administradores', value: summary.admins, helper: 'Com controle amplo do sistema.', icon: UserPlus },
         ].map((card) => {
           const Icon = card.icon
@@ -280,7 +238,7 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
                 <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Identificacao</h3>
                 <p className="mt-1 text-sm text-slate-500">Dados principais do funcionario dentro da operacao.</p>
               </div>
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_220px]">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_220px]">
                 <div className="space-y-2">
                   <Label htmlFor="staff-full-name">Nome completo</Label>
                   <Input
@@ -301,6 +259,28 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
                     placeholder="maria@empresa.com"
                     className="h-11"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="staff-password">Senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="staff-password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={form.password}
+                      onChange={(event) => updateForm('password', event.target.value)}
+                      placeholder="Defina a senha inicial"
+                      className="h-11 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="staff-role">Papel</Label>
@@ -490,18 +470,6 @@ export function TeamManagement({ initialStaff, summary, inviteEnabled }: TeamMan
                       </div>
 
                       <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                        {inviteEnabled ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="rounded-xl bg-white"
-                            disabled={isBusy}
-                            onClick={() => handleResendInvite(member)}
-                          >
-                            {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                            Reenviar convite
-                          </Button>
-                        ) : null}
                         <Button
                           type="button"
                           variant="destructive"

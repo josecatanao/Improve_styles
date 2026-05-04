@@ -14,7 +14,7 @@ export default async function OrdersPage() {
 
       {setupRequired ? (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-          <h2 className="text-lg font-semibold text-amber-900">Configuracao necessaria</h2>
+          <h2 className="text-lg font-semibold text-amber-900">Configuração necessária</h2>
           <p className="mt-2 text-sm text-amber-800">
             Execute o script SQL <code>supabase/02_orders.sql</code> no seu Supabase para criar as tabelas de pedidos.
           </p>

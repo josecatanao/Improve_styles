@@ -4,6 +4,7 @@ import { refresh, revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
 import { getStoreCategoryKey, normalizeStoreCategoryLabel } from '@/lib/storefront'
+import { requirePermission } from '@/lib/permissions-server'
 
 type CategoryInput = {
   name: string
@@ -26,16 +27,13 @@ function normalizeOptionalText(value: string | null | undefined) {
 }
 
 async function requireDashboardUser() {
+  await requirePermission('products:manage')
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user || user.user_metadata.account_type === 'customer') {
-    throw new Error('Usuario sem permissao para gerenciar categorias.')
-  }
-
-  return { supabase, user }
+  return { supabase, user: user! }
 }
 
 function revalidateCategorySurfaces() {

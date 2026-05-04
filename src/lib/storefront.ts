@@ -161,16 +161,16 @@ export function getProductGallery(product: ProductListItem | ProductDetail) {
 }
 
 export function getProductDisplayBadge(product: ProductListItem) {
-  if (Number(product.compare_at_price ?? 0) > Number(product.price ?? 0)) {
+  if (product.is_promotion) {
     return '🔥 Oferta'
-  }
-
-  if (product.is_featured) {
-    return '⭐ Mais vendido'
   }
 
   if (product.is_new) {
     return '✨ Novo'
+  }
+
+  if (product.is_featured) {
+    return '⭐ Mais vendido'
   }
 
   return null

@@ -55,7 +55,9 @@ export async function updateSession(request: NextRequest) {
   const nextPath = sanitizeNextPath(request.nextUrl.searchParams.get('next'), mode)
 
   if (request.nextUrl.pathname.startsWith('/login') && user) {
-    if (mode === 'customer' && user.user_metadata.account_type === 'admin') {
+    const isDashboardUser = user.user_metadata?.account_type === 'admin' || user.user_metadata?.account_type === 'staff'
+
+    if (mode === 'customer' && isDashboardUser) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 

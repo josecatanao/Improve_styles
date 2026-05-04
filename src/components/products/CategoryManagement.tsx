@@ -252,14 +252,14 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
         showToast({ variant: 'success', title: 'Ordem salva', description: 'A nova ordem das categorias foi aplicada.' })
       })
       .catch(() => {
-        showToast({ variant: 'error', title: 'Erro ao salvar ordem', description: 'As categorias foram reordenadas visualmente, mas a nova ordem nao foi salva. Tente novamente.' })
+        showToast({ variant: 'error', title: 'Erro ao salvar ordem', description: 'As categorias foram reordenadas visualmente, mas a nova ordem não foi salva. Tente novamente.' })
       })
   }
 
   async function handleRemove(categoryId: string, categoryName: string) {
     const confirmed = await confirm({
       title: 'Excluir categoria?',
-      description: `A categoria "${categoryName}" sera removida e os produtos vinculados ficarao sem categoria.`,
+      description: `A categoria "${categoryName}" será removida e os produtos vinculados ficarão sem categoria.`,
       confirmLabel: 'Excluir categoria',
       cancelLabel: 'Cancelar',
       variant: 'destructive',
@@ -295,7 +295,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
         <CardHeader>
           <CardTitle className="text-xl">Criar categoria</CardTitle>
           <CardDescription>
-            Cadastre as categorias oficiais da loja, escolha um icone padrao e, se quiser, associe uma imagem.
+            Cadastre as categorias oficiais da loja, escolha um ícone padrão e, se quiser, associe uma imagem.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -364,7 +364,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Biblioteca de icones</label>
+            <label className="text-sm font-medium text-slate-700">Biblioteca de ícones</label>
             <div className="flex flex-wrap gap-2">
               {CATEGORY_ICON_OPTIONS.map((option) => {
                 const Icon = option.icon
@@ -412,7 +412,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
         <CardHeader>
           <CardTitle className="text-xl">Categorias da loja</CardTitle>
           <CardDescription>
-            Ative, renomeie, escolha o icone, adicione imagem e reordene as categorias da vitrine.
+            Ative, renomeie, escolha o ícone, adicione imagem e reordene as categorias da vitrine.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -567,7 +567,7 @@ function SortableCategoryItem({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Biblioteca de icones</label>
+            <label className="text-sm font-medium text-slate-700">Biblioteca de ícones</label>
             <div className="flex flex-wrap gap-2">
               {CATEGORY_ICON_OPTIONS.map((option) => {
                 const Icon = option.icon

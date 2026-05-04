@@ -24,7 +24,7 @@ export default async function ProductCatalogPage({
     <div className="space-y-6">
       <ProductWorkspaceHeader
         title="Estoque"
-        description="Consulte o estoque interno, acompanhe variacoes e filtre os produtos por situacao comercial."
+        description="Consulte o estoque interno, acompanhe variações e filtre os produtos por situação comercial."
       />
 
       <ProductMetricsGrid metrics={metrics} />

@@ -57,6 +57,26 @@ export async function login(formData: FormData) {
     return redirect(buildLoginRedirect(nextPath, error.message, authView, mode))
   }
 
+  const accountType = authData.user?.user_metadata?.account_type
+
+  if (accountType === 'admin' || accountType === 'staff') {
+    revalidatePath('/', 'layout')
+    redirect('/dashboard')
+  }
+
+  if (authData.user) {
+    const { data: staffMember } = await supabase
+      .from('staff_members')
+      .select('id')
+      .eq('auth_user_id', authData.user.id)
+      .maybeSingle()
+
+    if (staffMember) {
+      revalidatePath('/', 'layout')
+      redirect('/dashboard')
+    }
+  }
+
   if (authData.user && mode === 'customer') {
     try {
       await ensureCustomerProfile(supabase, authData.user)

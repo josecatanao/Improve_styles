@@ -2,8 +2,10 @@
 
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { requirePermission } from '@/lib/permissions-server'
 
 export async function updateOrderStatus(orderId: string, newStatus: string) {
+  await requirePermission('dashboard:view')
   const supabase = createAdminClient()
 
   const { data: currentOrder, error: fetchError } = await supabase
@@ -47,6 +49,7 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
 }
 
 export async function deleteOrder(orderId: string) {
+  await requirePermission('dashboard:view')
   const supabase = createAdminClient()
 
   const { data: currentOrder, error: fetchError } = await supabase

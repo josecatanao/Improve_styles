@@ -44,15 +44,15 @@ const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pendente' },
   { value: 'processing', label: 'Processando' },
   { value: 'shipped', label: 'Saiu para entrega' },
-  { value: 'completed', label: 'Entregue / concluido' },
+  { value: 'completed', label: 'Entregue / concluído' },
   { value: 'cancelled', label: 'Cancelado' },
 ]
 
 const TEMPLATE_BUTTONS: Array<{ key: MessageTemplateKey; label: string }> = [
   { key: 'pending', label: 'Pedido recebido' },
-  { key: 'processing', label: 'Em separacao' },
+  { key: 'processing', label: 'Em separação' },
   { key: 'shipped', label: 'Saiu para entrega' },
-  { key: 'completed', label: 'Pedido concluido' },
+  { key: 'completed', label: 'Pedido concluído' },
 ]
 
 function formatDate(value: string) {
@@ -96,7 +96,7 @@ function getPaymentLabel(order: StoreOrder) {
     return 'Dinheiro'
   }
 
-  return `Cartao ${order.installments}x`
+  return `Cartão ${order.installments}x`
 }
 
 function getDeliveryLabel(order: StoreOrder) {
@@ -190,14 +190,14 @@ function buildWhatsAppMessage(order: StoreOrder, template: MessageTemplateKey) {
 
   switch (template) {
     case 'processing':
-      return `Ola, ${customerName}! Seu pedido ${orderCode} esta em separacao neste momento.${productsText} Ja conferimos os ${itemLabel} e vamos seguir com as proximas etapas do envio.`
+      return `Olá, ${customerName}! Seu pedido ${orderCode} está em separação neste momento.${productsText} Já conferimos os ${itemLabel} e vamos seguir com as próximas etapas do envio.`
     case 'shipped':
-      return `Ola, ${customerName}! Seu pedido ${orderCode} saiu para entrega.${productsText} Qualquer atualizacao de rota ou finalizacao, avisamos voce por aqui.`
+      return `Olá, ${customerName}! Seu pedido ${orderCode} saiu para entrega.${productsText} Qualquer atualização de rota ou finalização, avisamos você por aqui.`
     case 'completed':
-      return `Ola, ${customerName}! Seu pedido ${orderCode} foi concluido e marcado como entregue.${productsText} Obrigado pela compra. Se precisar de suporte no pos-venda, estamos por aqui.`
+      return `Olá, ${customerName}! Seu pedido ${orderCode} foi concluído e marcado como entregue.${productsText} Obrigado pela compra. Se precisar de suporte no pós-venda, estamos por aqui.`
     case 'pending':
     default:
-      return `Ola, ${customerName}! Recebemos seu pedido ${orderCode} com ${itemLabel}, no valor total de ${totalLabel}.${productsText} Ja registramos tudo por aqui e vamos continuar com as proximas etapas do envio.`
+      return `Olá, ${customerName}! Recebemos seu pedido ${orderCode} com ${itemLabel}, no valor total de ${totalLabel}.${productsText} Já registramos tudo por aqui e vamos continuar com as próximas etapas do envio.`
   }
 }
 
@@ -368,8 +368,8 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
     if (!phone) {
       showToast({
         variant: 'error',
-        title: 'WhatsApp indisponivel',
-        description: 'Esse pedido nao possui telefone para contato.',
+        title: 'WhatsApp indisponível',
+        description: 'Esse pedido não possui telefone para contato.',
       })
       return
     }
@@ -397,7 +397,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
       showToast({
         variant: 'error',
         title: 'Falha ao copiar',
-        description: 'Nao foi possivel copiar a mensagem agora.',
+        description: 'Não foi possível copiar a mensagem agora.',
       })
     }
   }
@@ -405,7 +405,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
   async function handleDelete(order: StoreOrder) {
     const confirmed = await confirm({
       title: 'Apagar pedido?',
-      description: `O pedido ${getOrderCode(order.id)} sera removido permanentemente.`,
+      description: `O pedido ${getOrderCode(order.id)} será removido permanentemente.`,
       confirmLabel: 'Apagar',
       cancelLabel: 'Cancelar',
       variant: 'destructive',
@@ -449,8 +449,8 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
         <MetricCard label="Total de pedidos" value={String(totalOrders)} helper="Pedidos registrados" icon={<ShoppingBag className="h-5 w-5 text-[#2563eb]" />} accent="bg-blue-50 text-blue-600" />
         <MetricCard label="Receita total" value={formatMoney(totalRevenue)} helper="Valor bruto acumulado" icon={<Banknote className="h-5 w-5 text-emerald-600" />} accent="bg-emerald-50 text-emerald-600" />
         <MetricCard label="Pendentes" value={String(pendingOrders)} helper="Aguardando andamento" icon={<Clock3 className="h-5 w-5 text-amber-500" />} accent="bg-amber-50 text-amber-600" />
-        <MetricCard label="Concluidos" value={String(completedOrders)} helper="Pedidos finalizados" icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />} accent="bg-emerald-50 text-emerald-600" />
-        <MetricCard label="Pedidos hoje" value={String(recentOrdersCount)} helper="Ultimas 24h" icon={<CalendarDays className="h-5 w-5 text-rose-600" />} accent="bg-rose-50 text-rose-600" />
+        <MetricCard label="Concluídos" value={String(completedOrders)} helper="Pedidos finalizados" icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />} accent="bg-emerald-50 text-emerald-600" />
+        <MetricCard label="Pedidos hoje" value={String(recentOrdersCount)} helper="Últimas 24h" icon={<CalendarDays className="h-5 w-5 text-rose-600" />} accent="bg-rose-50 text-rose-600" />
       </div>
 
       <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
@@ -499,7 +499,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                 { value: 'all', label: 'Todos' },
                 { value: 'pix', label: 'Pix' },
                 { value: 'cash', label: 'Dinheiro' },
-                { value: 'card', label: 'Cartao' },
+                { value: 'card', label: 'Cartão' },
               ]}
               className="w-[180px] shrink-0"
             />
@@ -527,10 +527,10 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                 setCurrentPage(1)
               }}
               options={[
-                { value: '7d', label: 'Ultimos 7 dias' },
-                { value: '24h', label: 'Ultimas 24h' },
-                { value: '30d', label: 'Ultimos 30 dias' },
-                { value: 'all', label: 'Todo periodo' },
+                { value: '7d', label: 'Últimos 7 dias' },
+                { value: '24h', label: 'Últimas 24h' },
+                { value: '30d', label: 'Últimos 30 dias' },
+                { value: 'all', label: 'Todo período' },
               ]}
               className="w-[180px] shrink-0"
             />
@@ -1023,11 +1023,11 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                             </div>
 
                             <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                              Status atual: <span className="font-semibold text-slate-700 dark:text-slate-200">{getStatusLabel(currentStatus)}</span>. So a mensagem correspondente a esse status fica habilitada.
+                              Status atual: <span className="font-semibold text-slate-700 dark:text-slate-200">{getStatusLabel(currentStatus)}</span>. Só a mensagem correspondente a esse status fica habilitada.
                             </p>
 
                             <div className="mt-4 space-y-2">
-                              <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Mensagem editavel</label>
+                              <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Mensagem editável</label>
                               <textarea
                                 value={messageDrafts[order.id] || ''}
                                 onChange={(event) =>

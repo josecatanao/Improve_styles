@@ -25,7 +25,7 @@ export default async function ProductsPage() {
     <div className="space-y-5">
       <ProductWorkspaceHeader
         title="Produtos"
-        description="Gerencie o cadastro e acompanhe o catalogo da sua loja em uma area organizada."
+        description="Gerencie o cadastro e acompanhe o catálogo da sua loja em uma área organizada."
       />
 
       <ProductMetricsGrid metrics={metrics} />
@@ -71,12 +71,12 @@ export default async function ProductsPage() {
           <div className="grid gap-6 xl:grid-cols-2">
             <HorizontalBarChart
               title="Produtos por categoria"
-              description="Onde o catalogo esta mais concentrado hoje."
+              description="Onde o catálogo está mais concentrado hoje."
               items={overview.categoryBreakdown}
             />
             <HorizontalBarChart
               title="Faixas de estoque"
-              description="Distribuicao entre ruptura, baixo volume e estoque saudavel."
+              description="Distribuição entre ruptura, baixo volume e estoque saudável."
               items={overview.stockBands}
             />
           </div>
@@ -96,7 +96,7 @@ export default async function ProductsPage() {
               <div className="mt-4 space-y-2">
                 {overview.topInventoryProducts.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
-                    Nenhum produto disponivel para analise.
+                    Nenhum produto disponível para análise.
                   </div>
                 ) : (
                   overview.topInventoryProducts.slice(0, 3).map((product, index) => (
@@ -139,8 +139,8 @@ export default async function ProductsPage() {
                   <ChartColumn className="h-4 w-4" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Status do catalogo</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Distribuicao entre ativos, ocultos e rascunho.</p>
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Status do catálogo</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Distribuição entre ativos, ocultos e rascunho.</p>
                 </div>
               </div>
 
@@ -181,7 +181,7 @@ export default async function ProductsPage() {
           <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <HorizontalBarChart
               title="Marcas com mais itens"
-              description="Peso de cada marca no sortimento do catalogo."
+              description="Peso de cada marca no sortimento do catálogo."
               items={overview.brandBreakdown}
             />
 
@@ -192,8 +192,8 @@ export default async function ProductsPage() {
                     <FolderKanban className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Ultimos produtos cadastrados</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Acompanhamento rapido dos itens mais recentes.</p>
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Últimos produtos cadastrados</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Acompanhamento rápido dos itens mais recentes.</p>
                   </div>
                 </div>
                 <Link
@@ -244,7 +244,7 @@ export default async function ProductsPage() {
                             </span>
                             {product.product_variants?.length ? (
                               <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                                {product.product_variants.length} variacao(oes)
+                                {product.product_variants.length} variação(ões)
                               </span>
                             ) : null}
                           </div>

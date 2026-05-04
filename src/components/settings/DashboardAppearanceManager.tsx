@@ -39,7 +39,7 @@ export function DashboardAppearanceManager({
       showToast({
         variant: 'success',
         title: 'Tema do dashboard salvo',
-        description: 'A aparencia do painel administrativo foi atualizada.',
+        description: 'A aparência do painel administrativo foi atualizada.',
       })
     } catch (error) {
       showToast({
@@ -56,7 +56,7 @@ export function DashboardAppearanceManager({
     <div className="space-y-6">
       {!schemaReady ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          As colunas visuais ainda nao existem no banco. Rode novamente <code>supabase/04_marketing_and_reviews.sql</code> para liberar o tema do dashboard.
+          As colunas visuais ainda não existem no banco. Rode novamente <code>supabase/04_marketing_and_reviews.sql</code> para liberar o tema do dashboard.
         </div>
       ) : null}
 

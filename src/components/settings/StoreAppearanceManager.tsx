@@ -99,13 +99,13 @@ export function StoreAppearanceManager({
       setPreviewLogoUrl(storeLogoUrl)
       showToast({
         variant: 'success',
-        title: 'Configuracoes salvas',
-        description: 'As configuracoes da loja foram atualizadas.',
+        title: 'Configurações salvas',
+        description: 'As configurações da loja foram atualizadas.',
       })
     } catch (error) {
       showToast({
         variant: 'error',
-        title: 'Falha ao salvar configuracoes',
+        title: 'Falha ao salvar configurações',
         description: error instanceof Error ? error.message : 'Erro inesperado.',
       })
     } finally {
@@ -123,7 +123,7 @@ export function StoreAppearanceManager({
     if (!file.type.startsWith('image/')) {
       showToast({
         variant: 'error',
-        title: 'Arquivo invalido',
+        title: 'Arquivo inválido',
         description: 'Escolha uma imagem para representar a logo da loja.',
       })
       event.target.value = ''
@@ -143,7 +143,7 @@ export function StoreAppearanceManager({
   async function handleRemoveLogo() {
     const confirmed = await confirm({
       title: 'Remover logo?',
-      description: 'Tem certeza que deseja remover a logo da loja? A logo atual sera excluida apos salvar as alteracoes.',
+      description: 'Tem certeza que deseja remover a logo da loja? A logo atual será excluída após salvar as alterações.',
       confirmLabel: 'Remover logo',
       cancelLabel: 'Cancelar',
       variant: 'destructive',
@@ -176,7 +176,7 @@ export function StoreAppearanceManager({
     <div className="space-y-6">
       {!schemaReady ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          As colunas visuais ainda nao existem no banco. Rode novamente <code>supabase/04_marketing_and_reviews.sql</code> para liberar nome, logo, cores, tema e customizacao da loja.
+          As colunas visuais ainda não existem no banco. Rode novamente <code>supabase/04_marketing_and_reviews.sql</code> para liberar nome, logo, cores, tema e customização da loja.
         </div>
       ) : null}
 
@@ -184,7 +184,7 @@ export function StoreAppearanceManager({
         <div className="flex flex-col gap-4 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1.5">
             <h1 className="text-[1.9rem] font-semibold tracking-tight text-slate-950">Personalize sua loja</h1>
-            <p className="text-sm text-slate-500">Deixe sua loja com a identidade da sua marca. As alteracoes sao salvas automaticamente quando voce confirmar.</p>
+            <p className="text-sm text-slate-500">Deixe sua loja com a identidade da sua marca. As alterações são salvas automaticamente quando você confirmar.</p>
           </div>
 
           <Button
@@ -194,7 +194,7 @@ export function StoreAppearanceManager({
             className="h-11 rounded-xl bg-[#2563eb] px-5 text-white hover:bg-[#1d4ed8]"
           >
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-            Salvar alteracoes
+            Salvar alterações
           </Button>
         </div>
 
@@ -204,7 +204,7 @@ export function StoreAppearanceManager({
               <div className="flex min-w-max items-center gap-2">
                 <StepPill number={1} title="Identidade" active={activeStep === 'identity'} onClick={() => setActiveStep('identity')} />
                 <StepPill number={2} title="Componentes" active={activeStep === 'components'} onClick={() => setActiveStep('components')} />
-                <StepPill number={3} title="Revisao" active={activeStep === 'review'} onClick={() => setActiveStep('review')} />
+                <StepPill number={3} title="Revisão" active={activeStep === 'review'} onClick={() => setActiveStep('review')} />
               </div>
             </div>
 
@@ -213,7 +213,7 @@ export function StoreAppearanceManager({
                 title="Identidade da loja"
                 description="Defina o nome, logo e imagem da sua marca."
               >
-                <FieldGroup label="Nome da loja" hint="Esse nome sera exibido para seus clientes.">
+                <FieldGroup label="Nome da loja" hint="Esse nome será exibido para seus clientes.">
                   <Input
                     value={form.storeName}
                     onChange={(event) => setForm((current) => ({ ...current, storeName: event.target.value }))}
@@ -263,7 +263,7 @@ export function StoreAppearanceManager({
                   </div>
                 </FieldGroup>
 
-                <FieldGroup label="WhatsApp da loja" hint="Numero que aparecera no botao &quot;Atendimento&quot; do cabecalho. Ex.: 5511999999999" infoText="Digite o numero completo do WhatsApp com DDD e codigo do pais, sem espacos ou tracos. Exemplo: 5511999999999.">
+                <FieldGroup label="WhatsApp da loja" hint="Número que aparecerá no botão &quot;Atendimento&quot; do cabeçalho. Ex.: 5511999999999" infoText="Digite o número completo do WhatsApp com DDD e código do país, sem espaços ou traços. Exemplo: 5511999999999.">
                   <Input
                     value={form.storeWhatsapp}
                     onChange={(event) => setForm((current) => ({ ...current, storeWhatsapp: event.target.value }))}
@@ -277,10 +277,10 @@ export function StoreAppearanceManager({
             {activeStep === 'components' ? (
               <SectionCard
                 title="Componentes da loja"
-                description="Personalize cores da marca, topo, cards e botoes da vitrine."
+                description="Personalize cores da marca, topo, cards e botões da vitrine."
               >
                 <div className="grid gap-4 md:grid-cols-2">
-                  <FieldGroup label="Cor primaria da marca" infoText="Cor principal da sua identidade visual. Aparece em botoes primarios, destaques e links da vitrine.">
+                  <FieldGroup label="Cor primária da marca" infoText="Cor principal da sua identidade visual. Aparece em botões primários, destaques e links da vitrine.">
                     <ColorField
                       value={form.brandPrimaryColor}
                       onChange={(value) => setForm((current) => ({ ...current, brandPrimaryColor: value }))}
@@ -293,7 +293,7 @@ export function StoreAppearanceManager({
                     ) : null}
                   </FieldGroup>
 
-                  <FieldGroup label="Cor secundaria da marca" infoText="Cor de apoio. Aparece em elementos secundarios, tags e superficies suaves da vitrine.">
+                  <FieldGroup label="Cor secundária da marca" infoText="Cor de apoio. Aparece em elementos secundários, tags e superfícies suaves da vitrine.">
                     <ColorField
                       value={form.brandSecondaryColor}
                       onChange={(value) => setForm((current) => ({ ...current, brandSecondaryColor: value }))}
@@ -302,14 +302,14 @@ export function StoreAppearanceManager({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <FieldGroup label="Fundo do menu" infoText="Altera o fundo do cabecalho superior da loja, onde ficam logo, menu e acoes principais.">
+                  <FieldGroup label="Fundo do menu" infoText="Altera o fundo do cabeçalho superior da loja, onde ficam logo, menu e ações principais.">
                     <ColorField
                       value={form.storeHeaderBackgroundColor}
                       onChange={(value) => setForm((current) => ({ ...current, storeHeaderBackgroundColor: value }))}
                     />
                   </FieldGroup>
 
-                  <FieldGroup label="Botao principal" infoText="Muda os botoes principais de acao da vitrine, como comprar e buscar.">
+                  <FieldGroup label="Botão principal" infoText="Muda os botões principais de ação da vitrine, como comprar e buscar.">
                     <ColorField
                       value={form.storeButtonBackgroundColor}
                       onChange={(value) => setForm((current) => ({ ...current, storeButtonBackgroundColor: value }))}
@@ -331,14 +331,14 @@ export function StoreAppearanceManager({
                     />
                   </FieldGroup>
 
-                  <FieldGroup label="Borda dos cards" infoText="Controla a cor das bordas dos cards e caixas de conteudo da loja.">
+                  <FieldGroup label="Borda dos cards" infoText="Controla a cor das bordas dos cards e caixas de conteúdo da loja.">
                     <ColorField
                       value={form.storeCardBorderColor}
                       onChange={(value) => setForm((current) => ({ ...current, storeCardBorderColor: value }))}
                     />
                   </FieldGroup>
 
-                  <FieldGroup label="Botao do carrinho" infoText="Muda o botao do carrinho e os destaques ligados ao acesso rapido ao carrinho.">
+                  <FieldGroup label="Botão do carrinho" infoText="Muda o botão do carrinho e os destaques ligados ao acesso rápido ao carrinho.">
                     <ColorField
                       value={form.storeCartButtonColor}
                       onChange={(value) => setForm((current) => ({ ...current, storeCartButtonColor: value }))}
@@ -350,17 +350,17 @@ export function StoreAppearanceManager({
 
             {activeStep === 'review' ? (
               <SectionCard
-                title="Revisao da loja"
+                title="Revisão da loja"
                 description="Confira os principais itens configurados antes de salvar."
               >
                 <div className="grid gap-4 md:grid-cols-2">
-                  <SummaryItem label="Nome da loja" value={form.storeName || 'Nao definido'} />
+                  <SummaryItem label="Nome da loja" value={form.storeName || 'Não definido'} />
                   <SummaryItem label="Logo" value={previewLogoUrl ? 'Configurada' : 'Sem logo'} />
-                  <SummaryItem label="WhatsApp" value={form.storeWhatsapp || 'Nao definido'} />
+                  <SummaryItem label="WhatsApp" value={form.storeWhatsapp || 'Não definido'} />
                   <SummaryItem label="Cor primaria" value={form.brandPrimaryColor} swatch={form.brandPrimaryColor} />
                   <SummaryItem label="Cor secundaria" value={form.brandSecondaryColor} swatch={form.brandSecondaryColor} />
                   <SummaryItem label="Menu" value={form.storeHeaderBackgroundColor} swatch={form.storeHeaderBackgroundColor} />
-                  <SummaryItem label="Botao principal" value={form.storeButtonBackgroundColor} swatch={form.storeButtonBackgroundColor} />
+                  <SummaryItem label="Botão principal" value={form.storeButtonBackgroundColor} swatch={form.storeButtonBackgroundColor} />
                   <SummaryItem label="Card" value={form.storeCardBackgroundColor} swatch={form.storeCardBackgroundColor} />
                   <SummaryItem label="Carrinho" value={form.storeCartButtonColor} swatch={form.storeCartButtonColor} />
                 </div>
@@ -374,17 +374,17 @@ export function StoreAppearanceManager({
               className="h-11 w-full rounded-xl bg-[#2563eb] px-5 text-white hover:bg-[#1d4ed8]"
             >
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-              Salvar alteracoes
+              Salvar alterações
             </Button>
           </div>
 
           <aside className="xl:sticky xl:top-6 xl:self-start">
             <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-4">
-                <h2 className="text-lg font-semibold text-slate-950">Visualizacao da loja</h2>
+                <h2 className="text-lg font-semibold text-slate-950">Visualização da loja</h2>
                 <p className="mt-1 text-sm text-slate-500">
                   {activeStep === 'identity' ? 'Visualize nome e logo da sua marca.' : null}
-                  {activeStep === 'components' ? 'Confira topo, cards e botoes da vitrine.' : null}
+                  {activeStep === 'components' ? 'Confira topo, cards e botões da vitrine.' : null}
                   {activeStep === 'review' ? 'Revise os principais elementos antes de salvar.' : null}
                 </p>
               </div>
@@ -412,7 +412,7 @@ export function StoreAppearanceManager({
 
                     <div className="rounded-[1.25rem] border border-blue-100 bg-blue-50 px-4 py-3">
                       <p className="text-sm font-medium text-blue-900">Essa etapa altera a assinatura visual da loja.</p>
-                      <p className="mt-1 text-xs text-blue-700">Nome e logo aparecem no cabecalho, carrinho e rodape.</p>
+                      <p className="mt-1 text-xs text-blue-700">Nome e logo aparecem no cabeçalho, carrinho e rodapé.</p>
                     </div>
                   </div>
                 ) : null}
@@ -423,9 +423,9 @@ export function StoreAppearanceManager({
                       <p className="text-sm font-medium text-slate-900">Como ler este preview</p>
                       <div className="mt-2 grid gap-2 text-xs text-slate-500">
                         <p><span className="font-semibold text-slate-700">1.</span> Faixa superior: fundo do menu.</p>
-                        <p><span className="font-semibold text-slate-700">2.</span> Botao &quot;Carrinho&quot;: cor do botao do carrinho.</p>
+                        <p><span className="font-semibold text-slate-700">2.</span> Botão &quot;Carrinho&quot;: cor do botão do carrinho.</p>
                         <p><span className="font-semibold text-slate-700">3.</span> Card do produto: fundo e borda dos cards.</p>
-                        <p><span className="font-semibold text-slate-700">4.</span> Botao &quot;Comprar&quot;: botao principal da loja.</p>
+                        <p><span className="font-semibold text-slate-700">4.</span> Botão &quot;Comprar&quot;: botão principal da loja.</p>
                       </div>
                     </div>
 
@@ -512,9 +512,9 @@ export function StoreAppearanceManager({
                   <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Resumo final</p>
                       <div className="mt-4 grid gap-3">
-                      <ReviewLine label="Nome da loja" value={form.storeName || 'Nao definido'} />
+                      <ReviewLine label="Nome da loja" value={form.storeName || 'Não definido'} />
                       <ReviewLine label="Logo" value={previewLogoUrl ? 'Configurada' : 'Sem logo'} />
-                      <ReviewLine label="WhatsApp" value={form.storeWhatsapp || 'Nao definido'} />
+                      <ReviewLine label="WhatsApp" value={form.storeWhatsapp || 'Não definido'} />
                       <ReviewLine label="Cor primaria" value={form.brandPrimaryColor} />
                         <ReviewLine label="Cor secundaria" value={form.brandSecondaryColor} />
                         <ReviewLine label="Componentes" value={`${form.storeHeaderBackgroundColor} • ${form.storeButtonBackgroundColor} • ${form.storeCardBackgroundColor}`} />

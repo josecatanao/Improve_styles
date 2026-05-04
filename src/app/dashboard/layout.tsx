@@ -1,11 +1,13 @@
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
+import { PermissionsProvider } from '@/components/permissions-provider'
 import { getRecentOrderSignals } from '@/lib/orders'
 import { getPublicStoreSettings } from '@/lib/store-branding'
 import { buildStoreBrandStyle, normalizeStoreSettings } from '@/lib/store-settings'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { getRoleLabel, permissionOptions, type StaffPermission } from '@/lib/staff-shared'
 import type { Metadata } from 'next'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -38,18 +40,45 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  const isAdminByMetadata = user.user_metadata?.account_type === 'admin'
+  const accountType = user.user_metadata?.account_type
 
-  if (!isAdminByMetadata) {
+  if (accountType !== 'admin' && accountType !== 'staff') {
     const { data: staffData } = await supabase
       .from('staff_members')
-      .select('id, role')
+      .select('id')
       .eq('auth_user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!staffData) {
       redirect('/')
     }
+  }
+
+  let userPermissions: StaffPermission[] = []
+  let userDisplayName = user.user_metadata?.full_name ?? user.email ?? ''
+  let userRoleLabel: string | null = null
+
+  if (accountType === 'admin') {
+    userPermissions = permissionOptions.map((p) => p.key)
+    userRoleLabel = 'Administrador'
+  } else {
+    const { data: staffData } = await supabase
+      .from('staff_members')
+      .select('permissions, full_name, role')
+      .eq('auth_user_id', user.id)
+      .maybeSingle()
+
+    userPermissions = (staffData?.permissions as StaffPermission[]) ?? []
+    userDisplayName = staffData?.full_name || userDisplayName
+    if (staffData?.role) {
+      userRoleLabel = getRoleLabel(staffData.role)
+    }
+  }
+
+  const userIdentity = {
+    displayName: userDisplayName,
+    roleLabel: userRoleLabel,
+    email: user.email,
   }
 
   const [settings, recentOrders] = await Promise.all([
@@ -65,16 +94,29 @@ export default async function DashboardLayout({
       style={brandStyle}
     >
       <div className="hidden lg:flex lg:flex-col">
-        <Sidebar branding={{ logoUrl: normalizedSettings.store_logo_url, storeName: normalizedSettings.store_name }} recentOrders={recentOrders} />
+        <Sidebar
+          permissions={userPermissions}
+          branding={{ logoUrl: normalizedSettings.store_logo_url, storeName: normalizedSettings.store_name }}
+          recentOrders={recentOrders}
+          userDisplayName={userIdentity.displayName}
+          userRoleLabel={userIdentity.roleLabel ?? undefined}
+        />
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header branding={{ logoUrl: normalizedSettings.store_logo_url, storeName: normalizedSettings.store_name }} recentOrders={recentOrders} />
+        <Header
+          branding={{ logoUrl: normalizedSettings.store_logo_url, storeName: normalizedSettings.store_name }}
+          recentOrders={recentOrders}
+          userDisplayName={userIdentity.displayName}
+          userRoleLabel={userIdentity.roleLabel ?? undefined}
+        />
 
         <main className="flex-1 overflow-y-auto p-4 pt-16 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
           <div className="mx-auto max-w-7xl">
-            <Breadcrumb />
-            {children}
+            <PermissionsProvider permissions={userPermissions}>
+              <Breadcrumb />
+              {children}
+            </PermissionsProvider>
           </div>
         </main>
       </div>

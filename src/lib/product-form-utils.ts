@@ -129,7 +129,7 @@ export function parseOptionalNumber(value: string) {
 
 export function formatCurrency(value: number | null) {
   if (value == null) {
-    return 'Preco nao informado'
+    return 'Preço não informado'
   }
 
   return new Intl.NumberFormat('pt-BR', {

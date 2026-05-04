@@ -44,11 +44,11 @@ function getOrderStatusLabel(status: string) {
     case 'pending':
       return 'Pendentes'
     case 'processing':
-      return 'Em separacao'
+      return 'Em separação'
     case 'shipped':
       return 'Em entrega'
     case 'completed':
-      return 'Concluidos'
+      return 'Concluídos'
     case 'cancelled':
       return 'Cancelados'
     default:
@@ -78,11 +78,11 @@ function getPaymentLabel(method: string) {
     case 'pix':
       return 'Pix'
     case 'credit_card':
-      return 'Cartao'
+      return 'Cartão'
     case 'cash':
       return 'Dinheiro'
     default:
-      return method || 'Nao informado'
+      return method || 'Não informado'
   }
 }
 
@@ -248,7 +248,7 @@ export default async function DashboardPage() {
         <MetricCard
           title="Receita total"
           value={formatMoney(totalRevenue)}
-          helper={`${orders.length} pedidos registrados na operacao.`}
+          helper={`${orders.length} pedidos registrados na operação.`}
           icon={Wallet}
           tone="emerald"
         />
@@ -281,10 +281,10 @@ export default async function DashboardPage() {
           {(ordersResult.setupRequired || customersResult.setupRequired) && (
             <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">Dados pendentes</p>
-              <h3 className="mt-2 text-lg font-semibold">Nem todos os modulos do dashboard estao prontos no banco.</h3>
+              <h3 className="mt-2 text-lg font-semibold">Nem todos os módulos do dashboard estão prontos no banco.</h3>
               <div className="mt-3 space-y-2 text-sm text-amber-900/80">
-                {ordersResult.setupRequired ? <p>Os dados de pedidos ainda nao estao disponiveis.</p> : null}
-                {customersResult.setupRequired ? <p>Os dados de clientes ainda nao estao disponiveis.</p> : null}
+                {ordersResult.setupRequired ? <p>Os dados de pedidos ainda não estão disponíveis.</p> : null}
+                {customersResult.setupRequired ? <p>Os dados de clientes ainda não estão disponíveis.</p> : null}
               </div>
             </section>
           )}
@@ -310,7 +310,7 @@ export default async function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)]">
         <TimelineBarChart
           title="Vendas nos ultimos 7 dias"
-          description="Receita diaria para leitura rapida da operacao."
+          description="Receita diária para leitura rápida da operação."
           items={salesTimeline}
         />
 
@@ -321,17 +321,17 @@ export default async function DashboardPage() {
             </div>
             <div>
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Resumo comercial</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Leitura rapida dos pontos mais importantes da operacao.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Leitura rápida dos pontos mais importantes da operação.</p>
             </div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/50">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Receita concluida</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Receita concluída</p>
               <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">{formatMoney(completedRevenue)}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/50">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Endereco preenchido</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Endereço preenchido</p>
               <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">
                 {customersWithAddressRate.toFixed(0).replace('.', ',')}%
               </p>
@@ -351,16 +351,16 @@ export default async function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-3">
         <HorizontalBarChart
           title="Pedidos por status"
-          description="Distribuicao dos pedidos no fluxo operacional atual."
+          description="Distribuição dos pedidos no fluxo operacional atual."
           items={orderStatusBreakdown}
         />
         <HorizontalBarChart
           title="Formas de pagamento"
-          description="Como os clientes estao preferindo pagar."
+          description="Como os clientes estão preferindo pagar."
           items={paymentBreakdown}
         />
         <HorizontalBarChart
-          title="Metodo de entrega"
+          title="Método de entrega"
           description="Comparativo entre delivery e retirada na loja."
           items={deliveryBreakdown}
         />
@@ -390,7 +390,7 @@ export default async function DashboardPage() {
           <div className="mt-4 space-y-2">
             {topSellingProducts.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
-                Ainda nao existem pedidos suficientes.
+                Ainda não existem pedidos suficientes.
               </div>
             ) : (
               topSellingProducts.map((product, index) => (
@@ -419,7 +419,7 @@ export default async function DashboardPage() {
                 <Truck className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Ultimos pedidos</h2>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Últimos pedidos</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Acompanhamento imediato dos pedidos recentes.</p>
               </div>
             </div>
@@ -481,14 +481,14 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Alertas operacionais</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Itens que pedem atencao rapida.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Itens que pedem atenção rápida.</p>
               </div>
             </div>
             <Link
               href="/dashboard/produtos/catalogo"
               className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700"
             >
-              Catalogo
+              Catálogo
               <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -518,7 +518,7 @@ export default async function DashboardPage() {
             <div className="max-h-[180px] space-y-1.5 overflow-y-auto">
               {lowStockProducts.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
-                  Nenhum produto critico no momento.
+                  Nenhum produto crítico no momento.
                 </div>
               ) : (
                 lowStockProducts.slice(0, 6).map((product) => (
@@ -554,8 +554,8 @@ export default async function DashboardPage() {
                 <Package className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Status do catalogo</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Distribuicao entre ativos, rascunhos e ocultos.</p>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Status do catálogo</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Distribuição entre ativos, rascunhos e ocultos.</p>
               </div>
             </div>
             <Link
@@ -570,7 +570,7 @@ export default async function DashboardPage() {
           <div className="mt-4 space-y-1.5">
             {productOverview.statusBreakdown.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
-                Nenhum dado disponivel.
+                Nenhum dado disponível.
               </div>
             ) : (
               productOverview.statusBreakdown.map((item) => {
@@ -606,15 +606,15 @@ export default async function DashboardPage() {
                 <FolderKanban className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Ultimos produtos cadastrados</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Itens que entraram por ultimo no catalogo.</p>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">Últimos produtos cadastrados</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Itens que entraram por último no catálogo.</p>
               </div>
             </div>
             <Link
               href="/dashboard/produtos/catalogo"
               className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600"
             >
-              Catalogo
+              Catálogo
               <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -688,7 +688,7 @@ export default async function DashboardPage() {
             <Users className="h-4 w-4" />
           </div>
           <p className="mt-4 text-base font-semibold text-slate-900 dark:text-slate-50">Base de clientes</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Veja quem compra e como esta a base ativa.</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Veja quem compra e como está a base ativa.</p>
         </Link>
 
         <Link
@@ -698,8 +698,8 @@ export default async function DashboardPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
             <FolderKanban className="h-4 w-4" />
           </div>
-          <p className="mt-4 text-base font-semibold text-slate-900 dark:text-slate-50">Operacao de catalogo</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Gerencie estoque e saude do mix de produtos.</p>
+          <p className="mt-4 text-base font-semibold text-slate-900 dark:text-slate-50">Operação de catálogo</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Gerencie estoque e saúde do mix de produtos.</p>
         </Link>
       </div>
     </div>

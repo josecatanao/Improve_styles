@@ -2,8 +2,10 @@
 
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { requirePermission } from '@/lib/permissions-server'
 
 export async function deleteCustomer(id: string) {
+  await requirePermission('dashboard:view')
   const supabase = createAdminClient()
 
   // First try to delete the auth user, which should cascade to the customer_profiles table

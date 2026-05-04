@@ -16,14 +16,8 @@ export type CommercialBadge = {
 export function getProductCommercialBadge(
   product: ProductListItem,
 ): CommercialBadge | null {
-  const currentPrice = Number(product.price ?? 0)
-  const comparePrice = Number(product.compare_at_price ?? 0)
-
-  if (comparePrice > currentPrice && comparePrice > 0) {
-    const percent = Math.round(
-      ((comparePrice - currentPrice) / comparePrice) * 100,
-    )
-    return { label: STORE_COPY.badgeDiscount(percent), style: 'discount' }
+  if (product.is_promotion) {
+    return { label: STORE_COPY.badgePromo, style: 'discount' }
   }
 
   if (product.is_new) {

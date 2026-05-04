@@ -113,7 +113,7 @@ export function DeliverySettingsManager({
   async function handleLookupCep() {
     const digits = cep.replace(/\D/g, '')
     if (digits.length !== 8) {
-      setCepError('Digite um CEP valido com 8 digitos.')
+      setCepError('Digite um CEP válido com 8 dígitos.')
       return
     }
 
@@ -123,7 +123,7 @@ export function DeliverySettingsManager({
     try {
       const result = await lookupCep(digits)
       if (!result) {
-        setCepError('CEP nao encontrado. Verifique e tente novamente.')
+        setCepError('CEP não encontrado. Verifique e tente novamente.')
         return
       }
 
@@ -149,7 +149,7 @@ export function DeliverySettingsManager({
       showToast({
         variant: 'success',
         title: 'CEP encontrado',
-        description: 'Endereco preenchido automaticamente.',
+        description: 'Endereço preenchido automaticamente.',
       })
     } catch {
       setCepError('Erro ao consultar o CEP. Tente novamente.')
@@ -162,8 +162,8 @@ export function DeliverySettingsManager({
     if (!canSave) {
       showToast({
         variant: 'error',
-        title: 'Configuracao invalida',
-        description: 'Ative ao menos uma opcao de entrega.',
+        title: 'Configuração inválida',
+        description: 'Ative ao menos uma opção de entrega.',
       })
       return
     }
@@ -182,7 +182,7 @@ export function DeliverySettingsManager({
       showToast({
         variant: 'success',
         title: 'Salvo',
-        description: 'Opcoes de entrega atualizadas.',
+        description: 'Opções de entrega atualizadas.',
       })
 
       router.refresh()
@@ -201,14 +201,14 @@ export function DeliverySettingsManager({
     <div className="space-y-6">
       {!schemaReady ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          As colunas de entrega ainda nao existem no banco. Rode novamente <code>supabase/04_marketing_and_reviews.sql</code> no Supabase.
+          As colunas de entrega ainda não existem no banco. Rode novamente <code>supabase/04_marketing_and_reviews.sql</code> no Supabase.
         </div>
       ) : null}
 
       <div className="flex flex-col gap-4 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-[1.9rem] font-semibold tracking-tight text-slate-950">Opcoes de entrega</h1>
-          <p className="text-sm text-slate-500">Ative ou desative os metodos disponiveis no checkout.</p>
+          <h1 className="text-[1.9rem] font-semibold tracking-tight text-slate-950">Opções de entrega</h1>
+          <p className="text-sm text-slate-500">Ative ou desative os métodos disponíveis no checkout.</p>
         </div>
 
         <Button
@@ -232,7 +232,7 @@ export function DeliverySettingsManager({
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-900">Delivery (Entrega)</p>
-                <p className="text-xs text-slate-500">Cliente informa endereco e calcula frete por CEP.</p>
+                <p className="text-xs text-slate-500">Cliente informa endereço e calcula frete por CEP.</p>
               </div>
             </div>
             <Switch
@@ -249,7 +249,7 @@ export function DeliverySettingsManager({
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-900">Retirada na Loja</p>
-                <p className="text-xs text-slate-500">Cliente retira o pedido sem informar endereco.</p>
+                <p className="text-xs text-slate-500">Cliente retira o pedido sem informar endereço.</p>
               </div>
             </div>
             <Switch
@@ -266,7 +266,7 @@ export function DeliverySettingsManager({
                   <MapPin className="h-5 w-5 text-slate-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Endereco da loja para retirada</p>
+                  <p className="text-sm font-medium text-slate-900">Endereço da loja para retirada</p>
                   <p className="text-xs text-slate-500">Busque pelo CEP para preencher automaticamente.</p>
                 </div>
               </div>
@@ -312,7 +312,7 @@ export function DeliverySettingsManager({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Numero</label>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Número</label>
                     <Input
                       value={numero}
                       onChange={(e) => setNumero(e.target.value)}
@@ -343,7 +343,7 @@ export function DeliverySettingsManager({
                     <Input
                       value={cidade}
                       onChange={(e) => setCidade(e.target.value)}
-                      placeholder="Sao Paulo"
+                      placeholder="São Paulo"
                       className="h-11 rounded-xl"
                     />
                   </div>
@@ -361,7 +361,7 @@ export function DeliverySettingsManager({
 
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-600">
-                    Localizacao no mapa
+                    Localização no mapa
                     <span className="ml-1 font-normal text-slate-400">(clique no mapa ou arraste o marcador)</span>
                   </label>
                   <StoreLocationMap
@@ -398,12 +398,12 @@ export function DeliverySettingsManager({
       <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3">
         <p className="text-xs text-slate-500">
           {deliveryEnabled && pickupEnabled
-            ? 'O cliente podera escolher entre Delivery e Retirada no checkout.'
+            ? 'O cliente poderá escolher entre Delivery e Retirada no checkout.'
             : deliveryEnabled
-              ? 'Apenas Delivery disponivel. O cliente nao vera opcao de retirada.'
+              ? 'Apenas Delivery disponível. O cliente não verá opção de retirada.'
               : pickupEnabled
-                ? 'Apenas Retirada na Loja disponivel. O cliente nao vera opcao de delivery.'
-                : 'Ative ao menos uma opcao de entrega para liberar o checkout.'}
+                ? 'Apenas Retirada na Loja disponível. O cliente não verá opção de delivery.'
+                : 'Ative ao menos uma opção de entrega para liberar o checkout.'}
         </p>
       </div>
     </div>

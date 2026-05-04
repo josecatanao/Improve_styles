@@ -13,19 +13,19 @@ export function ProductMetricsGrid({ metrics }: { metrics: ProductDashboardMetri
     {
       label: 'Produtos cadastrados',
       value: String(metrics.totalProducts),
-      helper: 'Base total do catalogo.',
+      helper: 'Base total do catálogo.',
       icon: Package,
     },
     {
       label: 'Produtos ativos',
       value: String(metrics.activeProducts),
-      helper: 'Itens prontos para operacao.',
+      helper: 'Itens prontos para operação.',
       icon: Boxes,
     },
     {
       label: 'Valor em estoque',
       value: formatMoney(metrics.inventoryValue),
-      helper: 'Preco x quantidade em estoque.',
+      helper: 'Preço x quantidade em estoque.',
       icon: Wallet,
     },
     {

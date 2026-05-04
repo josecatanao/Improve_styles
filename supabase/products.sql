@@ -63,6 +63,7 @@ alter table public.products add column if not exists weight numeric(10,2);
 alter table public.products add column if not exists width numeric(10,2);
 alter table public.products add column if not exists height numeric(10,2);
 alter table public.products add column if not exists length numeric(10,2);
+alter table public.products add column if not exists is_promotion boolean not null default false;
 alter table public.products add column if not exists is_active boolean not null default false;
 alter table public.products add column if not exists created_at timestamptz not null default timezone('utc', now());
 alter table public.products add column if not exists updated_at timestamptz not null default timezone('utc', now());

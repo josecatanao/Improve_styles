@@ -21,15 +21,15 @@ const SECTION_CONTENT: Record<string, { title: string; description: string }> = 
   },
   promotions: {
     title: 'Ofertas especiais',
-    description: 'Bloco com produtos em promocao ou com desconto para chamar atencao logo na entrada.',
+    description: 'Bloco com produtos em promoção ou com desconto para chamar atenção logo na entrada.',
   },
   featured: {
     title: 'Produtos em destaque',
-    description: 'Area para mostrar os produtos mais importantes, mais vendidos ou que voce quer empurrar primeiro.',
+    description: 'Área para mostrar os produtos mais importantes, mais vendidos ou que você quer empurrar primeiro.',
   },
   'category-nav': {
     title: 'Atalhos de categorias',
-    description: 'Lista visual de categorias para o cliente navegar rapido pelas principais areas da loja.',
+    description: 'Lista visual de categorias para o cliente navegar rápido pelas principais áreas da loja.',
   },
 }
 
@@ -129,7 +129,7 @@ function SortableLayoutItem({
               : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
           }`}
           aria-label={isHidden ? `Mostrar ${label}` : `Ocultar ${label}`}
-          title={isHidden ? 'Tornar visivel' : 'Ocultar secao'}
+          title={isHidden ? 'Tornar visível' : 'Ocultar seção'}
         >
           {isHidden ? 'Mostrar' : 'Ocultar'}
         </button>
@@ -219,7 +219,7 @@ function SortableBannerItem({
                     ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
                     : 'bg-slate-100 text-slate-600 ring-slate-200'
                 }`}>
-                  {banner.is_active ? 'Visivel no site' : 'Oculto'}
+                  {banner.is_active ? 'Visível no site' : 'Oculto'}
                 </span>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
                   banner.link_url
@@ -229,7 +229,7 @@ function SortableBannerItem({
                   {banner.link_url ? 'Com link' : 'Sem link'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500">Arraste pelo icone sobre a imagem para ajustar a ordem de exibicao.</p>
+              <p className="text-xs text-slate-500">Arraste pelo icone sobre a imagem para ajustar a ordem de exibição.</p>
             </div>
             <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 lg:min-w-[164px] lg:justify-center">
               <Switch
@@ -271,7 +271,7 @@ function SortableBannerItem({
 
           <div className="flex flex-col gap-3 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-500">
-              Ao clicar no banner da vitrine, o cliente sera enviado para este destino.
+              Ao clicar no banner da vitrine, o cliente será enviado para este destino.
             </p>
             <Button
               variant="ghost"
@@ -363,13 +363,13 @@ export function MarketingManager({
       router.refresh()
       showToast({
         variant: 'success',
-        title: 'Anuncio salvo',
-        description: 'A barra de anuncios foi atualizada.',
+        title: 'Anúncio salvo',
+        description: 'A barra de anúncios foi atualizada.',
       })
     } catch (error) {
       showToast({
         variant: 'error',
-        title: 'Erro ao salvar anuncio',
+        title: 'Erro ao salvar anúncio',
         description: getErrorMessage(error),
       })
     } finally {
@@ -405,7 +405,7 @@ export function MarketingManager({
       showToast({
         variant: 'success',
         title: 'Ordem e visibilidade salvas',
-        description: 'A ordem e visibilidade das secoes da pagina inicial foram atualizadas.',
+        description: 'A ordem e visibilidade das seções da página inicial foram atualizadas.',
       })
     } catch (error) {
       showToast({
@@ -469,7 +469,7 @@ export function MarketingManager({
         const file = files[i]
 
         if (!file.type.startsWith('image/')) {
-          failedFiles.push(`${file.name} (tipo invalido)`)
+          failedFiles.push(`${file.name} (tipo inválido)`)
           continue
         }
 
@@ -556,7 +556,7 @@ export function MarketingManager({
   async function handleConfirmRemoveBanner(bannerId: string) {
     const confirmed = await confirm({
       title: 'Remover banner?',
-      description: 'Tem certeza que deseja remover este banner? Esta acao nao pode ser desfeita.',
+      description: 'Tem certeza que deseja remover este banner? Esta ação não pode ser desfeita.',
       confirmLabel: 'Sim, remover',
       cancelLabel: 'Cancelar',
       variant: 'destructive',
@@ -622,13 +622,13 @@ export function MarketingManager({
         showToast({
           variant: 'success',
           title: 'Ordem dos banners salva',
-          description: 'A nova ordem de exibicao dos banners foi aplicada.',
+          description: 'A nova ordem de exibição dos banners foi aplicada.',
         })
       } catch {
         showToast({
           variant: 'error',
           title: 'Erro ao salvar ordem dos banners',
-          description: 'Os banners foram reordenados visualmente, mas a nova ordem nao foi salva. Tente novamente.',
+          description: 'Os banners foram reordenados visualmente, mas a nova ordem não foi salva. Tente novamente.',
         })
       }
     }, 600)
@@ -700,7 +700,7 @@ export function MarketingManager({
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">Texto principal</label>
                     <Input
-                      placeholder="Ex: Frete Gratis nas compras acima de R$ 200"
+                      placeholder="Ex: Frete Grátis nas compras acima de R$ 200"
                       value={annText}
                       onChange={(e) => setAnnText(e.target.value)}
                     />
@@ -721,14 +721,14 @@ export function MarketingManager({
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-slate-700">Cor e pre-visualizacao</label>
+                    <label className="text-sm font-medium text-slate-700">Cor e pré-visualização</label>
                     <div className="flex items-center gap-3">
                       <input
                         type="color"
                         value={annBackgroundColor}
                         onChange={(e) => setAnnBackgroundColor(e.target.value)}
                         className="h-11 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white p-1"
-                        aria-label="Selecionar cor da barra de anuncios"
+                        aria-label="Selecionar cor da barra de anúncios"
                       />
                       <Input
                         value={annBackgroundColor}
@@ -740,10 +740,10 @@ export function MarketingManager({
                       className="rounded-xl px-4 py-3 text-center text-sm font-medium text-white"
                       style={{ backgroundColor: annBackgroundColor || '#3483fa' }}
                     >
-                      {annText || 'Pre-visualizacao da barra de anuncios'}
+                      {annText || 'Pre-visualizacao da barra de anúncios'}
                     </div>
                     <p className="text-xs leading-5 text-slate-500">
-                      Essa simulacao mostra o tom da faixa e ajuda a validar contraste antes de publicar.
+                      Essa simulação mostra o tom da faixa e ajuda a validar contraste antes de publicar.
                     </p>
                   </div>
                 </div>
@@ -765,12 +765,12 @@ export function MarketingManager({
                 <div className="space-y-1">
                   <CardTitle className="text-xl">Ordem e Visibilidade das Secoes</CardTitle>
                   <CardDescription>
-                    Defina a sequencia em que cada bloco aparece na vitrine e escolha quais secoes ficam visiveis. Arraste para reordenar ou use os controles laterais.
+                    Defina a sequência em que cada bloco aparece na vitrine e escolha quais seções ficam visíveis. Arraste para reordenar ou use os controles laterais.
                   </CardDescription>
                 </div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                O topo da lista aparece primeiro na home. Secoes marcadas como &quot;Oculta&quot; nao sao renderizadas na vitrine. Use o botao &quot;Ocultar&quot; para desativar uma secao sem remove-la da lista.
+                O topo da lista aparece primeiro na home. Secoes marcadas como &quot;Oculta&quot; nao sao renderizadas na vitrine. Use o botão &quot;Ocultar&quot; para desativar uma seção sem remove-la da lista.
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -792,7 +792,7 @@ export function MarketingManager({
                         description={
                           availableSections.find((section) => section.id === item)?.description ||
                           SECTION_CONTENT[item]?.description ||
-                          'Sessao personalizada da pagina inicial.'
+                          'Seção personalizada da pagina inicial.'
                         }
                         isHidden={hiddenSections.includes(item)}
                         isDragging={activeLayoutItemId === item}
@@ -825,7 +825,7 @@ export function MarketingManager({
                     <div className="space-y-1">
                       <CardTitle className="text-xl">Banners Principais</CardTitle>
                       <CardDescription>
-                        Gerencie o carrossel principal logo abaixo do cabecalho com foco em ordem, visibilidade e destino de clique.
+                        Gerencie o carrossel principal logo abaixo do cabeçalho com foco em ordem, visibilidade e destino de clique.
                       </CardDescription>
                     </div>
                   </div>
@@ -846,7 +846,7 @@ export function MarketingManager({
               <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-800">Biblioteca de banners</p>
-                  <p className="text-xs text-slate-500">Adicione novas imagens e depois ajuste a ordem de exibicao pela alca de arraste.</p>
+                  <p className="text-xs text-slate-500">Adicione novas imagens e depois ajuste a ordem de exibição pela alça de arraste.</p>
                 </div>
                 <div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleBannerUpload} />

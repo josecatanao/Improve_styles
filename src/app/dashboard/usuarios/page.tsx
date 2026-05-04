@@ -27,7 +27,6 @@ export default async function UsersPage() {
         <TeamManagement
           initialStaff={staff}
           summary={summary}
-          inviteEnabled={Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)}
         />
       )}
     </div>

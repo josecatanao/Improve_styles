@@ -9,7 +9,7 @@ import { useCart, buildCartItemId } from '@/components/store/CartProvider'
 import { formatMoney, getProductDisplayBadge, getProductPrimaryImage, normalizeStoreCategoryLabel } from '@/lib/storefront'
 
 function getBadgeStyles(product: ProductListItem, badge: string | null) {
-  if (Number(product.compare_at_price ?? 0) > Number(product.price ?? 0)) {
+  if (product.is_promotion) {
     return 'bg-gradient-to-r from-[#ff5a52] to-[#ff3d2e] text-white'
   }
 
@@ -29,14 +29,6 @@ function getBadgeStyles(product: ProductListItem, badge: string | null) {
 }
 
 function getBadgeLabel(product: ProductListItem, badge: string | null) {
-  const currentPrice = Number(product.price ?? 0)
-  const comparePrice = Number(product.compare_at_price ?? 0)
-
-  if (comparePrice > currentPrice && comparePrice > 0) {
-    const percent = Math.round(((comparePrice - currentPrice) / comparePrice) * 100)
-    return `🔥 -${percent}%`
-  }
-
   if (badge === 'Novo') {
     return '✨ Novo'
   }

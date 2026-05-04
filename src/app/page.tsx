@@ -111,7 +111,7 @@ export default async function Home({
     .sort((a, b) => a.sortOrder - b.sortOrder || b.products.length - a.products.length)
 
   // Filter products for the dynamic sections
-  const promotionalProducts = storefront.allProducts.filter(p => p.compare_at_price && p.compare_at_price > (p.price || 0)).slice(0, 8)
+  const promotionalProducts = storefront.allProducts.filter(p => p.is_promotion).slice(0, 8)
   const featuredProducts = storefront.allProducts.filter(p => p.is_featured).slice(0, 8)
   const isSearchMode = query.trim().length > 0
   const isSortMode = sort !== 'popular'

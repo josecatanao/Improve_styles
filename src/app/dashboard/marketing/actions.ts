@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/utils/supabase/admin'
 import { refresh, revalidatePath, revalidateTag } from 'next/cache'
+import { requirePermission } from '@/lib/permissions-server'
 
 function isMissingRelationError(error: { code?: string; message: string } | null) {
   if (!error) return false
@@ -41,6 +42,7 @@ export async function saveStoreSettings(
   annLink: string,
   annBackgroundColor: string
 ) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
   const normalizedAnnouncementColor = normalizeAnnouncementColor(annBackgroundColor)
 
@@ -84,6 +86,7 @@ export async function saveStoreSettings(
 }
 
 export async function uploadStoreBannerAction(formData: FormData) {
+  await requirePermission('settings:manage')
   const file = formData.get('file') as File
   const orderIndex = Number(formData.get('orderIndex') || 0)
   
@@ -126,6 +129,7 @@ export async function uploadStoreBannerAction(formData: FormData) {
 }
 
 export async function addStoreBanner(imageUrl: string, linkUrl: string, orderIndex: number) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
   const { data: banner, error } = await supabase.from('store_banners').insert({
     image_url: imageUrl,
@@ -141,6 +145,7 @@ export async function addStoreBanner(imageUrl: string, linkUrl: string, orderInd
 }
 
 export async function removeStoreBanner(bannerId: string) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
   const { error } = await supabase.from('store_banners').delete().eq('id', bannerId)
   ensureSuccess(error, 'Erro ao remover banner')
@@ -151,6 +156,7 @@ export async function removeStoreBanner(bannerId: string) {
 }
 
 export async function toggleStoreBanner(bannerId: string, isActive: boolean) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
   const { data: banner, error } = await supabase
     .from('store_banners')
@@ -166,6 +172,7 @@ export async function toggleStoreBanner(bannerId: string, isActive: boolean) {
 }
 
 export async function updateStoreBannerLink(bannerId: string, linkUrl: string) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
   const sanitizedLink = linkUrl.trim()
 
@@ -184,6 +191,7 @@ export async function updateStoreBannerLink(bannerId: string, linkUrl: string) {
 }
 
 export async function reorderStoreBanners(orderedIds: string[]) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
 
   await Promise.all(

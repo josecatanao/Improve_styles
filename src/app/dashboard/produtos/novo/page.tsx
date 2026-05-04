@@ -10,7 +10,7 @@ export default async function NewProductPage() {
     <div className="space-y-6">
       <ProductWorkspaceHeader
         title="Cadastrar produto"
-        description="Preencha os dados do item, envie imagens e salve o produto no catalogo."
+        description="Preencha os dados do item, envie imagens e salve o produto no catálogo."
       />
 
       {metrics.setupRequired ? (

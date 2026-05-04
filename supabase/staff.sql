@@ -68,12 +68,17 @@ on public.staff_members
 for select
 using (owner_id = auth.uid());
 
+drop policy if exists "staff_members_select_self" on public.staff_members;
+create policy "staff_members_select_self"
+on public.staff_members
+for select
+using (auth_user_id = auth.uid());
+
 drop policy if exists "staff_members_insert_own" on public.staff_members;
 create policy "staff_members_insert_own"
 on public.staff_members
 for insert
 with check (owner_id = auth.uid());
-
 drop policy if exists "staff_members_update_own" on public.staff_members;
 create policy "staff_members_update_own"
 on public.staff_members

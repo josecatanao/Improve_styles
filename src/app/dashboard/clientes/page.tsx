@@ -14,7 +14,7 @@ export default async function CustomersPage() {
 
       {setupRequired ? (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-          <h2 className="text-lg font-semibold text-amber-900">Configuracao necessaria</h2>
+          <h2 className="text-lg font-semibold text-amber-900">Configuração necessária</h2>
           <p className="mt-2 text-sm text-amber-800">
             Execute o SQL atualizado de <code>supabase/products.sql</code> e configure a service role do Supabase para habilitar a base de clientes.
           </p>

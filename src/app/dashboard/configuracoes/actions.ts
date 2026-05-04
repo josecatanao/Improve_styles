@@ -2,6 +2,7 @@
 
 import { refresh, revalidatePath, revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { requirePermission } from '@/lib/permissions-server'
 import type { DashboardTheme, HeaderNavigation } from '@/lib/store-settings'
 import {
   isMissingStoreSettingsColumnError,
@@ -32,6 +33,7 @@ export async function saveStoreAppearance(input: {
   storeCartButtonColor: string
   dashboardTheme: DashboardTheme
 }) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
   const storeName = input.storeName.trim() || 'Improve Styles'
   const storeLogoUrl = input.storeLogoUrl.trim() || null
@@ -102,6 +104,7 @@ export async function saveDashboardAppearance(input: {
   brandPrimaryColor: string
   brandSecondaryColor: string
 }) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
   const dashboardTheme = normalizeDashboardTheme(input.dashboardTheme)
   const brandPrimaryColor = normalizeHexColor(input.brandPrimaryColor, '#0f172a')
@@ -149,6 +152,7 @@ export async function saveDeliverySettings(input: {
   storeAddressLat: number | null
   storeAddressLng: number | null
 }) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
 
   const { data: existing, error: existingError } = await supabase
@@ -192,6 +196,7 @@ export async function saveDeliverySettings(input: {
 }
 
 export async function saveHeaderNavigation(input: HeaderNavigation) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
 
   const { data: existing, error: existingError } = await supabase

@@ -19,6 +19,8 @@ import {
   Upload,
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
+import { usePermissions } from '@/components/permissions-provider'
+import { translateError } from '@/lib/permissions'
 import type {
   ProductColor,
   ProductDetail,
@@ -38,6 +40,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import {
   resolveUniqueProductSlug,
@@ -64,6 +67,7 @@ export type ProductFormState = {
   price: string
   compare_at_price: string
   status: ProductStatus
+  is_promotion: boolean
   is_featured: boolean
   show_specs: boolean
   collection: string
@@ -137,6 +141,7 @@ const initialState: ProductFormState = {
   price: '',
   compare_at_price: '',
   status: 'draft',
+  is_promotion: false,
   is_featured: false,
   show_specs: false,
   collection: '',
@@ -150,25 +155,25 @@ const initialState: ProductFormState = {
 const stepItems = [
   {
     key: 'basic',
-    title: 'Informacoes basicas',
-    description: 'Nome, descricao, categoria, marca e preco.',
+    title: 'Informações básicas',
+    description: 'Nome, descrição, categoria, marca e preço.',
     icon: Package2,
   },
   {
     key: 'variations',
-    title: 'Variacoes',
+    title: 'Variações',
     description: 'Tipo de produto, cores e tamanhos.',
     icon: SwatchBook,
   },
   {
     key: 'images',
     title: 'Imagens',
-    description: 'Upload, preview e ordenacao.',
+    description: 'Upload, preview e ordenação.',
     icon: ImagePlus,
   },
   {
     key: 'review',
-    title: 'Revisao final',
+    title: 'Revisão final',
     description: 'Cheque tudo antes de salvar.',
     icon: ShieldCheck,
   },
@@ -491,6 +496,7 @@ function CreatableField({
 export function ProductForm({ mode = 'create', product = null, options }: ProductFormProps) {
   const router = useRouter()
   const confirm = useConfirm()
+  const { guard } = usePermissions()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const initialImages = buildInitialImages(product)
   const initialGroups = buildInitialGroups(product)
@@ -510,6 +516,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         price: String(product.price ?? ''),
         compare_at_price: String(product.compare_at_price ?? ''),
         status: product.status ?? 'draft',
+        is_promotion: product.is_promotion ?? false,
         is_featured: product.is_featured ?? false,
         show_specs: product.show_specs ?? false,
         collection: product.collection ?? '',
@@ -873,7 +880,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
     const confirmed = await confirm({
       title: 'Remover variante?',
-      description: `O tamanho "${variant.size}" da cor "${group?.name ?? ''}" sera removido com seu estoque e preco.`,
+      description: `O tamanho "${variant.size}" da cor "${group?.name ?? ''}" será removido com seu estoque e preço.`,
       confirmLabel: 'Remover',
       cancelLabel: 'Cancelar',
       variant: 'destructive',
@@ -995,6 +1002,8 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       showToast('error', reviewIssue)
       return
     }
+
+    if (!guard('products:manage')) return
 
     submissionLockRef.current = true
     setIsSubmitting(true)
@@ -1133,6 +1142,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
         collection: form.collection.trim() || null,
         audience: form.audience.trim() || null,
         tags: [],
+        is_promotion: form.is_promotion,
         is_featured: form.is_featured,
         show_specs: form.show_specs,
         is_new: false,
@@ -1419,7 +1429,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       submissionLockRef.current = false
       setIsSubmitting(false)
       setUploadProgress(null)
-      showToast('error', submitError instanceof Error ? submitError.message : 'Falha ao salvar o produto.')
+      showToast('error', translateError(submitError, 'Falha ao salvar o produto.'))
     }
   }
 
@@ -1613,25 +1623,23 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
                   <Card className="border-0 bg-slate-50 ring-1 ring-slate-200 dark:bg-slate-950/70 dark:ring-slate-800">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Preco</CardTitle>
-                      <CardDescription>Defina o valor de venda e, opcionalmente, um preco anterior para promocao.</CardDescription>
+                      <CardTitle className="text-base">Preço</CardTitle>
+                      <CardDescription>Defina o valor de venda e, opcionalmente, um preço anterior para promoção.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-4 px-5 pb-5 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
-                      <FieldGroup label="Preco de venda" hint="Valor que o cliente pagara.">
-                        <Input
-                          inputMode="decimal"
+                      <FieldGroup label="Preço de venda" hint="Valor que o cliente pagará.">
+                        <CurrencyInput
                           value={form.price}
-                          onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
+                          onChange={(rawValue) => setForm((current) => ({ ...current, price: rawValue }))}
                           placeholder="89.90"
                           className="h-11 bg-white text-lg font-semibold dark:bg-slate-900"
                         />
                       </FieldGroup>
                       <div className="hidden items-center pt-6 text-sm text-slate-400 dark:text-slate-500 sm:flex">ou</div>
-                      <FieldGroup label="Preco promocional (De/Por)" hint="Preco anterior para destacar desconto. Opcional.">
-                        <Input
-                          inputMode="decimal"
+                      <FieldGroup label="Preço promocional (De/Por)" hint="Preço anterior para destacar desconto. Opcional.">
+                        <CurrencyInput
                           value={form.compare_at_price}
-                          onChange={(event) => setForm((current) => ({ ...current, compare_at_price: event.target.value }))}
+                          onChange={(rawValue) => setForm((current) => ({ ...current, compare_at_price: rawValue }))}
                           placeholder="119.90"
                           className="h-11 bg-white dark:bg-slate-900"
                         />
@@ -1681,6 +1689,18 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   </Card>
 
                   <div className="grid gap-4 sm:grid-cols-2">
+                    <FieldGroup label="Oferta Especial" hint="Exibe na secao de ofertas da Home. Controle manual.">
+                      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900/80">
+                        <input
+                          type="checkbox"
+                          checked={form.is_promotion}
+                          onChange={(e) => setForm(current => ({...current, is_promotion: e.target.checked}))}
+                          className="h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:border-slate-600 dark:bg-slate-950"
+                        />
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-100">Sim, este produto e uma oferta</span>
+                      </label>
+                    </FieldGroup>
+
                     <FieldGroup label="Destaque na Loja" hint="Exibe na secao principal de destaques da Home.">
                       <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900/80">
                         <input
@@ -1869,12 +1889,12 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                 <div>
                                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                                    {useSizes ? 'Tamanhos dessa cor' : 'Configuracao dessa cor'}
+                                    {useSizes ? 'Tamanhos dessa cor' : 'Configuração dessa cor'}
                                   </p>
                                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                     {useSizes
                                       ? 'Adicione tamanhos predefinidos ou crie um tamanho personalizado.'
-                                      : 'Cada cor fica com uma unica linha de estoque, preco e SKU.'}
+                                      : 'Cada cor fica com uma única linha de estoque, preço e SKU.'}
                                   </p>
                                 </div>
 
@@ -1946,21 +1966,19 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                                         />
                                       </FieldGroup>
 
-                                      <FieldGroup label="Preco">
-                                        <Input
-                                          inputMode="decimal"
+                                      <FieldGroup label="Preço">
+                                        <CurrencyInput
                                           value={variant.price}
-                                          onChange={(event) => updateVariant(group.id, variant.id, 'price', event.target.value)}
+                                          onChange={(rawValue) => updateVariant(group.id, variant.id, 'price', rawValue)}
                                           placeholder={form.price || '89.90'}
                                           className="h-10"
                                         />
                                       </FieldGroup>
 
-                                      <FieldGroup label="Preco Antigo">
-                                        <Input
-                                          inputMode="decimal"
+                                      <FieldGroup label="Preço Antigo">
+                                        <CurrencyInput
                                           value={variant.compare_at_price}
-                                          onChange={(event) => updateVariant(group.id, variant.id, 'compare_at_price', event.target.value)}
+                                          onChange={(rawValue) => updateVariant(group.id, variant.id, 'compare_at_price', rawValue)}
                                           placeholder={form.compare_at_price || '119.90'}
                                           className="h-10"
                                         />
@@ -2190,7 +2208,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
             {step === 3 ? (
               <StepShell
-                title="Revisao final"
+                title="Revisão final"
                 description="Verifique como o produto sera exibido na sua loja online."
               >
                 <div className="grid gap-4">
@@ -2198,7 +2216,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                     <CardHeader>
                       <CardTitle>Preview na loja</CardTitle>
                       <CardDescription>
-                        Simulacao da vitrine com imagem principal, galeria, preco e variacoes.
+                        Simulação da vitrine com imagem principal, galeria, preço e variações.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="px-5 pb-5">

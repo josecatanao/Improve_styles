@@ -17,7 +17,7 @@ export default async function DashboardSettingsPage() {
   return (
     <div className="space-y-6">
       <ProductWorkspaceHeader
-        title="Aparencia do dashboard"
+        title="Aparência do dashboard"
         description="Personalize o tema e as cores do painel administrativo."
       />
 

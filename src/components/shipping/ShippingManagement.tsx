@@ -80,7 +80,7 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
   async function handleDelete(zoneId: string) {
     const confirmed = await confirm({
       title: 'Excluir zona de entrega?',
-      description: 'Essa exclusao e definitiva e nao pode ser desfeita.',
+      description: 'Essa exclusão é definitiva e não pode ser desfeita.',
       confirmLabel: 'Excluir zona',
       cancelLabel: 'Cancelar',
       variant: 'destructive',
@@ -92,7 +92,7 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
       await deleteShippingZone(zoneId)
       setZones((current) => current.filter((z) => z.id !== zoneId))
       router.refresh()
-      showToast({ variant: 'success', title: 'Zona de entrega excluida' })
+      showToast({ variant: 'success', title: 'Zona de entrega excluída' })
     } catch (error) {
       showToast({ variant: 'error', title: 'Falha ao excluir zona', description: getErrorMessage(error) })
     } finally {
@@ -128,7 +128,7 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Zonas de entrega</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Cada zona define uma faixa de CEP, o preco base do frete e o prazo estimado.
+              Cada zona define uma faixa de CEP, o preço base do frete e o prazo estimado.
             </p>
           </div>
           {!showNewForm ? (
@@ -159,7 +159,7 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
                   name="name"
                   required
                   defaultValue={editingZone?.name || ''}
-                  placeholder="Ex: Regiao Central"
+                  placeholder="Ex: Região Central"
                   className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                 />
               </label>
@@ -184,16 +184,21 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
                 />
               </label>
               <label className="grid gap-1.5">
-                <span className="text-xs font-medium text-slate-600">Preco base (R$)</span>
-                <input
-                  name="base_price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  defaultValue={editingZone?.base_price || 0}
-                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                />
+                <span className="text-xs font-medium text-slate-600">Preço base (R$)</span>
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm font-medium text-slate-400">R$</span>
+                  <input
+                    name="base_price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    inputMode="decimal"
+                    defaultValue={editingZone?.base_price || 0}
+                    placeholder="0,00"
+                    className="h-10 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  />
+                </div>
               </label>
               <label className="grid gap-1.5">
                 <span className="text-xs font-medium text-slate-600">Prazo estimado (dias)</span>
@@ -207,16 +212,20 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
                 />
               </label>
               <label className="grid gap-1.5">
-                <span className="text-xs font-medium text-slate-600">Frete gratis acima de (R$)</span>
-                <input
-                  name="free_shipping_threshold"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  defaultValue={editingZone?.free_shipping_threshold || ''}
-                  placeholder="Opcional"
-                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                />
+                <span className="text-xs font-medium text-slate-600">Frete grátis acima de (R$)</span>
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm font-medium text-slate-400">R$</span>
+                  <input
+                    name="free_shipping_threshold"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    defaultValue={editingZone?.free_shipping_threshold || ''}
+                    placeholder="0,00"
+                    className="h-10 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  />
+                </div>
               </label>
             </div>
             <div className="mt-4 flex items-center gap-3">
@@ -226,7 +235,7 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
                 className="inline-flex items-center gap-2 rounded-xl bg-[#3483fa] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2968c8] disabled:opacity-50"
               >
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {editZoneId ? 'Salvar alteracoes' : 'Criar zona'}
+                {editZoneId ? 'Salvar alterações' : 'Criar zona'}
               </button>
               <button
                 type="button"
@@ -253,7 +262,7 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
                   <th className="px-6 py-3">Preco base</th>
                   <th className="px-6 py-3">Prazo</th>
                   <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3 text-right">Acoes</th>
+                  <th className="px-6 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -263,18 +272,18 @@ export function ShippingManagement({ initialZones }: ShippingManagementProps) {
                       <p className="font-semibold text-slate-900">{zone.name}</p>
                       {zone.free_shipping_threshold ? (
                         <p className="mt-1 text-xs text-emerald-600">
-                          Frete gratis a partir de {formatCurrency(zone.free_shipping_threshold)}
+                          Frete grátis a partir de {formatCurrency(zone.free_shipping_threshold)}
                         </p>
                       ) : null}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {zone.zip_code_start} ate {zone.zip_code_end}
+                      {zone.zip_code_start} até {zone.zip_code_end}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900 font-medium">
                       {formatCurrency(zone.base_price)}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {zone.estimated_days} dias uteis
+                      {zone.estimated_days} dias úteis
                     </td>
                     <td className="px-6 py-4">
                       <button

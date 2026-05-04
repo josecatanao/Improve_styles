@@ -18,6 +18,7 @@ import { useConfirm, useToast } from '@/components/ui/feedback-provider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Switch } from '@/components/ui/switch'
 
 const EMPTY_FORM = {
@@ -155,7 +156,7 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
   async function handleDelete(couponId: string, couponCode: string) {
     const confirmedDelete = await confirm({
       title: 'Excluir cupom?',
-      description: `O cupom "${couponCode}" sera removido permanentemente.`,
+      description: `O cupom "${couponCode}" será removido permanentemente.`,
       confirmLabel: 'Excluir cupom',
       cancelLabel: 'Cancelar',
       variant: 'destructive',
@@ -212,7 +213,7 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Codigo do cupom</label>
+                <label className="text-sm font-medium text-slate-700">Código do cupom</label>
                 <Input
                   value={form.code}
                   onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
@@ -221,7 +222,7 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Descricao (opcional)</label>
+                <label className="text-sm font-medium text-slate-700">Descrição (opcional)</label>
                 <Input
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -242,7 +243,7 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
                 >
                   <option value="percentage">Percentual (%)</option>
                   <option value="fixed">Valor fixo (R$)</option>
-                  <option value="free_shipping">Frete gratis</option>
+                  <option value="free_shipping">Frete grátis</option>
                 </select>
               </div>
               {form.discount_type !== 'free_shipping' ? (
@@ -250,25 +251,30 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
                   <label className="text-sm font-medium text-slate-700">
                     {form.discount_type === 'percentage' ? 'Percentual de desconto' : 'Valor do desconto (R$)'}
                   </label>
-                  <Input
-                    type="number"
-                    step={form.discount_type === 'percentage' ? '1' : '0.01'}
-                    min="0"
-                    max={form.discount_type === 'percentage' ? '100' : undefined}
-                    value={form.discount_value}
-                    onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))}
-                    placeholder={form.discount_type === 'percentage' ? '20' : '50.00'}
-                  />
+                  {form.discount_type === 'percentage' ? (
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="100"
+                      value={form.discount_value}
+                      onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))}
+                      placeholder="20"
+                    />
+                  ) : (
+                    <CurrencyInput
+                      value={form.discount_value}
+                      onChange={(rawValue) => setForm((f) => ({ ...f, discount_value: rawValue }))}
+                      placeholder="50.00"
+                    />
+                  )}
                 </div>
               ) : null}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Valor minimo do pedido (R$)</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <label className="text-sm font-medium text-slate-700">Valor mínimo do pedido (R$)</label>
+                <CurrencyInput
                   value={form.min_order_value}
-                  onChange={(e) => setForm((f) => ({ ...f, min_order_value: e.target.value }))}
+                  onChange={(rawValue) => setForm((f) => ({ ...f, min_order_value: rawValue }))}
                   placeholder="0.00"
                 />
               </div>
@@ -320,7 +326,7 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
                 ) : (
                   <TicketPercent className="mr-2 h-4 w-4" />
                 )}
-                {editingId ? 'Salvar alteracoes' : 'Criar cupom'}
+                {editingId ? 'Salvar alterações' : 'Criar cupom'}
               </Button>
               <Button type="button" variant="outline" onClick={resetForm}>
                 Cancelar
@@ -334,7 +340,7 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
         <CardHeader>
           <CardTitle className="text-xl">Cupons cadastrados</CardTitle>
           <CardDescription>
-            Gerencie os cupons de desconto disponiveis para os clientes.
+            Gerencie os cupons de desconto disponíveis para os clientes.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -347,14 +353,14 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    <th className="px-3 py-3">Codigo</th>
+                    <th className="px-3 py-3">Código</th>
                     <th className="px-3 py-3">Tipo</th>
                     <th className="px-3 py-3">Valor</th>
                     <th className="px-3 py-3">Uso</th>
                     <th className="px-3 py-3">Status</th>
                     <th className="px-3 py-3">Validade</th>
                     <th className="px-3 py-3">Criado</th>
-                    <th className="px-3 py-3 text-right">Acoes</th>
+                    <th className="px-3 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -369,7 +375,7 @@ export function CouponManagement({ initialCoupons }: { initialCoupons: StoreCoup
                         {coupon.discount_type === 'percentage'
                           ? 'Percentual'
                           : coupon.discount_type === 'free_shipping'
-                            ? 'Frete gratis'
+                            ? 'Frete grátis'
                             : 'Valor fixo'}
                       </td>
                       <td className="px-3 py-3 font-medium text-slate-900">

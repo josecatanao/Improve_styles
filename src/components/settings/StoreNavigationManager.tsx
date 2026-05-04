@@ -11,7 +11,7 @@ import { useToast } from '@/components/ui/feedback-provider'
 import { Button } from '@/components/ui/button'
 
 const NAV_ITEM_LABELS: Record<HeaderNavItemId, string> = {
-  home: 'Inicio',
+  home: 'Início',
   categories: 'Categorias',
   promocoes: 'Promocoes',
   novidades: 'Novidades',
@@ -19,10 +19,10 @@ const NAV_ITEM_LABELS: Record<HeaderNavItemId, string> = {
 }
 
 const NAV_ITEM_DESCRIPTIONS: Record<HeaderNavItemId, string> = {
-  home: 'Link para a pagina inicial da loja. Aparece como primeiro item quando habilitado.',
-  categories: 'Listagem de categorias dinamicas da loja. Exibe as categorias gerenciadas no painel.',
-  promocoes: 'Link para produtos em promocao (ordenados por menor preco).',
-  novidades: 'Link para produtos mais recentes (ordenados por data de publicacao).',
+  home: 'Link para a página inicial da loja. Aparece como primeiro item quando habilitado.',
+  categories: 'Listagem de categorias dinâmicas da loja. Exibe as categorias gerenciadas no painel.',
+  promocoes: 'Link para produtos em promoção (ordenados por menor preço).',
+  novidades: 'Link para produtos mais recentes (ordenados por data de publicação).',
   mais_vendidos: 'Link para produtos mais vendidos (ordenados por popularidade).',
 }
 
@@ -93,7 +93,7 @@ function SortableNavItem({
             {NAV_ITEM_LABELS[item.id]}
           </span>
           <span className="truncate text-xs text-slate-400">
-            {item.id !== 'categories' ? 'Link fixo' : 'Grupo dinamico'}
+            {item.id !== 'categories' ? 'Link fixo' : 'Grupo dinâmico'}
           </span>
         </div>
         <p className="mt-0.5 text-xs leading-5 text-slate-500">{NAV_ITEM_DESCRIPTIONS[item.id]}</p>
@@ -181,7 +181,7 @@ export function StoreNavigationManager({
         showToast({
           variant: 'error',
           title: 'Erro ao salvar ordem',
-          description: 'A navegacao foi reordenada visualmente, mas a nova ordem nao foi salva. Tente novamente.',
+          description: 'A navegação foi reordenada visualmente, mas a nova ordem não foi salva. Tente novamente.',
         })
       }
     }, 600)
@@ -213,12 +213,12 @@ export function StoreNavigationManager({
       showToast({
         variant: 'success',
         title: 'Navegacao salva',
-        description: 'A navegacao do header foi atualizada.',
+        description: 'A navegação do header foi atualizada.',
       })
     } catch (error) {
       showToast({
         variant: 'error',
-        title: 'Falha ao salvar navegacao',
+        title: 'Falha ao salvar navegação',
         description: error instanceof Error ? error.message : 'Erro inesperado.',
       })
     } finally {
@@ -248,7 +248,7 @@ export function StoreNavigationManager({
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-slate-950">Navegacao do header</h2>
           <p className="text-sm text-slate-500">
-            Controle quais itens aparecem na navegacao principal da loja. Arraste pelo icone de alca para reordenar ou use os botoes de seta.
+            Controle quais itens aparecem na navegação principal da loja. Arraste pelo ícone de alça para reordenar ou use os botões de seta.
           </p>
         </div>
         <Button
@@ -258,7 +258,7 @@ export function StoreNavigationManager({
           className="h-11 shrink-0 rounded-xl bg-[#2563eb] px-5 text-white hover:bg-[#1d4ed8]"
         >
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-          Salvar navegacao
+          Salvar navegação
         </Button>
       </div>
 
@@ -266,8 +266,8 @@ export function StoreNavigationManager({
         <div className="grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 rounded-[1rem] bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
           <span className="w-8 text-center">#</span>
           <span className="w-8"></span>
-          <span>Item de navegacao</span>
-          <span className="w-24 text-center">Visivel</span>
+          <span>Item de navegação</span>
+          <span className="w-24 text-center">Visível</span>
         </div>
 
         <DndContext
@@ -296,12 +296,12 @@ export function StoreNavigationManager({
       </div>
 
       <div className="mt-5 rounded-[1.25rem] border border-blue-100 bg-blue-50 px-4 py-3">
-        <p className="text-sm font-medium text-blue-900">Como funciona a navegacao</p>
+        <p className="text-sm font-medium text-blue-900">Como funciona a navegação</p>
         <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-blue-700">
-          <li>A ordem dos itens na lista define a ordem de exibicao no header da loja.</li>
-          <li>Itens desmarcados nao aparecem na navegacao do desktop nem do menu mobile.</li>
+          <li>A ordem dos itens na lista define a ordem de exibição no header da loja.</li>
+          <li>Itens desmarcados não aparecem na navegação do desktop nem do menu mobile.</li>
           <li>&quot;Categorias&quot; expande dinamicamente as categorias gerenciadas no painel de produtos.</li>
-          <li>Alteracoes entram em vigor imediatamente apos salvar.</li>
+          <li>Alterações entram em vigor imediatamente após salvar.</li>
         </ul>
       </div>
     </section>

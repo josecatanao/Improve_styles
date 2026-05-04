@@ -28,22 +28,22 @@ export default async function MarketingPage() {
     {
       id: 'banners',
       label: 'Banners principais',
-      description: 'Carrossel do topo da pagina inicial para campanhas, lancamentos e avisos visuais.',
+      description: 'Carrossel do topo da página inicial para campanhas, lançamentos e avisos visuais.',
     },
     {
       id: 'promotions',
       label: 'Ofertas especiais',
-      description: 'Faixa de produtos em promocao para destacar descontos e oportunidades de compra.',
+      description: 'Faixa de produtos em promoção para destacar descontos e oportunidades de compra.',
     },
     {
       id: 'featured',
       label: 'Produtos em destaque',
-      description: 'Secao com os produtos mais importantes da loja ou itens que merecem maior visibilidade.',
+      description: 'Seção com os produtos mais importantes da loja ou itens que merecem maior visibilidade.',
     },
     {
       id: 'category-nav',
       label: 'Atalhos de categorias',
-      description: 'Bloco com categorias em evidência para facilitar a navegacao logo no inicio da home.',
+      description: 'Bloco com categorias em evidência para facilitar a navegação logo no início da home.',
     },
     ...managedCategories.map((category) => ({
       id: getCategorySectionId(category.slug),
@@ -61,13 +61,13 @@ export default async function MarketingPage() {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Marketing & Vitrine</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Gerencie banners da loja, faixas de anuncio e reordene as secoes da sua pagina inicial.
+          Gerencie banners da loja, faixas de anúncio e reordene as seções da sua página inicial.
         </p>
       </div>
 
       {setupRequired ? (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-          <h2 className="text-lg font-semibold text-amber-900">Configuracao necessaria</h2>
+          <h2 className="text-lg font-semibold text-amber-900">Configuração necessária</h2>
           <p className="mt-2 text-sm text-amber-800">
             Execute o script SQL <code>supabase/04_marketing_and_reviews.sql</code> no seu Supabase para criar
             <code> store_settings</code>, <code> store_banners</code> e as politicas de marketing.

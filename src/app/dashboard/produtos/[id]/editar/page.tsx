@@ -34,7 +34,7 @@ export default async function EditProductPage({
     <div className="space-y-6">
       <ProductWorkspaceHeader
         title="Editar produto"
-        description="Atualize as informacoes do item, reorganize imagens e ajuste o status do catalogo."
+        description="Atualize as informações do item, reorganize imagens e ajuste o status do catálogo."
       />
 
       <div className="flex">
@@ -43,7 +43,7 @@ export default async function EditProductPage({
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
         >
           <ArrowLeft className="h-4 w-4" />
-          Voltar para o catalogo
+          Voltar para o catálogo
         </Link>
       </div>
 

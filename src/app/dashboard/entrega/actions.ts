@@ -2,12 +2,14 @@
 
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { requirePermission } from '@/lib/permissions-server'
 
 function cleanCep(value: string) {
   return (value || '').replace(/\D/g, '')
 }
 
 export async function createShippingZone(formData: FormData) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
 
   const name = formData.get('name') as string
@@ -38,6 +40,7 @@ export async function createShippingZone(formData: FormData) {
 }
 
 export async function updateShippingZone(zoneId: string, formData: FormData) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
 
   const name = formData.get('name') as string
@@ -68,6 +71,7 @@ export async function updateShippingZone(zoneId: string, formData: FormData) {
 }
 
 export async function deleteShippingZone(zoneId: string) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
 
   const { error } = await supabase.from('shipping_zones').delete().eq('id', zoneId)
@@ -79,6 +83,7 @@ export async function deleteShippingZone(zoneId: string) {
 }
 
 export async function toggleShippingZone(zoneId: string, isActive: boolean) {
+  await requirePermission('settings:manage')
   const supabase = createAdminClient()
 
   const { error } = await supabase.from('shipping_zones').update({
