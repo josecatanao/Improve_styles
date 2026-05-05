@@ -74,7 +74,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
           <StoreImage
             src={image}
             alt={product.name}
-            className="h-[10rem] w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.03] sm:h-[14rem]"
+            className="h-[10rem] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] sm:h-[14rem]"
             fallbackClassName="flex h-[10rem] items-center justify-center px-4 text-center text-xs font-medium text-slate-500 sm:h-[14rem] sm:px-6 sm:text-sm"
             fallbackLabel={product.name}
           />

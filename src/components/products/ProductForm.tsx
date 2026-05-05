@@ -7,6 +7,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Crop,
   GripVertical,
   ImagePlus,
   LoaderCircle,
@@ -57,6 +58,7 @@ import {
 import { useProductDraft } from '@/hooks/use-product-draft'
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes'
 import { useConfirm } from '@/components/ui/feedback-provider'
+import { ImageEditor } from '@/components/products/ImageEditor'
 
 export type ProductFormState = {
   name: string
@@ -102,6 +104,7 @@ type ExistingImageItem = {
   storagePath: string | null
   assignedColorName: string | null
   assignedColorHex: string | null
+  editedBlob?: Blob
 }
 
 type NewImageItem = {
@@ -111,6 +114,7 @@ type NewImageItem = {
   url: string
   assignedColorName: string | null
   assignedColorHex: string | null
+  editedBlob?: Blob
 }
 
 type RemoteImageItem = {
@@ -119,6 +123,7 @@ type RemoteImageItem = {
   url: string
   assignedColorName: string | null
   assignedColorHex: string | null
+  editedBlob?: Blob
 }
 
 export type ImageItem = ExistingImageItem | NewImageItem | RemoteImageItem
@@ -199,8 +204,10 @@ const suggestedSizes = ['P', 'M', 'G', 'GG'] as const
 
 function revokeNewImageUrls(images: ImageItem[]) {
   images.forEach((image) => {
-    if (image.kind === 'new') {
-      URL.revokeObjectURL(image.url)
+    if (image.kind === 'new' || image.editedBlob) {
+      if (image.url.startsWith('blob:')) {
+        URL.revokeObjectURL(image.url)
+      }
     }
   })
 }
@@ -548,6 +555,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
   const [toast, setToast] = useState<ToastState>(null)
   const [hasSubmittedSuccessfully, setHasSubmittedSuccessfully] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{ completed: number; total: number } | null>(null)
+  const [editingImageId, setEditingImageId] = useState<string | null>(null)
   const [showDraftRestoreDialog, setShowDraftRestoreDialog] = useState(draft.hasDraft)
   const [showMeasures, setShowMeasures] = useState(
     mode === 'edit' && product ? !!(product.weight || product.width || product.height || product.length) : false
@@ -678,6 +686,73 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
     showToast('success', `${nextFiles.length} imagem(ns) adicionada(s) a galeria.`)
   }
 
+  async function handleStartEdit(imageId: string) {
+    const image = imagesRef.current.find((item) => item.id === imageId)
+    if (!image) return
+
+    if (image.kind === 'remote' && !image.editedBlob) {
+      if (image.url.startsWith('blob:')) return
+
+      try {
+        const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(image.url)}`
+        const response = await fetch(proxyUrl)
+        if (!response.ok) throw new Error('Falha ao carregar imagem remota.')
+        const blob = await response.blob()
+        const blobUrl = URL.createObjectURL(blob)
+
+        updateImages(
+          imagesRef.current.map((item) =>
+            item.id === imageId
+              ? {
+                  ...item,
+                  url: blobUrl,
+                  editedBlob: blob,
+                  file: new File([blob], `remote-${imageId}.jpg`, { type: blob.type || 'image/jpeg' }),
+                } as ImageItem
+              : item
+          )
+        )
+      } catch {
+        showToast('error', 'Nao foi possivel carregar a imagem remota para edicao.')
+        return
+      }
+    }
+
+    setEditingImageId(imageId)
+  }
+
+  function handleEditorConfirm(imageId: string, blob: Blob) {
+    const image = imagesRef.current.find((item) => item.id === imageId)
+    if (!image) return
+
+    if (image.url.startsWith('blob:')) {
+      URL.revokeObjectURL(image.url)
+    }
+    const newUrl = URL.createObjectURL(blob)
+
+    const editedFile = new File([blob], image.kind === 'new' ? image.file.name : `edited-${imageId}.jpg`, {
+      type: blob.type || 'image/jpeg',
+    })
+
+    const updatedImages = imagesRef.current.map((item) => {
+      if (item.id !== imageId) return item
+      return {
+        ...item,
+        url: newUrl,
+        editedBlob: blob,
+        file: editedFile,
+      } as ImageItem
+    })
+
+    updateImages(updatedImages)
+    setEditingImageId(null)
+    showToast('success', 'Imagem ajustada com sucesso.')
+  }
+
+  function handleEditorCancel(imageId: string) {
+    setEditingImageId(null)
+  }
+
   async function appendImageUrl() {
     const trimmedUrl = imageUrlDraft.trim()
 
@@ -743,9 +818,10 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
     if (!confirmed) return
 
-    if (image.kind === 'new') {
+    if (image.kind === 'new' || image.url.startsWith('blob:')) {
       URL.revokeObjectURL(image.url)
-    } else if (image.kind === 'existing' && image.storagePath) {
+    }
+    if (image.kind === 'existing' && image.storagePath) {
       removedExistingImageIdsRef.current.push(image.id)
       removedExistingStoragePathsRef.current.push(image.storagePath)
     } else if (image.kind === 'existing') {
@@ -1267,10 +1343,13 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       }
 
       const existingImages = imagesRef.current.filter((img) => img.kind === 'existing')
-      const remoteImages = imagesRef.current.filter((img) => img.kind === 'remote')
+      const editedExistingImages = existingImages.filter((img) => img.editedBlob)
+      const uneditedExistingImages = existingImages.filter((img) => !img.editedBlob)
+      const remoteImages = imagesRef.current.filter((img) => img.kind === 'remote' && !img.editedBlob)
+      const editedRemoteImages = imagesRef.current.filter((img) => img.kind === 'remote' && img.editedBlob)
       const newImages = imagesRef.current.filter((img) => img.kind === 'new')
 
-      for (const [index, image] of existingImages.entries()) {
+      for (const [index, image] of uneditedExistingImages.entries()) {
         const { error: sortOrderError } = await supabase
           .from('product_images')
           .update({
@@ -1283,6 +1362,27 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
         if (sortOrderError) {
           throw new Error(sortOrderError.message)
+        }
+      }
+
+      const editedExistingOffset = uneditedExistingImages.length
+      for (const [index, image] of editedExistingImages.entries()) {
+        const { error: updateError } = await supabase
+          .from('product_images')
+          .update({
+            sort_order: editedExistingOffset + index,
+            alt_text: form.name.trim(),
+            assigned_color_name: image.assignedColorName,
+            assigned_color_hex: image.assignedColorHex,
+          })
+          .eq('id', image.id)
+
+        if (updateError) {
+          throw new Error(updateError.message)
+        }
+
+        if (image.storagePath) {
+          removedExistingStoragePathsRef.current.push(image.storagePath)
         }
       }
 
@@ -1305,7 +1405,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
       }
 
       const newStartIndex = existingImages.length + remoteImages.length
-      const totalNewImages = newImages.length
+      const totalNewImages = newImages.length + editedExistingImages.length + editedRemoteImages.length
 
       if (totalNewImages > 0) {
         setUploadProgress({ completed: 0, total: totalNewImages })
@@ -1323,19 +1423,22 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
           const batchResults = await Promise.allSettled(
             batch.map(async (image, batchIndex) => {
               const globalIndex = newStartIndex + batchStart + batchIndex
-              const optimized = await imageCompression(image.file, {
+              const sourceFile = image.editedBlob
+                ? new File([image.editedBlob], image.file.name, { type: image.editedBlob.type || 'image/jpeg' })
+                : image.file
+              const optimized = await imageCompression(sourceFile, {
                 maxSizeMB: 0.3,
                 maxWidthOrHeight: 1600,
                 useWebWorker: true,
               })
 
-              const extension = optimized.name.split('.').pop()?.toLowerCase() || 'jpg'
+              const extension = sourceFile.name.split('.').pop()?.toLowerCase() || 'jpg'
               const path = `${user.id}/${productId}/${crypto.randomUUID()}.${extension}`
 
               const { error: uploadError } = await supabase.storage.from('product-images').upload(path, optimized, {
                 cacheControl: '3600',
                 upsert: false,
-                contentType: optimized.type || image.file.type || 'image/jpeg',
+                contentType: optimized.type || sourceFile.type || 'image/jpeg',
               })
 
               if (uploadError) {
@@ -1374,6 +1477,130 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
           if (failed.length > 0) {
             const firstError = (failed[0] as PromiseRejectedResult).reason
             throw new Error(firstError instanceof Error ? firstError.message : 'Falha ao processar imagens.')
+          }
+        }
+
+        for (let batchStart = 0; batchStart < editedExistingImages.length; batchStart += CONCURRENCY) {
+          const batch = editedExistingImages.slice(batchStart, batchStart + CONCURRENCY)
+
+          const batchResults = await Promise.allSettled(
+            batch.map(async (image) => {
+              if (!image.editedBlob) return null
+              const editedFile = new File([image.editedBlob], `edited-${image.id}.jpg`, {
+                type: image.editedBlob.type || 'image/jpeg',
+              })
+              const optimized = await imageCompression(editedFile, {
+                maxSizeMB: 0.3,
+                maxWidthOrHeight: 1600,
+                useWebWorker: true,
+              })
+
+              const extension = 'jpg'
+              const path = `${user.id}/${productId}/${crypto.randomUUID()}.${extension}`
+
+              const { error: uploadError } = await supabase.storage.from('product-images').upload(path, optimized, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: optimized.type || 'image/jpeg',
+              })
+
+              if (uploadError) {
+                throw new Error(uploadError.message)
+              }
+
+              uploadedPaths.push(path)
+
+              const { data: publicUrlData } = supabase.storage.from('product-images').getPublicUrl(path)
+
+              const { error: updateError } = await supabase
+                .from('product_images')
+                .update({
+                  storage_path: path,
+                  public_url: publicUrlData.publicUrl,
+                })
+                .eq('id', image.id)
+
+              if (updateError) {
+                throw new Error(updateError.message || 'Nao foi possivel atualizar a imagem.')
+              }
+
+              return { path }
+            })
+          )
+
+          setUploadProgress({
+            completed: Math.min(newImages.length + batchStart + CONCURRENCY, totalNewImages),
+            total: totalNewImages,
+          })
+
+          const failed = batchResults.filter((r) => r.status === 'rejected')
+          if (failed.length > 0) {
+            const firstError = (failed[0] as PromiseRejectedResult).reason
+            throw new Error(firstError instanceof Error ? firstError.message : 'Falha ao processar imagens editadas.')
+          }
+        }
+
+        for (let batchStart = 0; batchStart < editedRemoteImages.length; batchStart += CONCURRENCY) {
+          const batch = editedRemoteImages.slice(batchStart, batchStart + CONCURRENCY)
+
+          const batchResults = await Promise.allSettled(
+            batch.map(async (image) => {
+              if (!image.editedBlob) return null
+              const editedFile = new File([image.editedBlob], `edited-remote-${image.id}.jpg`, {
+                type: image.editedBlob.type || 'image/jpeg',
+              })
+              const optimized = await imageCompression(editedFile, {
+                maxSizeMB: 0.3,
+                maxWidthOrHeight: 1600,
+                useWebWorker: true,
+              })
+
+              const path = `${user.id}/${productId}/${crypto.randomUUID()}.jpg`
+
+              const { error: uploadError } = await supabase.storage.from('product-images').upload(path, optimized, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: optimized.type || 'image/jpeg',
+              })
+
+              if (uploadError) {
+                throw new Error(uploadError.message)
+              }
+
+              uploadedPaths.push(path)
+
+              const { data: publicUrlData } = supabase.storage.from('product-images').getPublicUrl(path)
+
+              const remoteEditedOffset = existingImages.length + remoteImages.length + newImages.length
+              const sortIndex = remoteEditedOffset + batchStart
+              const { error: imageInsertError } = await supabase.from('product_images').insert({
+                owner_id: user.id,
+                product_id: productId,
+                storage_path: path,
+                public_url: publicUrlData.publicUrl,
+                alt_text: form.name.trim(),
+                assigned_color_name: image.assignedColorName,
+                assigned_color_hex: image.assignedColorHex,
+                sort_order: sortIndex,
+              })
+
+              if (imageInsertError) {
+                throw new Error(imageInsertError.message || 'Nao foi possivel salvar a imagem.')
+              }
+
+              return { path }
+            })
+          )
+
+          setUploadProgress({
+            completed: Math.min(newImages.length + editedExistingImages.length + batchStart + CONCURRENCY, totalNewImages),
+            total: totalNewImages,
+          })
+
+          const failed = batchResults.filter((r) => r.status === 'rejected')
+          if (failed.length > 0) {
+            const firstError = (failed[0] as PromiseRejectedResult).reason
+            throw new Error(firstError instanceof Error ? firstError.message : 'Falha ao processar imagens remotas editadas.')
           }
         }
       } catch (uploadError) {
@@ -2147,6 +2374,11 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                               <span className="rounded-full bg-slate-950/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
                                 {index === 0 ? 'Capa' : `#${index + 1}`}
                               </span>
+                              {image.editedBlob ? (
+                                <span className="rounded-full bg-emerald-500/90 px-2 py-1 text-[10px] font-medium text-white">
+                                  Ajustada
+                                </span>
+                              ) : null}
                               <span className="rounded-full bg-white/90 px-2 py-1 text-[10px] font-medium text-slate-600 dark:bg-slate-900/90 dark:text-slate-300">
                                 Arraste para ordenar
                               </span>
@@ -2189,10 +2421,16 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                             </FieldGroup>
                           </CardContent>
 
-                          <CardFooter className="justify-between gap-3 border-t border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/80">
-                            <Button type="button" variant="outline" size="sm" onClick={() => setCoverImage(image.id)}>
-                              Definir capa
-                            </Button>
+                          <CardFooter className="flex-wrap justify-between gap-2 border-t border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/80">
+                            <div className="flex items-center gap-2">
+                              <Button type="button" variant="outline" size="sm" onClick={() => setCoverImage(image.id)}>
+                                Definir capa
+                              </Button>
+                              <Button type="button" variant="outline" size="sm" onClick={() => handleStartEdit(image.id)}>
+                                <Crop className="h-3.5 w-3.5" />
+                                Ajustar
+                              </Button>
+                            </div>
                             <Button type="button" variant="destructive" size="sm" onClick={() => removeImage(image.id)}>
                               <Trash2 className="h-4 w-4" />
                               Remover
@@ -2226,7 +2464,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                             {previewImage ? (
                               <>
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={previewImage.url} alt={form.name || 'Preview do produto'} className="h-full w-full object-cover" />
+                                <img src={previewImage.url} alt={form.name || 'Preview do produto'} className="h-full w-full" />
                               </>
                             ) : (
                               <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-400 dark:text-slate-500">
@@ -2385,6 +2623,18 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
           </div>
         </div>
       ) : null}
+
+      {editingImageId ? (() => {
+        const editingImage = imagesRef.current.find((item) => item.id === editingImageId)
+        if (!editingImage) return null
+        return (
+          <ImageEditor
+            imageUrl={editingImage.url}
+            onConfirm={(blob) => handleEditorConfirm(editingImageId, blob)}
+            onCancel={() => handleEditorCancel(editingImageId)}
+          />
+        )
+      })() : null}
     </>
   )
 }
