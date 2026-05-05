@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useSearchParams } from 'next/navigation'
@@ -254,6 +254,39 @@ export function Header({
 
   const navItems = buildNavItems(headerNavigation, categories)
 
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true)
+  const lastScrollY = useRef(0)
+  const SCROLL_HIDE_THRESHOLD = 80
+  const SCROLL_SHOW_THRESHOLD = 5
+
+  useEffect(() => {
+    let ticking = false
+
+    function handleScroll() {
+      if (ticking) return
+      ticking = true
+
+      window.requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY
+        const delta = currentScrollY - lastScrollY.current
+
+        if (currentScrollY <= 0) {
+          setIsHeaderVisible(true)
+        } else if (delta > SCROLL_SHOW_THRESHOLD && currentScrollY > SCROLL_HIDE_THRESHOLD) {
+          setIsHeaderVisible(false)
+        } else if (delta < -SCROLL_SHOW_THRESHOLD) {
+          setIsHeaderVisible(true)
+        }
+
+        lastScrollY.current = currentScrollY
+        ticking = false
+      })
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   return (
     <>
       <StoreDrawer open={isMenuOpen} onClose={closeMenu} side="left">
@@ -286,7 +319,12 @@ export function Header({
         </div>
       </StoreDrawer>
 
-      <header className="border-b border-[color:var(--store-header-border)] bg-[var(--store-header-bg)] text-[var(--store-header-fg)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <header
+        className={cn(
+          'sticky top-0 z-50 border-b border-[color:var(--store-header-border)] bg-[var(--store-header-bg)] text-[var(--store-header-fg)] shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-transform duration-300 ease-in-out',
+          !isHeaderVisible && '-translate-y-full'
+        )}
+      >
 
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:gap-4 lg:px-8 lg:py-4">
           <div className="flex items-center gap-3">

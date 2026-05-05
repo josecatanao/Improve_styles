@@ -66,9 +66,15 @@ export function ProductCard({ product }: { product: ProductListItem }) {
   const reviewCount = Number(product.review_count ?? 0)
   const averageRating = typeof product.average_rating === 'number' ? product.average_rating : null
   const hasReviews = reviewCount > 0 && averageRating !== null
+  const isUnavailable = Number(product.stock ?? 0) <= 0
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-2.5 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_42px_-26px_rgba(15,23,42,0.26)] sm:p-4">
+    <article
+      className={`
+        group relative flex h-full flex-col overflow-hidden rounded-xl border border-[color:var(--store-card-border)] bg-[var(--store-card-bg)] p-2.5 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.22)] transition-all duration-300 sm:p-4
+        ${isUnavailable ? 'opacity-60' : 'hover:-translate-y-1 hover:shadow-[0_22px_42px_-26px_rgba(15,23,42,0.26)]'}
+      `}
+    >
       <Link href={`/produto/${product.id}`} className="flex h-full flex-col">
         <div className="relative overflow-hidden rounded-lg bg-white">
           <StoreImage
@@ -153,38 +159,44 @@ export function ProductCard({ product }: { product: ProductListItem }) {
               </p>
             </div>
 
-            <button
-              type="button"
-              aria-label={`Adicionar ${product.name} ao carrinho`}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                addItem({
-                  id: buildCartItemId(product.id, swatches[0]?.hex ?? null, null),
-                  productId: product.id,
-                  name: product.name,
-                  category: product.category ?? null,
-                  price: addPrice,
-                  quantity: 1,
-                  image,
-                  colorName: swatches[0]?.name ?? null,
-                  colorHex: swatches[0]?.hex ?? null,
-                })
-                setAdded(true)
-                setTimeout(() => setAdded(false), 1500)
-              }}
-              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md shadow-[0_18px_28px_-18px_rgba(11,47,111,0.75)] transition-all duration-300 sm:h-12 sm:w-12 ${
-                added
-                  ? 'scale-110 bg-emerald-500 text-white'
-                  : 'bg-[var(--store-cart-bg)] text-[var(--store-cart-fg)] group-hover:scale-[1.04]'
-              }`}
-            >
-              {added ? (
-                <Check className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
-              ) : (
-                <ShoppingCart className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
-              )}
-            </button>
+            {isUnavailable ? (
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-400 sm:h-12 sm:w-12">
+                <ShoppingCart className="h-4.5 w-4.5 sm:h-5 sm:w-5 opacity-50" />
+              </span>
+            ) : (
+              <button
+                type="button"
+                aria-label={`Adicionar ${product.name} ao carrinho`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  addItem({
+                    id: buildCartItemId(product.id, swatches[0]?.hex ?? null, null),
+                    productId: product.id,
+                    name: product.name,
+                    category: product.category ?? null,
+                    price: addPrice,
+                    quantity: 1,
+                    image,
+                    colorName: swatches[0]?.name ?? null,
+                    colorHex: swatches[0]?.hex ?? null,
+                  })
+                  setAdded(true)
+                  setTimeout(() => setAdded(false), 1500)
+                }}
+                className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md shadow-[0_18px_28px_-18px_rgba(11,47,111,0.75)] transition-all duration-300 sm:h-12 sm:w-12 ${
+                  added
+                    ? 'scale-110 bg-emerald-500 text-white'
+                    : 'bg-[var(--store-cart-bg)] text-[var(--store-cart-fg)] group-hover:scale-[1.04]'
+                }`}
+              >
+                {added ? (
+                  <Check className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+                ) : (
+                  <ShoppingCart className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+                )}
+              </button>
+            )}
           </div>
 
           <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs">
