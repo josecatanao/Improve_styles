@@ -646,7 +646,7 @@ export function CheckoutClient({
             Para calcular o frete e concluir a entrega, cadastre um endereço.
           </p>
           <Link
-            href="/conta/enderecos"
+            href="/conta/enderecos?returnTo=%2Fcheckout"
             className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--store-button-bg)] px-5 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90"
           >
             <Plus className="h-4 w-4" />

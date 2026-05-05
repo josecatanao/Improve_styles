@@ -66,17 +66,17 @@ function getStatusLabel(status: string) {
 function getStatusBadgeClasses(status: string) {
   switch (status) {
     case 'pending':
-      return 'bg-amber-50 text-amber-700'
+      return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
     case 'processing':
-      return 'bg-blue-50 text-blue-700'
+      return 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
     case 'shipped':
-      return 'bg-indigo-50 text-indigo-700'
+      return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
     case 'completed':
-      return 'bg-emerald-50 text-emerald-700'
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
     case 'cancelled':
-      return 'bg-red-50 text-red-700'
+      return 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
     default:
-      return 'bg-slate-100 text-slate-700'
+      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
   }
 }
 
@@ -113,17 +113,21 @@ function normalizeWhatsAppPhone(phone: string | null) {
 function buildWhatsAppMessage(order: StoreOrder, template: string) {
   const customerName = order.customer_name.trim() || 'cliente'
   const orderCode = getOrderCode(order.id)
+  const itemLabel = `${order.total_items} ${order.total_items === 1 ? 'item' : 'itens'}`
+  const totalLabel = formatMoney(order.total_price)
+  const productNames = Array.from(new Set(order.store_order_items.map((item) => item.name.trim()).filter(Boolean))).join(', ')
+  const productsText = productNames ? ` Produtos do pedido: ${productNames}.` : ''
 
   switch (template) {
     case 'processing':
-      return `Olá, ${customerName}! Seu pedido ${orderCode} está em preparação.`
+      return `Olá, ${customerName}! Seu pedido ${orderCode} está em separação neste momento.${productsText} Já conferimos os ${itemLabel} e vamos seguir com as próximas etapas do envio.`
     case 'shipped':
-      return `Olá, ${customerName}! Seu pedido ${orderCode} saiu para entrega.`
+      return `Olá, ${customerName}! Seu pedido ${orderCode} saiu para entrega.${productsText} Qualquer atualização de rota ou finalização, avisamos você por aqui.`
     case 'completed':
-      return `Olá, ${customerName}! Seu pedido ${orderCode} foi entregue. Obrigado pela compra.`
+      return `Olá, ${customerName}! Seu pedido ${orderCode} foi concluído e marcado como entregue.${productsText} Obrigado pela compra. Se precisar de suporte no pós-venda, estamos por aqui.`
     case 'pending':
     default:
-      return `Olá, ${customerName}! Recebemos seu pedido ${orderCode} e já estamos acompanhando tudo por aqui.`
+      return `Olá, ${customerName}! Recebemos seu pedido ${orderCode} com ${itemLabel}, no valor total de ${totalLabel}.${productsText} Já registramos tudo por aqui e vamos continuar com as próximas etapas do envio.`
   }
 }
 
@@ -143,12 +147,18 @@ function getStatusTemplateKey(status: string) {
   return 'pending'
 }
 
-export function OrderDetailView({ order }: { order: StoreOrder }) {
+export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: StoreOrder; storeName?: string | null; storeLogoUrl?: string | null }) {
   const router = useRouter()
   const showToast = useToast()
   const [status, setStatus] = useState(order.status)
   const [isPending, startTransition] = useTransition()
   const [messageDraft, setMessageDraft] = useState(buildWhatsAppMessage(order, order.status))
+
+  const storeDisplayName = storeName?.trim() || 'Improve Styles'
+
+  function handlePrint() {
+    window.print()
+  }
 
   const orderCode = getOrderCode(order.id)
   const subtotal = useMemo(
@@ -214,6 +224,129 @@ export function OrderDetailView({ order }: { order: StoreOrder }) {
 
   return (
     <div className="space-y-6">
+      <style>{`
+        @media print {
+          @page {
+            margin: 18mm 14mm 18mm 14mm;
+            size: A4;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .no-print,
+          .no-print * {
+            display: none !important;
+          }
+          .print-only {
+            display: block !important;
+          }
+        }
+      `}</style>
+
+      <div className="print-only hidden">
+        <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', color: '#0f172a' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', paddingBottom: '24px', borderBottom: '2px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {storeLogoUrl ? (
+                <img src={storeLogoUrl} alt={storeDisplayName} style={{ height: '52px', maxWidth: '140px', objectFit: 'contain' }} />
+              ) : null}
+              <div>
+                <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', margin: 0 }}>{storeDisplayName}</h1>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Comprovante de pedido</p>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', margin: 0 }}>#{orderCode}</p>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' }}>{formatDate(order.created_at)}</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '24px', marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid #e2e8f0' }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 8px 0' }}>Cliente</p>
+              <p style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>{order.customer_name}</p>
+              <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 2px 0' }}>{order.customer_phone || 'Sem telefone'}</p>
+              <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>{order.customer_email || 'Sem e-mail'}</p>
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 8px 0' }}>Entrega</p>
+              <p style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>{getDeliveryLabel(order)}</p>
+              <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>{order.delivery_address || 'Endereço não informado'}</p>
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 8px 0' }}>Pagamento</p>
+              <p style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>{getPaymentLabel(order)}</p>
+              <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>{getStatusLabel(status)}</p>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '32px' }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 12px 0' }}>Itens do pedido</p>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                  <th style={{ textAlign: 'left', padding: '10px 8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Produto</th>
+                  <th style={{ textAlign: 'center', padding: '10px 8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Qtd</th>
+                  <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Unitario</th>
+                  <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.store_order_items.map((item) => (
+                  <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '10px 8px', color: '#0f172a' }}>
+                      <p style={{ margin: 0, fontWeight: 500 }}>{item.name}</p>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                        {item.size || item.color_name || item.sku ? `${item.size || item.color_name || item.sku}` : ''}
+                      </p>
+                    </td>
+                    <td style={{ textAlign: 'center', padding: '10px 8px', color: '#475569' }}>{item.quantity}</td>
+                    <td style={{ textAlign: 'right', padding: '10px 8px', color: '#475569' }}>{formatMoney(item.price)}</td>
+                    <td style={{ textAlign: 'right', padding: '10px 8px', fontWeight: 600, color: '#0f172a' }}>{formatMoney(item.price * item.quantity)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px', paddingTop: '16px', borderTop: '2px solid #e2e8f0' }}>
+            <div style={{ width: '260px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px', color: '#475569' }}>
+                <span>Subtotal</span>
+                <span>{formatMoney(subtotal)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px', color: '#475569' }}>
+                <span>Taxa de entrega</span>
+                <span>{formatMoney(shippingCost)}</span>
+              </div>
+              {discount > 0 ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px', color: '#059669' }}>
+                  <span>Desconto</span>
+                  <span>- {formatMoney(discount)}</span>
+                </div>
+              ) : null}
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0 0', borderTop: '2px solid #0f172a', fontSize: '18px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
+                <span>Total</span>
+                <span>{formatMoney(order.total_price)}</span>
+              </div>
+            </div>
+          </div>
+
+          {order.notes?.trim() ? (
+            <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '13px', color: '#475569', marginBottom: '16px' }}>
+              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 6px 0' }}>Observações</p>
+              <p style={{ margin: 0 }}>{order.notes}</p>
+            </div>
+          ) : null}
+
+          <div style={{ textAlign: 'center', paddingTop: '24px', borderTop: '1px solid #e2e8f0', fontSize: '11px', color: '#94a3b8' }}>
+            <p style={{ margin: 0 }}>Documento gerado em {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short' }).format(new Date())}</p>
+            <p style={{ margin: '4px 0 0 0' }}>{storeDisplayName} — Pedido #{orderCode}</p>
+          </div>
+        </div>
+      </div>
+      <div className="no-print">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
@@ -242,7 +375,7 @@ export function OrderDetailView({ order }: { order: StoreOrder }) {
             <MessageCircleMore className="h-4 w-4" />
             {currentWhatsAppTemplate?.label || 'WhatsApp'}
           </Button>
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4" />
             Imprimir
           </Button>
@@ -501,6 +634,7 @@ export function OrderDetailView({ order }: { order: StoreOrder }) {
             </div>
           </InfoCard>
         </div>
+      </div>
       </div>
     </div>
   )

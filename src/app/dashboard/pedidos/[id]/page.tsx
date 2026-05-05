@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getStoreOrderById } from '@/lib/orders'
+import { getPublicStoreSettings } from '@/lib/store-branding'
+import { normalizeStoreSettings } from '@/lib/store-settings'
 import { OrderDetailView } from '@/components/orders/OrderDetailView'
 
 export default async function OrderDetailPage({
@@ -8,7 +10,11 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const { order, setupRequired, errorMessage } = await getStoreOrderById(id)
+  const [orderResult, settings] = await Promise.all([
+    getStoreOrderById(id),
+    getPublicStoreSettings(),
+  ])
+  const { order, setupRequired, errorMessage } = orderResult
 
   if (setupRequired) {
     return (
@@ -33,5 +39,13 @@ export default async function OrderDetailPage({
     notFound()
   }
 
-  return <OrderDetailView order={order} />
+  const normalizedSettings = normalizeStoreSettings(settings)
+
+  return (
+    <OrderDetailView
+      order={order}
+      storeName={normalizedSettings.store_name}
+      storeLogoUrl={normalizedSettings.store_logo_url}
+    />
+  )
 }

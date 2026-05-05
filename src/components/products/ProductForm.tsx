@@ -50,7 +50,6 @@ import {
   normalizeHex,
   isValidHex,
   parseOptionalNumber,
-  formatCurrency,
   checkSkuUniqueness,
   resolveUniqueSku,
   validateRemoteImageUrl,
@@ -59,6 +58,7 @@ import { useProductDraft } from '@/hooks/use-product-draft'
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes'
 import { useConfirm } from '@/components/ui/feedback-provider'
 import { ImageEditor } from '@/components/products/ImageEditor'
+import { ProductReviewPreview } from '@/components/products/ProductReviewPreview'
 
 export type ProductFormState = {
   name: string
@@ -657,6 +657,7 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
   )
   const previewImage = images[0] ?? null
   const previewPrice = parseOptionalNumber(form.price)
+  const previewComparePrice = parseOptionalNumber(form.compare_at_price)
 
   function showToast(type: NonNullable<ToastState>['type'], message: string) {
     setToast({ type, message })
@@ -2449,110 +2450,15 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                 title="Revisão final"
                 description="Verifique como o produto sera exibido na sua loja online."
               >
-                <div className="grid gap-4">
-                  <Card className="border-0 bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-                    <CardHeader>
-                      <CardTitle>Preview na loja</CardTitle>
-                      <CardDescription>
-                        Simulação da vitrine com imagem principal, galeria, preço e variações.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="px-5 pb-5">
-                      <div className="grid gap-5 lg:grid-cols-[minmax(0,340px)_1fr]">
-                        <div className="overflow-hidden rounded-[1.75rem] bg-white shadow-[0_20px_45px_-32px_rgba(15,23,42,0.45)] ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
-                          <div className="relative aspect-[4/5] overflow-hidden bg-slate-100 dark:bg-slate-950">
-                            {previewImage ? (
-                              <>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={previewImage.url} alt={form.name || 'Preview do produto'} className="h-full w-full" />
-                              </>
-                            ) : (
-                              <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-400 dark:text-slate-500">
-                                A imagem de capa aparecera aqui.
-                              </div>
-                            )}
-                            <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700 dark:bg-slate-900/90 dark:text-slate-200">
-                              {form.category || 'Categoria'}
-                            </div>
-                          </div>
-                          <div className="space-y-4 p-5">
-                            <div className="flex items-center justify-between gap-3">
-                              <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
-                                  Improve Styles
-                                </p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">Preview do Card</p>
-                              </div>
-                              <div className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 ring-1 ring-cyan-100">
-                                {form.status === 'active' ? 'Ativo' : 'Rascunho'}
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <h4 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-slate-50">
-                                {form.name || 'Nome do produto'}
-                              </h4>
-                              <p className="line-clamp-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                                {form.shortDescription || 'Resumo curto aparecerá aqui.'}
-                              </p>
-                            </div>
-
-                            <div className="flex items-end justify-between gap-4">
-                              <div>
-                                <p className="text-xs uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Preco</p>
-                                <p className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-50">{formatCurrency(previewPrice)}</p>
-                              </div>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">{totalStock} em estoque</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
-                            <p className="text-xs uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Variacoes disponiveis</p>
-                            <div className="mt-4 flex flex-wrap gap-3">
-                              {colorGroups.map((group) => (
-                                <div key={group.id} className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
-                                  <span className="h-3.5 w-3.5 rounded-full border border-slate-300 dark:border-slate-600" style={{ backgroundColor: group.hex }} />
-                                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{group.name}</span>
-                                </div>
-                              ))}
-                            </div>
-                            
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              {colorGroups.flatMap((group) => group.variants).map((variant) => (
-                                <span
-                                  key={variant.id}
-                                  className="rounded-full bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700"
-                                >
-                                  {variant.size}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="rounded-[1.5rem] bg-white p-5 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
-                            <p className="text-xs uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Galeria ({images.length})</p>
-                            {images.length > 0 ? (
-                              <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                                {images.map((image, index) => (
-                                  <div key={image.id} className="overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
-                                    <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-950">
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img src={image.url} alt={`Preview ${index + 1}`} className="h-full w-full object-cover" />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Nenhuma imagem na galeria.</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                <ProductReviewPreview
+                  form={form}
+                  colorGroups={colorGroups}
+                  images={images}
+                  totalStock={totalStock}
+                  previewPrice={previewPrice ?? 0}
+                  previewImage={previewImage}
+                  previewComparePrice={previewComparePrice}
+                />
               </StepShell>
             ) : null}
 

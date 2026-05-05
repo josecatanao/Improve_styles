@@ -71,100 +71,105 @@ export function CustomerManagement({ customers, summary }: CustomerManagementPro
           const Icon = item.icon
 
           return (
-            <Card key={item.label} className="border-0 bg-white ring-1 ring-slate-200">
+            <Card key={item.label} className="border-0 bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
               <CardContent className="px-5 py-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-500">{item.label}</p>
-                  <Icon className="h-5 w-5 text-slate-400" />
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{item.label}</p>
+                  <Icon className="h-5 w-5 text-slate-400 dark:text-slate-500" />
                 </div>
-                <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">{item.value}</p>
-                <p className="mt-2 text-sm text-slate-500">{item.helper}</p>
+                <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">{item.value}</p>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{item.helper}</p>
               </CardContent>
             </Card>
           )
         })}
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-100 px-6 py-5">
-          <h2 className="text-lg font-semibold text-slate-900">Clientes da loja</h2>
-          <p className="mt-1 text-sm text-slate-500">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-b border-slate-100 px-6 py-5 dark:border-slate-800">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Clientes da loja</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Acompanhe quem já criou conta, com foco em contato e entrega.
           </p>
         </div>
 
         {customers.length === 0 ? (
-          <div className="px-6 py-12 text-center text-sm text-slate-500">Nenhum cliente cadastrado ainda.</div>
+          <div className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">Nenhum cliente cadastrado ainda.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100">
-              <thead className="bg-slate-50">
-                <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  <th scope="col" className="px-6 py-3">Cliente</th>
-                  <th scope="col" className="px-6 py-3">Contato</th>
-                  <th scope="col" className="px-6 py-3">Entrega</th>
-                  <th scope="col" className="px-6 py-3">Status</th>
-                  <th scope="col" className="px-6 py-3">Último acesso</th>
-                  <th scope="col" className="px-6 py-3 text-right">Ações</th>
+            <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
+              <thead className="bg-slate-50 dark:bg-slate-950/60">
+                <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                  <th scope="col" className="px-6 py-3 w-[240px]">Cliente</th>
+                  <th scope="col" className="px-6 py-3 w-[210px]">Contato</th>
+                  <th scope="col" className="px-6 py-3 w-[200px]">Entrega</th>
+                  <th scope="col" className="px-6 py-3 w-[90px]">Status</th>
+                  <th scope="col" className="px-6 py-3 w-[130px]">Último acesso</th>
+                  <th scope="col" className="px-6 py-3 text-right w-[60px]">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {customers.map((customer) => (
-                  <tr key={customer.id} className="align-top">
-                    <td className="px-6 py-4">
+                  <tr key={customer.id} className="align-top h-16">
+                    <td className="px-6 py-3">
                       <div className="flex items-start gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
                           {customer.photo_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={customer.photo_url} alt={customer.full_name} className="h-full w-full object-cover" />
                           ) : (
-                            <UserRound className="h-5 w-5 text-slate-400" />
+                            <UserRound className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-900">{customer.full_name}</p>
-                          <p className="mt-1 text-sm text-slate-500">{customer.email}</p>
-                          <p className="mt-2 text-xs text-slate-400">
+                          <p className="font-semibold text-slate-900 dark:text-slate-50 truncate">{customer.full_name}</p>
+                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">{customer.email}</p>
+                          <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
                             Cadastro em {formatDate(customer.created_at)}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-slate-400" />
-                          <span>{customer.email}</span>
+                    <td className="px-6 py-3 text-sm text-slate-600 dark:text-slate-300">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                          <span className="truncate">{customer.email}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-slate-400" />
-                          <span>{customer.whatsapp?.trim() || 'Não informado'}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                          <span className="truncate">{customer.whatsapp?.trim() || 'Não informado'}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
+                    <td className="px-6 py-3 text-sm text-slate-600 dark:text-slate-300">
                       {customer.delivery_address?.trim() ? (
-                        <p className="max-w-sm leading-6">{customer.delivery_address}</p>
+                        <span
+                          className="block max-w-[200px] truncate cursor-default"
+                          title={customer.delivery_address}
+                        >
+                          {customer.delivery_address}
+                        </span>
                       ) : (
-                        <span className="text-slate-400">Não informado</span>
+                        <span className="text-slate-400 dark:text-slate-500">Não informado</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-3">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          customer.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap ${
+                          customer.status === 'active' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                         }`}
                       >
                         {customer.status === 'active' ? 'Ativo' : 'Inativo'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{formatDate(customer.last_login_at)}</td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-3 text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap">{formatDate(customer.last_login_at)}</td>
+                    <td className="px-6 py-3 text-right">
                       <button
                         type="button"
                         onClick={() => handleDelete(customer.id)}
                         disabled={isDeleting === customer.id}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950/30"
                         aria-label="Excluir cliente"
                       >
                         <Trash2 className="h-4 w-4" />

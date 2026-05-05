@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import type { ProductImageRecord } from '@/lib/product-shared'
 
@@ -17,6 +17,17 @@ export function ProductGallery({
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isZoomOpen, setIsZoomOpen] = useState(false)
+  const [isHovering, setIsHovering] = useState(false)
+  const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 })
+  const imageContainerRef = useRef<HTMLDivElement>(null)
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!imageContainerRef.current) return
+    const rect = imageContainerRef.current.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+    setMousePosition({ x, y })
+  }, [])
   const normalizedImages = useMemo(
     () =>
       images.length > 0
@@ -69,27 +80,45 @@ export function ProductGallery({
         </div>
 
         <div className="space-y-3">
-          <div className="group relative hidden aspect-square overflow-hidden rounded-lg border border-slate-200 bg-white lg:block">
-            {activeImage?.public_url ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setIsZoomOpen(true)}
-                  className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/92 text-slate-700 shadow-sm transition-colors hover:bg-white"
-                >
-                  <Search className="h-4 w-4" />
-                </button>
-                <img
-                  src={activeImage.public_url}
-                  alt={activeImage.alt_text || productName}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.06]"
-                />
-              </>
-            ) : (
-              <div className="flex aspect-square items-center justify-center bg-slate-100 text-sm text-slate-500">
-                Sem imagem principal
-              </div>
-            )}
+          <div className="hidden lg:block">
+            <div
+              ref={imageContainerRef}
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+              onMouseMove={handleMouseMove}
+              className={`group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-white cursor-zoom-in ${
+                isHovering ? 'z-10' : ''
+              }`}
+            >
+              {activeImage?.public_url ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsZoomOpen(true)}
+                    className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/92 text-slate-700 shadow-sm transition-colors hover:bg-white"
+                  >
+                    <Search className="h-4 w-4" />
+                  </button>
+                  <img
+                    src={activeImage.public_url}
+                    alt={activeImage.alt_text || productName}
+                    className="absolute inset-0 w-full h-full object-cover transition-all duration-200 ease-out"
+                    style={
+                      isHovering
+                        ? {
+                            transform: 'scale(2.2)',
+                            transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
+                          }
+                        : undefined
+                    }
+                  />
+                </>
+              ) : (
+                <div className="flex aspect-square items-center justify-center bg-slate-100 text-sm text-slate-500">
+                  Sem imagem principal
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="lg:hidden">

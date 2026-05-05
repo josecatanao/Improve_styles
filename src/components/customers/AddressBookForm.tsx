@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { CheckCircle2, Loader2, MapPin, Navigation2, Plus, Save, Star, Trash2, X } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { lookupCep } from '@/app/dashboard/configuracoes/cep-actions'
@@ -26,7 +27,8 @@ function formatGpsDate(value: string | null) {
   }).format(new Date(value))
 }
 
-export function AddressBookForm({ initialAddresses }: { initialAddresses: CustomerAddress[] }) {
+export function AddressBookForm({ initialAddresses, returnTo }: { initialAddresses: CustomerAddress[]; returnTo?: string | null }) {
+  const router = useRouter()
   const confirm = useConfirm()
   const formRef = useRef<HTMLDivElement>(null)
   const [addresses, setAddresses] = useState<CustomerAddress[]>(initialAddresses)
@@ -175,6 +177,9 @@ export function AddressBookForm({ initialAddresses }: { initialAddresses: Custom
       resetForm()
       setShowForm(false)
       setMessage({ type: 'success', text: 'Endereço salvo com sucesso.' })
+      if (returnTo) {
+        router.push(returnTo)
+      }
     } else {
       setMessage({ type: 'error', text: result.error || 'Não foi possível salvar o endereço.' })
     }

@@ -3,7 +3,11 @@ import { AddressBookForm } from '@/components/customers/AddressBookForm'
 import { getCustomerAddresses } from '@/lib/customer-addresses'
 import { getStoreCustomerSession } from '@/lib/customer-session'
 
-export default async function AccountAddressesPage() {
+export default async function AccountAddressesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string }>
+}) {
   const session = await getStoreCustomerSession()
 
   if (!session) {
@@ -11,6 +15,7 @@ export default async function AccountAddressesPage() {
   }
 
   const addresses = await getCustomerAddresses(session.userId)
+  const params = await searchParams
 
-  return <AddressBookForm initialAddresses={addresses} />
+  return <AddressBookForm initialAddresses={addresses} returnTo={params.returnTo ?? null} />
 }

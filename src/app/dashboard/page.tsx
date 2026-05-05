@@ -59,17 +59,17 @@ function getOrderStatusLabel(status: string) {
 function getOrderStatusClasses(status: string) {
   switch (status) {
     case 'pending':
-      return 'bg-amber-50 text-amber-700'
+      return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
     case 'processing':
-      return 'bg-blue-50 text-blue-700'
+      return 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
     case 'shipped':
-      return 'bg-indigo-50 text-indigo-700'
+      return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
     case 'completed':
-      return 'bg-emerald-50 text-emerald-700'
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
     case 'cancelled':
-      return 'bg-red-50 text-red-700'
+      return 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
     default:
-      return 'bg-slate-100 text-slate-700'
+      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
   }
 }
 
