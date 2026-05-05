@@ -560,7 +560,7 @@ export async function getStorefrontData(options?: {
   const query = options?.query?.trim()
   const category = options?.category?.trim()
   const sort = options?.sort ?? 'popular'
-  const limit = options?.limit ?? 50
+  const limit = options?.limit ?? 9999
 
   const { data, error } = await supabase
     .from('products')
@@ -894,12 +894,19 @@ export async function getPublicProductById(productId: string): Promise<{
 
 export async function getProductFormOptions(): Promise<ProductFormOptions> {
   const supabase = await createClient()
-  const { data: categoryRows, error: categoryError } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const categoryQuery = supabase
     .from('store_categories')
     .select('name')
-    .eq('is_active', true)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
+
+  const scopedQuery = user ? categoryQuery.eq('owner_id', user.id) : categoryQuery
+
+  const { data: categoryRows, error: categoryError } = await scopedQuery
 
   if (!isMissingTable(categoryError) && !categoryError && categoryRows) {
     const categories = Array.from(
@@ -907,14 +914,17 @@ export async function getProductFormOptions(): Promise<ProductFormOptions> {
         categoryRows
           .map((item) => item.name?.trim())
           .filter((value): value is string => Boolean(value))
-          .map((value) => normalizeStoreCategoryLabel(value))
       )
     )
 
-    const { data: brandRows, error: brandError } = await supabase
+    const brandQuery = supabase
       .from('products')
       .select('brand')
       .order('created_at', { ascending: false })
+
+    const scopedBrandQuery = user ? brandQuery.eq('owner_id', user.id) : brandQuery
+
+    const { data: brandRows, error: brandError } = await scopedBrandQuery
 
     if (isMissingTable(brandError) || brandError || !brandRows) {
       return {
@@ -937,10 +947,14 @@ export async function getProductFormOptions(): Promise<ProductFormOptions> {
     }
   }
 
-  const { data, error } = await supabase
+  const productQuery = supabase
     .from('products')
     .select('category, brand')
     .order('created_at', { ascending: false })
+
+  const scopedProductQuery = user ? productQuery.eq('owner_id', user.id) : productQuery
+
+  const { data, error } = await scopedProductQuery
 
   if (isMissingTable(error) || error || !data) {
     return {

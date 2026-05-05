@@ -3,13 +3,14 @@
 import { refresh, revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
-import { getStoreCategoryKey, normalizeStoreCategoryLabel } from '@/lib/storefront'
+import { slugifyStoreValue } from '@/lib/storefront'
 import { requirePermission } from '@/lib/permissions-server'
 
 type CategoryInput = {
   name: string
   iconName?: string | null
   imageUrl?: string | null
+  isActive?: boolean
 }
 
 function normalizeCategoryName(name: string) {
@@ -18,7 +19,7 @@ function normalizeCategoryName(name: string) {
     throw new Error('Informe o nome da categoria.')
   }
 
-  return normalizeStoreCategoryLabel(trimmed)
+  return trimmed
 }
 
 function normalizeOptionalText(value: string | null | undefined) {
@@ -38,6 +39,7 @@ async function requireDashboardUser() {
 
 function revalidateCategorySurfaces() {
   revalidatePath('/')
+  revalidatePath('/loja', 'layout')
   revalidatePath('/dashboard/produtos/categorias')
   revalidatePath('/dashboard/produtos/novo')
   revalidatePath('/dashboard/produtos')
@@ -48,7 +50,24 @@ export async function createStoreCategory(input: CategoryInput) {
   const normalizedName = normalizeCategoryName(input.name)
   const iconName = normalizeOptionalText(input.iconName)
   const imageUrl = normalizeOptionalText(input.imageUrl)
+  const isActive = input.isActive !== undefined ? input.isActive : true
   const { supabase, user } = await requireDashboardUser()
+
+  const slug = slugifyStoreValue(normalizedName)
+  if (!slug) {
+    throw new Error('Não foi possível gerar um slug para esta categoria. Use um nome com letras e números.')
+  }
+
+  const { data: existingSlug } = await supabase
+    .from('store_categories')
+    .select('id')
+    .eq('owner_id', user.id)
+    .eq('slug', slug)
+    .maybeSingle()
+
+  if (existingSlug) {
+    throw new Error('Já existe uma categoria com este nome (ou um nome que gera o mesmo slug).')
+  }
 
   const { data: currentRows } = await supabase
     .from('store_categories')
@@ -64,9 +83,9 @@ export async function createStoreCategory(input: CategoryInput) {
     .insert({
       owner_id: user.id,
       name: normalizedName,
-      slug: getStoreCategoryKey(normalizedName),
+      slug,
       sort_order: nextSortOrder,
-      is_active: true,
+      is_active: isActive,
       icon_name: iconName,
       image_url: imageUrl,
     })
@@ -99,12 +118,27 @@ export async function updateStoreCategory(categoryId: string, input: CategoryInp
   }
 
   const previousName = existing.name
+  const newSlug = slugifyStoreValue(normalizedName)
+
+  if (newSlug && previousName.trim().toLowerCase() !== normalizedName.trim().toLowerCase()) {
+    const { data: slugConflict } = await supabase
+      .from('store_categories')
+      .select('id')
+      .eq('owner_id', user.id)
+      .eq('slug', newSlug)
+      .neq('id', categoryId)
+      .maybeSingle()
+
+    if (slugConflict) {
+      throw new Error('Já existe outra categoria com este nome (ou um nome que gera o mesmo slug).')
+    }
+  }
 
   const { data, error } = await supabase
     .from('store_categories')
     .update({
       name: normalizedName,
-      slug: getStoreCategoryKey(normalizedName),
+      slug: newSlug,
       icon_name: iconName,
       image_url: imageUrl,
       updated_at: new Date().toISOString(),

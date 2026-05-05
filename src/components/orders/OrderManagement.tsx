@@ -30,10 +30,10 @@ import {
   Trash2,
   Truck,
 } from 'lucide-react'
-import { deleteOrder, updateOrderStatus } from '@/app/dashboard/pedidos/actions'
+import { deleteOrder, updateOrderPaymentStatus, updateOrderStatus } from '@/app/dashboard/pedidos/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { getStatusOptions, getStatusLabel, getStatusBadgeClasses, isPickup } from '@/lib/order-statuses'
+import { getPaymentStatusBadgeClasses, getPaymentStatusLabel, getStatusOptions, getStatusLabel, getStatusBadgeClasses, isPickup, normalizePaymentStatus, type PaymentStatus } from '@/lib/order-statuses'
 
 type MessageTemplateKey = 'pending' | 'processing' | 'shipped' | 'completed'
 type SortOption = 'recent' | 'oldest' | 'highest' | 'lowest'
@@ -244,6 +244,65 @@ function OrderStatusSelect({
   )
 }
 
+function PaymentStatusSelect({
+  orderId,
+  currentPaymentStatus,
+  onUpdated,
+}: {
+  orderId: string
+  currentPaymentStatus: PaymentStatus
+  onUpdated: (status: PaymentStatus) => void
+}) {
+  const [isPending, startTransition] = useTransition()
+  const showToast = useToast()
+
+  function handlePaymentStatusChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const newStatus = e.target.value as PaymentStatus
+    startTransition(async () => {
+      try {
+        await updateOrderPaymentStatus(orderId, newStatus)
+        onUpdated(newStatus)
+        showToast({
+          variant: 'success',
+          title: 'Status do pagamento atualizado',
+        })
+      } catch (err) {
+        showToast({
+          variant: 'error',
+          title: 'Falha ao atualizar o pagamento',
+          description: err instanceof Error ? err.message : 'Erro inesperado.',
+        })
+      }
+    })
+  }
+
+  return (
+    <div className="relative inline-block w-full min-w-0 max-w-[180px]">
+      <label htmlFor={`payment-status-${orderId}`} className="sr-only">Status do pagamento</label>
+      <select
+        id={`payment-status-${orderId}`}
+        disabled={isPending}
+        value={currentPaymentStatus}
+        onChange={handlePaymentStatusChange}
+        className="h-9 w-full appearance-none rounded-lg border border-slate-200 bg-white py-1.5 pl-3 pr-8 text-sm font-medium text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:border-slate-600 dark:focus:ring-slate-800"
+      >
+        <option value="pending">Pendente</option>
+        <option value="paid">Pago</option>
+        <option value="cancelled">Cancelado</option>
+      </select>
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+        {isPending ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400 dark:text-slate-500" />
+        ) : (
+          <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
   const router = useRouter()
   const showToast = useToast()
@@ -262,6 +321,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
     Object.fromEntries(orders.map((order) => [order.id, buildWhatsAppMessage(order, getStatusTemplateKey(order.status, order.delivery_method))]))
   )
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({})
+  const [paymentStatusOverrides, setPaymentStatusOverrides] = useState<Record<string, PaymentStatus>>({})
   const [busyDeleteId, setBusyDeleteId] = useState<string | null>(null)
 
   const totalOrders = orders.length
@@ -577,6 +637,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
             <div className={cn(viewMode === 'compact' ? 'grid gap-4 md:grid-cols-2 2xl:grid-cols-3' : 'space-y-4')}>
               {paginatedOrders.map((order) => {
               const currentStatus = statusOverrides[order.id] || order.status
+              const currentPaymentStatus = paymentStatusOverrides[order.id] ?? normalizePaymentStatus(order.payment_status, order.status)
               const isExpanded = expandedOrderId === order.id
               const isDeleting = busyDeleteId === order.id
               const PaymentIcon = getPaymentIcon(order.payment_method)
@@ -591,6 +652,9 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                             <p className="text-[1.05rem] font-semibold tracking-tight text-slate-900 dark:text-slate-50">{getOrderCode(order.id)}</p>
                             <span className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${getStatusBadgeClasses(currentStatus)}`}>
                               {getStatusLabel(currentStatus, order.delivery_method)}
+                            </span>
+                            <span className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${getPaymentStatusBadgeClasses(currentPaymentStatus)}`}>
+                              Pagamento: {getPaymentStatusLabel(currentPaymentStatus)}
                             </span>
                           </div>
                           <div className="space-y-1">
@@ -680,6 +744,15 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                           }}
                         />
 
+                        <PaymentStatusSelect
+                          orderId={order.id}
+                          currentPaymentStatus={currentPaymentStatus}
+                          onUpdated={(status) => {
+                            setPaymentStatusOverrides((current) => ({ ...current, [order.id]: status }))
+                            router.refresh()
+                          }}
+                        />
+
                         <Button
                           type="button"
                           variant="destructive"
@@ -759,6 +832,9 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                             <span className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${getStatusBadgeClasses(currentStatus)}`}>
                               {getStatusLabel(currentStatus, order.delivery_method)}
                             </span>
+                            <span className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${getPaymentStatusBadgeClasses(currentPaymentStatus)}`}>
+                              Pagamento: {getPaymentStatusLabel(currentPaymentStatus)}
+                            </span>
                             {mountedAt - new Date(order.created_at).getTime() <= 1000 * 60 * 60 * 24 ? (
                               <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                                 Novo
@@ -817,7 +893,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                         </div>
 
                         <div className="space-y-3">
-                          <div className={cn('grid gap-2', viewMode === 'compact' ? 'sm:grid-cols-1 lg:grid-cols-3' : 'sm:grid-cols-2 xl:grid-cols-[minmax(132px,1fr)_minmax(126px,1fr)_180px]' )}>
+                          <div className="grid grid-cols-2 gap-2">
                             <Button
                               type="button"
                               size="sm"
@@ -852,6 +928,15 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                                 router.refresh()
                               }}
                             />
+
+                            <PaymentStatusSelect
+                              orderId={order.id}
+                              currentPaymentStatus={currentPaymentStatus}
+                              onUpdated={(status) => {
+                                setPaymentStatusOverrides((current) => ({ ...current, [order.id]: status }))
+                                router.refresh()
+                              }}
+                            />
                           </div>
 
                           <div className="flex justify-end">
@@ -882,12 +967,20 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                                 <p><span className="font-medium text-slate-800 dark:text-slate-100">Itens:</span> {order.total_items} {order.total_items === 1 ? 'item' : 'itens'}</p>
                                 <p><span className="font-medium text-slate-800 dark:text-slate-100">Pagamento:</span> {getPaymentLabel(order)}</p>
                                 <p><span className="font-medium text-slate-800 dark:text-slate-100">Entrega:</span> {getDeliveryLabel(order)}</p>
-                                <div className="pt-1">
+                                <div className="pt-1 space-y-2">
                                   <OrderStatusSelect
                                     order={{ ...order, status: currentStatus }}
                                     onUpdated={(status) => {
                                       setStatusOverrides((current) => ({ ...current, [order.id]: status }))
                                       updateDraft(order, getStatusTemplateKey(status))
+                                      router.refresh()
+                                    }}
+                                  />
+                                  <PaymentStatusSelect
+                                    orderId={order.id}
+                                    currentPaymentStatus={currentPaymentStatus}
+                                    onUpdated={(status) => {
+                                      setPaymentStatusOverrides((current) => ({ ...current, [order.id]: status }))
                                       router.refresh()
                                     }}
                                   />

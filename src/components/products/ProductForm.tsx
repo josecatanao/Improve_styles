@@ -59,6 +59,7 @@ import { useUnsavedChanges } from '@/hooks/use-unsaved-changes'
 import { useConfirm } from '@/components/ui/feedback-provider'
 import { ImageEditor } from '@/components/products/ImageEditor'
 import { ProductReviewPreview } from '@/components/products/ProductReviewPreview'
+import { createStoreCategory } from '@/app/dashboard/produtos/categorias/actions'
 
 export type ProductFormState = {
   name: string
@@ -405,6 +406,8 @@ function CreatableField({
   placeholder,
   onDraftChange,
   onSelect,
+  onCreate,
+  isCreating = false,
 }: {
   label: string
   hint?: string
@@ -414,6 +417,8 @@ function CreatableField({
   placeholder: string
   onDraftChange: (value: string) => void
   onSelect: (value: string) => void
+  onCreate?: (name: string) => void
+  isCreating?: boolean
 }) {
   const [isEditing, setIsEditing] = useState(!value)
   const filtered = useMemo(() => {
@@ -430,6 +435,12 @@ function CreatableField({
     onSelect(normalized)
     onDraftChange('')
     setIsEditing(false)
+  }
+
+  function handleCreate() {
+    const name = draft.trim()
+    if (!name || !onCreate) return
+    onCreate(name)
   }
 
   return (
@@ -483,13 +494,22 @@ function CreatableField({
                   {option}
                 </button>
               ))}
-              {draft.trim() && !options.some((option) => option.toLowerCase() === draft.trim().toLowerCase()) ? (
+              {draft.trim() && !options.some((option) => option.toLowerCase() === draft.trim().toLowerCase()) && onCreate ? (
+                <button
+                  type="button"
+                  onClick={handleCreate}
+                  disabled={isCreating}
+                  className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-100 transition-colors hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/20 dark:hover:bg-emerald-500/20"
+                >
+                  {isCreating ? 'Criando...' : `Criar "${draft.trim()}"`}
+                </button>
+              ) : draft.trim() && !options.some((option) => option.toLowerCase() === draft.trim().toLowerCase()) ? (
                 <button
                   type="button"
                   onClick={() => commit(draft)}
                   className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-100 transition-colors hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/20 dark:hover:bg-emerald-500/20"
                 >
-                  Criar &quot;{draft.trim()}&quot;
+                  Usar &quot;{draft.trim()}&quot;
                 </button>
               ) : null}
             </div>
@@ -546,6 +566,8 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
   const [newColorHex, setNewColorHex] = useState('#111111')
   const [categoryDraft, setCategoryDraft] = useState('')
   const [brandDraft, setBrandDraft] = useState('')
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(options.categories)
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false)
   const [sizeDrafts, setSizeDrafts] = useState<Record<string, string>>({})
   const [images, setImages] = useState<ImageItem[]>(initialImages)
   const [imageUrlDraft, setImageUrlDraft] = useState('')
@@ -661,6 +683,30 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
 
   function showToast(type: NonNullable<ToastState>['type'], message: string) {
     setToast({ type, message })
+  }
+
+  async function handleCreateCategory(name: string) {
+    const trimmed = name.trim()
+    if (!trimmed) return
+
+    setIsCreatingCategory(true)
+
+    try {
+      await createStoreCategory({ name: trimmed, isActive: false })
+      setCategoryOptions((current) => {
+        if (current.some((option) => option.toLowerCase() === trimmed.toLowerCase())) {
+          return current
+        }
+        return [...current, trimmed]
+      })
+      setForm((current) => ({ ...current, category: trimmed }))
+      setCategoryDraft('')
+      showToast('success', `Categoria "${trimmed}" criada e associada ao produto.`)
+    } catch (actionError) {
+      showToast('error', actionError instanceof Error ? actionError.message : 'Erro ao criar categoria.')
+    } finally {
+      setIsCreatingCategory(false)
+    }
   }
 
   function updateImages(nextImages: ImageItem[]) {
@@ -1809,13 +1855,15 @@ export function ProductForm({ mode = 'create', product = null, options }: Produc
                   <div className="grid gap-4 md:grid-cols-2">
                     <CreatableField
                       label="Categoria"
-                      hint="Use as categorias criadas em Produtos > Categorias."
+                      hint="Digite ou selecione uma categoria. Se nao existir, crie-a aqui mesmo."
                       value={form.category}
                       draft={categoryDraft}
-                      options={options.categories}
+                      options={categoryOptions}
                       placeholder="Ex.: Camisetas"
                       onDraftChange={setCategoryDraft}
                       onSelect={(value) => setForm((current) => ({ ...current, category: value }))}
+                      onCreate={handleCreateCategory}
+                      isCreating={isCreatingCategory}
                     />
                     <CreatableField
                       label="Marca"

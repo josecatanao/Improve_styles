@@ -1,9 +1,43 @@
 import { CheckCircle2, ClipboardList, PackageCheck, Truck } from 'lucide-react'
 
+export type PaymentStatus = 'pending' | 'paid' | 'cancelled'
+
 export type DeliveryMethod = 'delivery' | 'pickup'
 
 export function isPickup(deliveryMethod: string | undefined | null): boolean {
   return (deliveryMethod ?? '').toLowerCase() === 'pickup'
+}
+
+export function normalizePaymentStatus(paymentStatus: string | undefined | null, orderStatus?: string | null): PaymentStatus {
+  if (paymentStatus === 'paid' || paymentStatus === 'cancelled') {
+    return paymentStatus
+  }
+
+  if (orderStatus === 'completed') return 'paid'
+  if (orderStatus === 'cancelled') return 'cancelled'
+  return 'pending'
+}
+
+export function getPaymentStatusLabel(paymentStatus: string | undefined | null, orderStatus?: string | null): string {
+  switch (normalizePaymentStatus(paymentStatus, orderStatus)) {
+    case 'paid':
+      return 'Pago'
+    case 'cancelled':
+      return 'Cancelado'
+    default:
+      return 'Pendente'
+  }
+}
+
+export function getPaymentStatusBadgeClasses(paymentStatus: string | undefined | null, orderStatus?: string | null) {
+  switch (normalizePaymentStatus(paymentStatus, orderStatus)) {
+    case 'paid':
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+    case 'cancelled':
+      return 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+    default:
+      return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+  }
 }
 
 const DELIVERY_STATUS_OPTIONS = [

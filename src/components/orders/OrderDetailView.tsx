@@ -1,45 +1,52 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState, useTransition, type ReactNode } from 'react'
+import { Fragment, useMemo, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/lib/storefront'
 import type { StoreOrder } from '@/lib/orders'
+import type { OrderPDFSettings } from '@/components/orders/pedido-pdf'
+import { useOrderPDF } from '@/hooks/use-order-pdf'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/feedback-provider'
-import { updateOrderStatus } from '@/app/dashboard/pedidos/actions'
-import { getStatusOptions, getStatusSteps, getStatusLabel, getStatusBadgeClasses, isPickup } from '@/lib/order-statuses'
+import { updateOrderPaymentStatus, updateOrderStatus } from '@/app/dashboard/pedidos/actions'
+import {
+  getPaymentStatusBadgeClasses,
+  getPaymentStatusLabel,
+  getStatusBadgeClasses,
+  getStatusLabel,
+  isPickup,
+  normalizePaymentStatus,
+  type PaymentStatus,
+} from '@/lib/order-statuses'
 import {
   ArrowLeft,
-  CalendarDays,
   CheckCircle2,
   ClipboardList,
   Copy,
   CreditCard,
-  ExternalLink,
+  Download,
+  FileText,
   MapPin,
   MessageCircleMore,
   PackageCheck,
-  Printer,
+  PencilLine,
   ShoppingCart,
   Truck,
   UserRound,
 } from 'lucide-react'
 
-const WHATSAPP_TEMPLATES_DELIVERY = [
-  { key: 'pending', label: 'WhatsApp: Pedido recebido' },
-  { key: 'processing', label: 'WhatsApp: Em preparo' },
-  { key: 'shipped', label: 'WhatsApp: Saiu para entrega' },
-  { key: 'completed', label: 'WhatsApp: Entregue' },
-] as const
-
-const WHATSAPP_TEMPLATES_PICKUP = [
-  { key: 'pending', label: 'WhatsApp: Pedido recebido' },
-  { key: 'processing', label: 'WhatsApp: Aguardando retirada' },
-  { key: 'completed', label: 'WhatsApp: Produto retirado' },
-] as const
+type WorkflowStep = {
+  key: string
+  label: string
+  note: string
+  icon: typeof CheckCircle2
+  clickable: boolean
+  onClick?: () => void
+  state: 'done' | 'current' | 'upcoming'
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('pt-BR', {
@@ -53,7 +60,7 @@ function getOrderCode(orderId: string) {
 }
 
 function getDeliveryLabel(order: StoreOrder) {
-  return order.delivery_method === 'pickup' ? 'Retirada no local' : 'Entrega'
+  return order.delivery_method === 'pickup' ? 'Retirada na loja' : 'Entrega'
 }
 
 function getPaymentLabel(order: StoreOrder) {
@@ -65,7 +72,7 @@ function getPaymentLabel(order: StoreOrder) {
     return 'Dinheiro'
   }
 
-  return `Cartao ${order.installments}x`
+  return `Cartão ${order.installments}x`
 }
 
 function normalizeWhatsAppPhone(phone: string | null) {
@@ -95,7 +102,7 @@ function buildWhatsAppMessage(order: StoreOrder, template: string) {
     case 'processing':
       return pickup
         ? `Olá, ${customerName}! Seu pedido ${orderCode} está aguardando retirada na loja.${productsText} Assim que estiver disponível para retirada, avisamos você por aqui.`
-        : `Olá, ${customerName}! Seu pedido ${orderCode} está em separação neste momento.${productsText} Já conferimos os ${itemLabel} e vamos seguir com as próximas etapas do envio.`
+        : `Olá, ${customerName}! Seu pedido ${orderCode} está em preparação neste momento.${productsText} Já conferimos os ${itemLabel} e vamos seguir com as próximas etapas do envio.`
     case 'shipped':
       return `Olá, ${customerName}! Seu pedido ${orderCode} saiu para entrega.${productsText} Qualquer atualização de rota ou finalização, avisamos você por aqui.`
     case 'completed':
@@ -108,52 +115,164 @@ function buildWhatsAppMessage(order: StoreOrder, template: string) {
   }
 }
 
-function getStatusTemplateKey(status: string, deliveryMethod?: string | null) {
-  if (isPickup(deliveryMethod)) {
-    if (status === 'processing') return 'processing'
-    if (status === 'completed') return 'completed'
-    return 'pending'
+function getStepCardClasses(state: WorkflowStep['state']) {
+  if (state === 'current') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-900 shadow-[0_20px_40px_-28px_rgba(16,185,129,0.5)]'
   }
 
-  if (status === 'processing') return 'processing'
-  if (status === 'shipped') return 'shipped'
-  if (status === 'completed') return 'completed'
-  return 'pending'
+  if (state === 'done') {
+    return 'border-emerald-100 bg-white text-slate-900'
+  }
+
+  return 'border-slate-200 bg-white text-slate-500'
 }
 
-export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: StoreOrder; storeName?: string | null; storeLogoUrl?: string | null }) {
+function buildWorkflowSteps(
+  order: StoreOrder,
+  paymentStatus: PaymentStatus,
+  orderStatus: string,
+  onStatusChange: (nextStatus: string) => void,
+  onPaymentStatusChange: (nextStatus: PaymentStatus) => void
+): WorkflowStep[] {
+  const pickup = isPickup(order.delivery_method)
+  const paymentDone = paymentStatus === 'paid'
+
+  if (pickup) {
+    const pickupStepState: WorkflowStep['state'] =
+      !paymentDone ? 'upcoming' : orderStatus === 'completed' ? 'done' : 'current'
+
+    return [
+      {
+        key: 'payment',
+        label: 'Confirmar pagamento',
+        note: paymentDone ? 'Concluído' : 'Aguardando',
+        icon: CheckCircle2,
+        clickable: true,
+        onClick: () => onPaymentStatusChange('paid'),
+        state: paymentDone ? 'done' : 'current',
+      },
+      {
+        key: 'processing',
+        label: 'Aguardando retirada',
+        note: orderStatus === 'completed' ? 'Concluída' : pickupStepState === 'current' ? 'Etapa atual' : 'Aguardando',
+        icon: ClipboardList,
+        clickable: paymentDone,
+        onClick: () => onStatusChange('processing'),
+        state: pickupStepState,
+      },
+      {
+        key: 'completed',
+        label: 'Produto retirado',
+        note: orderStatus === 'completed' ? 'Concluída' : 'Aguardando',
+        icon: PackageCheck,
+        clickable: paymentDone,
+        onClick: () => onStatusChange('completed'),
+        state: orderStatus === 'completed' ? 'current' : 'upcoming',
+      },
+    ]
+  }
+
+  const processingState: WorkflowStep['state'] =
+    !paymentDone ? 'upcoming' : orderStatus === 'shipped' || orderStatus === 'completed' ? 'done' : 'current'
+  const shippedState: WorkflowStep['state'] =
+    orderStatus === 'completed' ? 'done' : orderStatus === 'shipped' ? 'current' : 'upcoming'
+  const completedState: WorkflowStep['state'] = orderStatus === 'completed' ? 'current' : 'upcoming'
+
+  return [
+    {
+      key: 'payment',
+      label: 'Confirmar pagamento',
+      note: paymentDone ? 'Concluído' : 'Aguardando',
+      icon: CheckCircle2,
+      clickable: true,
+      onClick: () => onPaymentStatusChange('paid'),
+      state: paymentDone ? 'done' : 'current',
+    },
+    {
+      key: 'processing',
+      label: 'Em preparação',
+      note: processingState === 'current' ? 'Etapa atual' : processingState === 'done' ? 'Concluída' : 'Aguardando',
+      icon: ClipboardList,
+      clickable: paymentDone,
+      onClick: () => onStatusChange('processing'),
+      state: processingState,
+    },
+    {
+      key: 'shipped',
+      label: 'Saiu para entrega',
+      note: shippedState === 'current' ? 'Etapa atual' : shippedState === 'done' ? 'Concluída' : 'Aguardando',
+      icon: Truck,
+      clickable: paymentDone,
+      onClick: () => onStatusChange('shipped'),
+      state: shippedState,
+    },
+    {
+      key: 'completed',
+      label: 'Marcar como entregue',
+      note: completedState === 'current' ? 'Concluída' : 'Aguardando',
+      icon: CheckCircle2,
+      clickable: paymentDone,
+      onClick: () => onStatusChange('completed'),
+      state: completedState,
+    },
+  ]
+}
+
+type OrderDetailViewProps = {
+  order: StoreOrder
+  storeName?: string | null
+  storeLogoUrl?: string | null
+  storeWhatsapp?: string | null
+  storeAddress?: string | null
+}
+
+export function OrderDetailView({ order, storeName, storeLogoUrl, storeWhatsapp, storeAddress }: OrderDetailViewProps) {
   const router = useRouter()
   const showToast = useToast()
   const [status, setStatus] = useState(order.status)
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(normalizePaymentStatus(order.payment_status, order.status))
   const [isPending, startTransition] = useTransition()
-  const [messageDraft, setMessageDraft] = useState(buildWhatsAppMessage(order, order.status))
+  const [isEditingMessage, setIsEditingMessage] = useState(false)
 
   const storeDisplayName = storeName?.trim() || 'Improve Styles'
+  const displayOrder = useMemo(
+    () => ({
+      ...order,
+      status,
+      payment_status: paymentStatus,
+    }),
+    [order, paymentStatus, status]
+  )
 
-  function handlePrint() {
-    window.print()
-  }
+  const [messageDraft, setMessageDraft] = useState(buildWhatsAppMessage(displayOrder, displayOrder.status))
+
+  const pdfSettings: OrderPDFSettings = useMemo(
+    () => ({
+      storeName: storeDisplayName,
+      storeLogoUrl: storeLogoUrl ?? null,
+      storeWhatsapp: storeWhatsapp ?? null,
+      storeAddress: storeAddress ?? null,
+    }),
+    [storeDisplayName, storeLogoUrl, storeWhatsapp, storeAddress]
+  )
+
+  const { downloadPDF, openPDFPreview, isGenerating } = useOrderPDF({ order: displayOrder, settings: pdfSettings })
 
   const orderCode = getOrderCode(order.id)
   const subtotal = useMemo(
-    () => order.store_order_items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    [order.store_order_items]
+    () => displayOrder.store_order_items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [displayOrder.store_order_items]
   )
-  const shippingCost = Number(order.shipping_cost || 0)
-  const discount = Math.max(0, subtotal + shippingCost - Number(order.total_price))
-  const pickup = isPickup(order.delivery_method)
-  const statusOptions = useMemo(() => getStatusOptions(order.delivery_method), [order.delivery_method])
-  const statusSteps = useMemo(() => getStatusSteps(order.delivery_method), [order.delivery_method])
-  const whatsappTemplates = pickup ? WHATSAPP_TEMPLATES_PICKUP : WHATSAPP_TEMPLATES_DELIVERY
-  const currentWhatsAppTemplateKey = getStatusTemplateKey(status, order.delivery_method)
-  const currentWhatsAppTemplate = whatsappTemplates.find((template) => template.key === currentWhatsAppTemplateKey)
-
+  const shippingCost = Number(displayOrder.shipping_cost || 0)
+  const discount = Number(displayOrder.discount_amount || 0)
+  const computedDiscount =
+    discount > 0 ? discount : Math.max(0, subtotal + shippingCost - Number(displayOrder.total_price))
   function handleStatusUpdate(nextStatus: string) {
     startTransition(async () => {
       try {
         await updateOrderStatus(order.id, nextStatus)
         setStatus(nextStatus)
-        setMessageDraft(buildWhatsAppMessage(order, nextStatus))
+        setMessageDraft(buildWhatsAppMessage({ ...displayOrder, status: nextStatus }, nextStatus))
         showToast({ variant: 'success', title: 'Status do pedido atualizado' })
         router.refresh()
       } catch (error) {
@@ -166,8 +285,25 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
     })
   }
 
+  function handlePaymentStatusUpdate(nextPaymentStatus: PaymentStatus) {
+    startTransition(async () => {
+      try {
+        await updateOrderPaymentStatus(order.id, nextPaymentStatus)
+        setPaymentStatus(nextPaymentStatus)
+        showToast({ variant: 'success', title: 'Status do pagamento atualizado' })
+        router.refresh()
+      } catch (error) {
+        showToast({
+          variant: 'error',
+          title: 'Falha ao atualizar o pagamento',
+          description: error instanceof Error ? error.message : 'Erro inesperado.',
+        })
+      }
+    })
+  }
+
   function openWhatsApp(customMessage?: string) {
-    const phone = normalizeWhatsAppPhone(order.customer_phone)
+    const phone = normalizeWhatsAppPhone(displayOrder.customer_phone)
     const message = (customMessage || messageDraft).trim()
 
     if (!phone) {
@@ -200,141 +336,28 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
     }
   }
 
+  const workflowSteps = buildWorkflowSteps(displayOrder, paymentStatus, status, handleStatusUpdate, handlePaymentStatusUpdate)
+
   return (
     <div className="space-y-6">
-      <style>{`
-        @media print {
-          @page {
-            margin: 18mm 14mm 18mm 14mm;
-            size: A4;
-          }
-          body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .no-print,
-          .no-print * {
-            display: none !important;
-          }
-          .print-only {
-            display: block !important;
-          }
-        }
-      `}</style>
-
-      <div className="print-only hidden">
-        <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', color: '#0f172a' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', paddingBottom: '24px', borderBottom: '2px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              {storeLogoUrl ? (
-                <img src={storeLogoUrl} alt={storeDisplayName} style={{ height: '52px', maxWidth: '140px', objectFit: 'contain' }} />
-              ) : null}
-              <div>
-                <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', margin: 0 }}>{storeDisplayName}</h1>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Comprovante de pedido</p>
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', margin: 0 }}>#{orderCode}</p>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' }}>{formatDate(order.created_at)}</p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '24px', marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid #e2e8f0' }}>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 8px 0' }}>Cliente</p>
-              <p style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>{order.customer_name}</p>
-              <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 2px 0' }}>{order.customer_phone || 'Sem telefone'}</p>
-              <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>{order.customer_email || 'Sem e-mail'}</p>
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 8px 0' }}>Entrega</p>
-              <p style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>{getDeliveryLabel(order)}</p>
-              <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>{order.delivery_address || 'Endereço não informado'}</p>
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 8px 0' }}>Pagamento</p>
-              <p style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>{getPaymentLabel(order)}</p>
-              <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>{getStatusLabel(status, order.delivery_method)}</p>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '32px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 12px 0' }}>Itens do pedido</p>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                  <th style={{ textAlign: 'left', padding: '10px 8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Produto</th>
-                  <th style={{ textAlign: 'center', padding: '10px 8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Qtd</th>
-                  <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Unitario</th>
-                  <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.store_order_items.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '10px 8px', color: '#0f172a' }}>
-                      <p style={{ margin: 0, fontWeight: 500 }}>{item.name}</p>
-                      <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
-                        {item.size || item.color_name || item.sku ? `${item.size || item.color_name || item.sku}` : ''}
-                      </p>
-                    </td>
-                    <td style={{ textAlign: 'center', padding: '10px 8px', color: '#475569' }}>{item.quantity}</td>
-                    <td style={{ textAlign: 'right', padding: '10px 8px', color: '#475569' }}>{formatMoney(item.price)}</td>
-                    <td style={{ textAlign: 'right', padding: '10px 8px', fontWeight: 600, color: '#0f172a' }}>{formatMoney(item.price * item.quantity)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px', paddingTop: '16px', borderTop: '2px solid #e2e8f0' }}>
-            <div style={{ width: '260px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px', color: '#475569' }}>
-                <span>Subtotal</span>
-                <span>{formatMoney(subtotal)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px', color: '#475569' }}>
-                <span>Taxa de entrega</span>
-                <span>{formatMoney(shippingCost)}</span>
-              </div>
-              {discount > 0 ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px', color: '#059669' }}>
-                  <span>Desconto</span>
-                  <span>- {formatMoney(discount)}</span>
-                </div>
-              ) : null}
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0 0', borderTop: '2px solid #0f172a', fontSize: '18px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
-                <span>Total</span>
-                <span>{formatMoney(order.total_price)}</span>
-              </div>
-            </div>
-          </div>
-
-          {order.notes?.trim() ? (
-            <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '13px', color: '#475569', marginBottom: '16px' }}>
-              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 6px 0' }}>Observações</p>
-              <p style={{ margin: 0 }}>{order.notes}</p>
-            </div>
-          ) : null}
-
-          <div style={{ textAlign: 'center', paddingTop: '24px', borderTop: '1px solid #e2e8f0', fontSize: '11px', color: '#94a3b8' }}>
-            <p style={{ margin: 0 }}>Documento gerado em {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short' }).format(new Date())}</p>
-            <p style={{ margin: '4px 0 0 0' }}>{storeDisplayName} — Pedido #{orderCode}</p>
-          </div>
-        </div>
-      </div>
-      <div className="no-print">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Pedido #{orderCode}</h1>
             <span className={`rounded-full px-3 py-1 text-sm font-semibold ${getStatusBadgeClasses(status)}`}>
-              {getStatusLabel(status, order.delivery_method)}
+              {getStatusLabel(status, displayOrder.delivery_method)}
+            </span>
+            <span
+              className={cn(
+                'rounded-full px-3 py-1 text-sm font-semibold',
+                getPaymentStatusBadgeClasses(paymentStatus, status)
+              )}
+            >
+              Pagamento: {getPaymentStatusLabel(paymentStatus, status)}
             </span>
           </div>
           <p className="text-sm text-slate-500">
-            Criado em {formatDate(order.created_at)} {' • '} Atualizado em {formatDate(order.updated_at)}
+            Criado em {formatDate(displayOrder.created_at)} {' • '} Atualizado em {formatDate(displayOrder.updated_at)}
           </p>
         </div>
 
@@ -345,89 +368,156 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
               Voltar para pedidos
             </Button>
           </Link>
-          <Button
-            variant="outline"
-            className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-            onClick={() => openWhatsApp(buildWhatsAppMessage(order, currentWhatsAppTemplateKey))}
-          >
-            <MessageCircleMore className="h-4 w-4" />
-            {currentWhatsAppTemplate?.label || 'WhatsApp'}
+          <Button variant="outline" onClick={downloadPDF} disabled={isGenerating}>
+            <Download className="h-4 w-4" />
+            {isGenerating ? 'Gerando...' : 'Baixar PDF'}
           </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4" />
-            Imprimir
+          <Button variant="outline" onClick={openPDFPreview} disabled={isGenerating}>
+            <FileText className="h-4 w-4" />
+            Visualizar
           </Button>
         </div>
       </div>
 
-      <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200">
-        <CardContent className="px-4 py-4">
-          <div className="space-y-4">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-              {statusSteps.map((step, index) => {
-                const Icon = step.icon
-                const currentIndex = statusSteps.findIndex((item) => item.value === status)
-                const stepIndex = statusSteps.findIndex((item) => item.value === step.value)
-                const isCurrent = status === step.value
-                const isCompleted = currentIndex >= stepIndex
+      <Card className="border-0 bg-white shadow-sm ring-1 ring-emerald-100">
+        <CardContent className="space-y-6 px-6 py-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-1">
+              <h2 className="text-3xl font-semibold tracking-tight text-slate-900">Etapas do pedido</h2>
+              <p className="text-sm text-slate-500">Acompanhe e atualize o status operacional do pedido.</p>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              <CheckCircle2 className="h-4 w-4" />
+              Pedido #{orderCode}
+            </div>
+          </div>
 
-                return (
-                  <div key={step.value} className="flex flex-1 items-center gap-3">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 xl:flex-row xl:items-stretch xl:gap-0">
+            {workflowSteps.map((step, index) => {
+              const Icon = step.icon
+              return (
+                <Fragment key={step.key}>
+                  <div className="flex items-stretch xl:flex-1">
                     <button
                       type="button"
-                      disabled={isPending}
-                      onClick={() => handleStatusUpdate(step.value)}
+                      disabled={isPending || !step.clickable}
+                      onClick={step.onClick}
                       className={cn(
-                        'flex min-h-14 flex-1 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
-                        isCurrent || isCompleted
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                        'group flex h-full w-full min-h-[170px] flex-col items-start justify-between rounded-3xl border px-5 py-5 text-left transition-all',
+                        getStepCardClasses(step.state),
+                        step.clickable && 'hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-28px_rgba(15,23,42,0.35)]',
+                        !step.clickable && 'cursor-default'
                       )}
                     >
-                      <span
-                        className={cn(
-                          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border',
-                          isCurrent || isCompleted
-                            ? 'border-emerald-300 bg-emerald-100 text-emerald-700'
-                            : 'border-slate-200 bg-slate-50 text-slate-400'
-                        )}
-                      >
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">{step.label}</p>
-                        {isCurrent ? <p className="text-xs text-emerald-700">Etapa atual</p> : null}
+                      <div className="mb-3 flex items-center gap-3">
+                        <span
+                          className={cn(
+                            'flex h-10 w-10 items-center justify-center rounded-full border',
+                            step.state === 'current'
+                              ? 'border-emerald-300 bg-emerald-100 text-emerald-700'
+                              : step.state === 'done'
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                                : 'border-slate-200 bg-slate-50 text-slate-400'
+                          )}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </span>
+                        <span
+                          className={cn(
+                            'flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-xs font-bold',
+                            step.state === 'current' || step.state === 'done'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-slate-200 text-slate-600'
+                          )}
+                        >
+                          {index + 1}
+                        </span>
                       </div>
+                      <div className="flex min-h-[72px] flex-1 flex-col">
+                        <p className="text-base font-semibold">{step.label}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {step.state === 'current' ? (
+                            <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                              Etapa atual
+                            </span>
+                          ) : null}
+                          <span className="text-sm text-slate-500">{step.note}</span>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs text-slate-500">
+                        {step.state === 'done' || step.state === 'current' ? formatDate(displayOrder.created_at) : '\u00A0'}
+                      </p>
                     </button>
-                    {index < statusSteps.length - 1 ? (
-                      <div className="hidden h-px flex-1 bg-slate-200 xl:block" />
-                    ) : null}
                   </div>
-                )
-              })}
+                  {index < workflowSteps.length - 1 ? (
+                    <div className="hidden w-16 shrink-0 items-center xl:flex">
+                      <div
+                        className={cn(
+                          'h-0.5 w-full border-t border-dashed',
+                          workflowSteps[index].state === 'done' ? 'border-emerald-400' : 'border-slate-300'
+                        )}
+                      />
+                    </div>
+                  ) : null}
+                </Fragment>
+              )
+            })}
+          </div>
+
+          <div className="mx-auto max-w-5xl rounded-3xl border border-emerald-200 bg-emerald-50/70 p-5">
+            <div className="mb-5 flex items-start gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-emerald-600 shadow-sm">
+                <MessageCircleMore className="h-6 w-6" />
+              </span>
+              <div>
+                <h3 className="text-2xl font-semibold tracking-tight text-slate-900">Mensagem da etapa atual</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Envie ao cliente uma mensagem personalizada sobre o status do pedido.
+                </p>
+              </div>
             </div>
 
-            {currentWhatsAppTemplate ? (
-              <div className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-emerald-800">Mensagem da etapa atual</p>
-                  <p className="text-sm text-emerald-700">
-                    Envie ao cliente a mensagem padrão de {getStatusLabel(status, order.delivery_method).toLowerCase()}.
-                  </p>
-                  <div className="rounded-lg border border-emerald-100 bg-white/70 px-3 py-2 text-sm leading-6 text-emerald-900">
-                    {buildWhatsAppMessage(order, currentWhatsAppTemplate.key)}
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-emerald-100 bg-white p-3 shadow-sm">
+                  <textarea
+                    value={messageDraft}
+                    onChange={(event) => setMessageDraft(event.target.value)}
+                    readOnly={!isEditingMessage}
+                    rows={6}
+                    className={cn(
+                      'w-full resize-none border-0 bg-transparent text-base leading-8 text-slate-800 outline-none',
+                      !isEditingMessage && 'cursor-default'
+                    )}
+                  />
+                  <div className="mt-2 text-right text-sm text-slate-400">{messageDraft.length}/1000 caracteres</div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <Button type="button" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => openWhatsApp()}>
+                    <MessageCircleMore className="h-4 w-4" />
+                    Enviar mensagem via WhatsApp
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setIsEditingMessage((current) => !current)}>
+                    <PencilLine className="h-4 w-4" />
+                    {isEditingMessage ? 'Concluir edição' : 'Editar mensagem'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-base font-semibold text-slate-700">Pré-visualização</p>
+                <div className="rounded-[28px] border border-[#f2e8de] bg-[#f7efe8] p-4">
+                  <div className="rounded-[24px] bg-white px-5 py-4 text-[0.95rem] leading-8 text-slate-800 shadow-[0_18px_38px_-32px_rgba(15,23,42,0.5)]">
+                    <div className="whitespace-pre-line">{messageDraft}</div>
+                    <div className="mt-4 flex items-center justify-end gap-2 text-sm text-slate-500">
+                      <span>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date())}</span>
+                      <CheckCircle2 className="h-4 w-4 text-slate-400" />
+                    </div>
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                  onClick={() => openWhatsApp(buildWhatsAppMessage(order, currentWhatsAppTemplate.key))}
-                >
-                  <MessageCircleMore className="h-4 w-4" />
-                  Enviar mensagem
-                </Button>
               </div>
-            ) : null}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -435,23 +525,23 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
       <div className="grid gap-6 xl:grid-cols-3">
         <InfoCard title="Dados do cliente" icon={<UserRound className="h-5 w-5 text-[#3483fa]" />}>
           <div className="space-y-2">
-            <p className="text-lg font-semibold text-slate-900">{order.customer_name}</p>
-            <p className="text-sm text-slate-600">{order.customer_phone || 'Sem telefone informado.'}</p>
-            <p className="text-sm text-slate-600">{order.customer_email || 'Sem e-mail informado.'}</p>
+            <p className="text-lg font-semibold text-slate-900">{displayOrder.customer_name}</p>
+            <p className="text-sm text-slate-600">{displayOrder.customer_phone || 'Sem telefone informado.'}</p>
+            <p className="text-sm text-slate-600">{displayOrder.customer_email || 'Sem e-mail informado.'}</p>
           </div>
         </InfoCard>
 
         <InfoCard title="Entrega" icon={<Truck className="h-5 w-5 text-[#3483fa]" />}>
           <div className="space-y-3">
             <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-              {getDeliveryLabel(order)}
+              {getDeliveryLabel(displayOrder)}
             </span>
             <p className="text-sm leading-6 text-slate-600">
-              {order.delivery_address || 'Endereço não informado.'}
+              {displayOrder.delivery_address || 'Endereço não informado.'}
             </p>
-            {order.delivery_lat && order.delivery_lng ? (
+            {displayOrder.delivery_lat && displayOrder.delivery_lng ? (
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${order.delivery_lat},${order.delivery_lng}`}
+                href={`https://www.google.com/maps/search/?api=1&query=${displayOrder.delivery_lat},${displayOrder.delivery_lng}`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 text-sm font-medium text-[#3483fa] hover:underline"
@@ -474,19 +564,21 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
             </div>
             <div className="flex items-center justify-between gap-3">
               <span>Status</span>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClasses(status)}`}>{getStatusLabel(status, order.delivery_method)}</span>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClasses(status)}`}>
+                {getStatusLabel(status, displayOrder.delivery_method)}
+              </span>
             </div>
             <div className="flex items-center justify-between gap-3">
               <span>Criado em</span>
-              <span className="font-medium text-slate-900">{formatDate(order.created_at)}</span>
+              <span className="font-medium text-slate-900">{formatDate(displayOrder.created_at)}</span>
             </div>
             <div className="flex items-center justify-between gap-3">
               <span>Atualizado em</span>
-              <span className="font-medium text-slate-900">{formatDate(order.updated_at)}</span>
+              <span className="font-medium text-slate-900">{formatDate(displayOrder.updated_at)}</span>
             </div>
             <div className="flex items-center justify-between gap-3">
               <span>Pagamento</span>
-              <span className="font-medium text-slate-900">{getPaymentLabel(order)}</span>
+              <span className="font-medium text-slate-900">{getPaymentLabel(displayOrder)}</span>
             </div>
           </div>
         </InfoCard>
@@ -504,11 +596,11 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
             <div className="overflow-hidden rounded-xl border border-slate-200">
               <div className="grid grid-cols-[1.6fr_0.8fr_0.7fr_0.9fr] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                 <span>Produto</span>
-                <span>Variacao</span>
+                <span>Variação</span>
                 <span>Qtd</span>
                 <span className="text-right">Subtotal</span>
               </div>
-              {order.store_order_items.map((item) => (
+              {displayOrder.store_order_items.map((item) => (
                 <div key={item.id} className="grid grid-cols-[1.6fr_0.8fr_0.7fr_0.9fr] gap-3 border-b border-slate-100 px-4 py-3 text-sm last:border-b-0">
                   <div className="min-w-0">
                     <p className="truncate font-medium text-slate-900">{item.name}</p>
@@ -530,89 +622,63 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
                 <span>Taxa de entrega</span>
                 <span>{formatMoney(shippingCost)}</span>
               </div>
-              {discount > 0 ? (
+              {computedDiscount > 0 ? (
                 <div className="flex items-center justify-between text-emerald-600">
-                  <span>Desconto</span>
-                  <span>- {formatMoney(discount)}</span>
+                  <span>Desconto{displayOrder.coupon_code ? ` (${displayOrder.coupon_code})` : ''}</span>
+                  <span>- {formatMoney(computedDiscount)}</span>
                 </div>
               ) : null}
               <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-lg font-semibold text-slate-900">
                 <span>Total</span>
-                <span>{formatMoney(order.total_price)}</span>
+                <span>{formatMoney(displayOrder.total_price)}</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <div className="space-y-6">
-          <InfoCard title="Linha do tempo" icon={<CalendarDays className="h-5 w-5 text-[#3483fa]" />}>
-            <div className="space-y-4">
-              {statusSteps.map((step) => {
-                const activeIndex = statusSteps.findIndex((item) => item.value === status)
-                const stepIndex = statusSteps.findIndex((item) => item.value === step.value)
-                const done = activeIndex >= stepIndex
-                return (
-                  <div key={step.value} className="flex items-start gap-3">
-                    <span className={`mt-1 h-3.5 w-3.5 rounded-full ring-4 ${done ? 'bg-emerald-500 ring-emerald-100' : 'bg-slate-200 ring-slate-100'}`} />
-                    <div>
-                      <p className="font-medium text-slate-900">{step.label}</p>
-                      <p className="text-sm text-slate-500">{done ? 'Etapa concluída ou atual.' : 'Etapa aguardando andamento.'}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </InfoCard>
-
           <InfoCard title="Pagamento" icon={<CreditCard className="h-5 w-5 text-[#3483fa]" />}>
-            <div className="space-y-3 text-sm text-slate-600">
+            <div className="space-y-4 text-sm text-slate-600">
               <div className="flex items-center justify-between gap-3">
                 <span>Forma de pagamento</span>
-                <span className="font-medium text-slate-900">{getPaymentLabel(order)}</span>
+                <span className="font-medium text-slate-900">{getPaymentLabel(displayOrder)}</span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span>Status</span>
-                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${status === 'completed' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
-                  {status === 'completed' ? 'Pago' : 'Pendente'}
+                <span>Status atual</span>
+                <span
+                  className={cn(
+                    'rounded-full px-2.5 py-1 text-xs font-semibold',
+                    getPaymentStatusBadgeClasses(paymentStatus, status)
+                  )}
+                >
+                  {getPaymentStatusLabel(paymentStatus, status)}
                 </span>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="payment-status" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Atualizar pagamento
+                </label>
+                <select
+                  id="payment-status"
+                  disabled={isPending}
+                  value={paymentStatus}
+                  onChange={(event) => handlePaymentStatusUpdate(event.target.value as PaymentStatus)}
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                >
+                  <option value="pending">Pendente</option>
+                  <option value="paid">Pago</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
               </div>
             </div>
           </InfoCard>
 
           <InfoCard title="Observações" icon={<ClipboardList className="h-5 w-5 text-[#3483fa]" />}>
             <p className="text-sm leading-6 text-slate-600">
-              {order.notes?.trim() || 'Nenhuma observação enviada pelo cliente.'}
+              {displayOrder.notes?.trim() || 'Nenhuma observação enviada pelo cliente.'}
             </p>
           </InfoCard>
-
-          <InfoCard title="Ações rápidas" icon={<MessageCircleMore className="h-5 w-5 text-[#3483fa]" />}>
-            <div className="grid gap-2">
-                {whatsappTemplates.map((template) => (
-                  <Button
-                    key={template.key}
-                    type="button"
-                    variant="outline"
-                    className="justify-start"
-                    disabled={template.key === currentWhatsAppTemplateKey}
-                    onClick={() => openWhatsApp(buildWhatsAppMessage(order, template.key))}
-                  >
-                    <MessageCircleMore className="h-4 w-4 text-emerald-600" />
-                    {template.label}
-                  </Button>
-                ))}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="justify-start"
-                  onClick={() => handleStatusUpdate('cancelled')}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Cancelar pedido
-                </Button>
-            </div>
-          </InfoCard>
         </div>
-      </div>
       </div>
     </div>
   )

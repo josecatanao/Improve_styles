@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import { getStoreCategoryKey, normalizeStoreCategoryLabel } from '@/lib/storefront'
+import { normalizeStoreCategoryLabel, slugifyStoreValue } from '@/lib/storefront'
 
 export type StoreCategory = {
   id: string
@@ -15,14 +15,6 @@ function isMissingTable(error: { code?: string } | null) {
   return error?.code === '42P01'
 }
 
-function buildCategoryName(value: string | null | undefined) {
-  return normalizeStoreCategoryLabel(value)
-}
-
-function buildCategorySlug(value: string | null | undefined) {
-  return getStoreCategoryKey(value)
-}
-
 export async function getManagedStoreCategories(page = 1, limit = 50): Promise<{
   categories: StoreCategory[]
   total: number
@@ -30,16 +22,31 @@ export async function getManagedStoreCategories(page = 1, limit = 50): Promise<{
   errorMessage: string | null
 }> {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return {
+      categories: [],
+      total: 0,
+      setupRequired: false,
+      errorMessage: 'Usuário não autenticado.',
+    }
+  }
+
   const from = (page - 1) * limit
   const to = from + limit - 1
 
   const { count, error: countError } = await supabase
     .from('store_categories')
     .select('*', { count: 'exact', head: true })
+    .eq('owner_id', user.id)
 
   const { data, error } = await supabase
     .from('store_categories')
     .select('id, name, slug, sort_order, is_active, icon_name, image_url')
+    .eq('owner_id', user.id)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
     .range(from, to)
@@ -65,8 +72,8 @@ export async function getManagedStoreCategories(page = 1, limit = 50): Promise<{
   return {
     categories: (data as StoreCategory[]).map((category) => ({
       ...category,
-      name: buildCategoryName(category.name),
-      slug: category.slug?.trim() || buildCategorySlug(category.name),
+      name: category.name?.trim() || 'Sem categoria',
+      slug: category.slug?.trim() || slugifyStoreValue(category.name) || 'sem-categoria',
     })),
     total: count ?? 0,
     setupRequired: false,
@@ -90,8 +97,8 @@ export async function getStorefrontCategories(): Promise<{
     return {
       categories: (data as StoreCategory[]).map((category) => ({
         ...category,
-        name: buildCategoryName(category.name),
-        slug: category.slug?.trim() || buildCategorySlug(category.name),
+        name: category.name?.trim() || 'Sem categoria',
+        slug: category.slug?.trim() || slugifyStoreValue(category.name) || 'sem-categoria',
       })),
       source: 'managed',
     }
@@ -124,11 +131,11 @@ export async function getStorefrontCategories(): Promise<{
           .map((item) => item.category?.trim())
           .filter((value): value is string => Boolean(value))
           .map((value, index) => [
-            buildCategorySlug(value),
+            slugifyStoreValue(value) || `category-${index}`,
             {
               id: `fallback-${index}`,
-              name: buildCategoryName(value),
-              slug: buildCategorySlug(value),
+              name: normalizeStoreCategoryLabel(value),
+              slug: slugifyStoreValue(value) || `category-${index}`,
               sort_order: index,
               is_active: true,
               icon_name: null,

@@ -48,6 +48,26 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
   return { success: true }
 }
 
+export async function updateOrderPaymentStatus(orderId: string, paymentStatus: string) {
+  await requirePermission('dashboard:view')
+  const supabase = createAdminClient()
+
+  const normalizedStatus = paymentStatus === 'paid' ? 'paid' : paymentStatus === 'cancelled' ? 'cancelled' : 'pending'
+
+  const { error } = await supabase
+    .from('store_orders')
+    .update({ payment_status: normalizedStatus, updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+
+  if (error) {
+    throw new Error('Falha ao atualizar status do pagamento.')
+  }
+
+  revalidatePath('/dashboard/pedidos')
+  revalidatePath(`/dashboard/pedidos/${orderId}`)
+  return { success: true }
+}
+
 export async function deleteOrder(orderId: string) {
   await requirePermission('dashboard:view')
   const supabase = createAdminClient()

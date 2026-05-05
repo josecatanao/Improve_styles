@@ -293,6 +293,7 @@ export async function submitOrder(payload: CheckoutPayload) {
     delivery_address_id: payload.deliveryAddressId || null,
     notes: payload.customer.notes,
     status: 'pending',
+    payment_status: 'pending',
     total_price: finalTotalPrice,
     total_items: verifiedTotalItems,
     coupon_code: couponCode,

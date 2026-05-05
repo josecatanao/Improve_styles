@@ -306,7 +306,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => { setNewCategoryName('Feminino'); setNewCategoryIconName('heart') }}
+                    onClick={() => { setNewCategoryName('Feminino'); setNewCategoryIconName('gem') }}
                     className="rounded-lg border border-pink-200 bg-pink-50 px-2.5 py-1 text-[11px] font-medium text-pink-700 transition-colors hover:bg-pink-100"
                   >
                     Feminino
@@ -320,7 +320,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: S
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setNewCategoryName('Infantil'); setNewCategoryIconName('baby') }}
+                    onClick={() => { setNewCategoryName('Infantil'); setNewCategoryIconName('user-round') }}
                     className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-100"
                   >
                     Infantil

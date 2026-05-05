@@ -46,6 +46,8 @@ export default async function OrderDetailPage({
       order={order}
       storeName={normalizedSettings.store_name}
       storeLogoUrl={normalizedSettings.store_logo_url}
+      storeWhatsapp={normalizedSettings.store_whatsapp}
+      storeAddress={normalizedSettings.store_address}
     />
   )
 }

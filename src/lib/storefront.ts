@@ -102,41 +102,16 @@ export function normalizeStoreCategoryLabel(value: string | null | undefined) {
     return 'Sem categoria'
   }
 
-  const normalized = trimmed
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-
-  const aliases: Array<{ label: string; match: string[] }> = [
-    { label: 'Camisetas', match: ['camiseta', 'camisetas', 't shirt', 'tshirts'] },
-    { label: 'Camisas', match: ['camisa', 'camisas', 'social'] },
-    { label: 'Calcas', match: ['calca', 'calcas', 'jeans'] },
-    { label: 'Bermudas', match: ['bermuda', 'bermudas', 'short', 'shorts'] },
-    { label: 'Bolsas', match: ['bolsa', 'bolsas', 'mochila', 'mochilas', 'bag', 'bags'] },
-    { label: 'Calcados', match: ['calcado', 'calcados', 'tenis', 'sapato', 'sapatos'] },
-    { label: 'Jaquetas', match: ['jaqueta', 'jaquetas'] },
-    { label: 'Moletons', match: ['moletom', 'moletons', 'hoodie', 'hoodies'] },
-    { label: 'Bones', match: ['bone', 'bones', 'cap', 'caps'] },
-    { label: 'Polos', match: ['polo', 'polos'] },
-    { label: 'Blusas', match: ['blusa', 'blusas'] },
-    { label: 'Acessorios', match: ['acessorio', 'acessorios'] },
-  ]
-
-  const alias = aliases.find((entry) =>
-    entry.match.some((candidate) => normalized === candidate || normalized.startsWith(`${candidate} `))
-  )
-
-  if (alias) {
-    return alias.label
-  }
-
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
 }
 
 export function getStoreCategoryKey(value: string | null | undefined) {
-  return slugifyStoreValue(normalizeStoreCategoryLabel(value))
+  const trimmed = value?.trim()
+  if (!trimmed) {
+    return 'sem-categoria'
+  }
+
+  return slugifyStoreValue(trimmed)
 }
 
 export function getProductPrimaryImage(product: ProductListItem | ProductDetail) {

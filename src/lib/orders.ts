@@ -20,6 +20,7 @@ export type StoreOrder = {
   delivery_address: string | null
   notes: string | null
   status: string
+  payment_status: string
   total_price: number
   total_items: number
   delivery_method: string
@@ -32,6 +33,8 @@ export type StoreOrder = {
   shipping_zip: string | null
   created_at: string
   updated_at: string
+  coupon_code: string | null
+  discount_amount: number | null
   store_order_items: StoreOrderItem[]
 }
 

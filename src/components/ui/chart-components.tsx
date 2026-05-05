@@ -1,30 +1,24 @@
 'use client'
 
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 
-const CHART_COLORS = {
-  primary: 'hsl(var(--chart-1))',
-  secondary: 'hsl(var(--chart-2))',
-  tertiary: 'hsl(var(--chart-3))',
-  quaternary: 'hsl(var(--chart-4))',
-  quinary: 'hsl(var(--chart-5))',
-} as const
+const CHART_PALETTE = [
+  '#3b82f6', // blue-500
+  '#10b981', // emerald-500
+  '#f59e0b', // amber-500
+  '#8b5cf6', // violet-500
+  '#ef4444', // red-500
+  '#06b6d4', // cyan-500
+  '#f97316', // orange-500
+  '#ec4899', // pink-500
+] as const
 
-const FALLBACK_COLORS = [
-  'hsl(221 83% 53%)',
-  'hsl(142 71% 45%)',
-  'hsl(30 90% 55%)',
-  'hsl(262 83% 58%)',
-  'hsl(340 82% 52%)',
-  'hsl(190 80% 45%)',
-  'hsl(45 93% 47%)',
-  'hsl(280 65% 55%)',
-]
+const CHART_PRIMARY = CHART_PALETTE[0]
+const CHART_SECONDARY = CHART_PALETTE[1]
 
 function getChartColor(index: number) {
-  const key = Object.keys(CHART_COLORS)[index % Object.keys(CHART_COLORS).length] as keyof typeof CHART_COLORS
-  return CHART_COLORS[key] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length]
+  return CHART_PALETTE[index % CHART_PALETTE.length]
 }
 
 function formatTooltipValue(value: number, format?: 'currency' | 'number'): string {
@@ -155,10 +149,9 @@ export function HorizontalBarChart({
           />
           <Bar dataKey={dataKey} radius={[4, 4, 4, 4]}>
             {chartData.map((entry, index) => (
-              <rect
+              <Cell
                 key={`cell-${index}`}
                 fill={getChartColor(index)}
-                data-key={entry.label}
               />
             ))}
           </Bar>
@@ -194,11 +187,11 @@ export function TimelineBarChart({
   const chartConfig = {
     revenue: {
       label: 'Receita',
-      color: 'hsl(var(--chart-1))',
+      color: CHART_PRIMARY,
     },
     orders: {
       label: 'Pedidos',
-      color: 'hsl(var(--chart-2))',
+      color: CHART_SECONDARY,
     },
   } satisfies ChartConfig
 
@@ -250,7 +243,7 @@ export function TimelineBarChart({
               </div>
             )} />}
           />
-          <Bar dataKey="revenue" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="revenue" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
         </BarChart>
       </ChartContainer>
     </ChartCard>
@@ -285,7 +278,7 @@ export function TimelineAreaChart({
   const chartConfig = {
     value: {
       label: title,
-      color: 'hsl(var(--chart-1))',
+      color: CHART_PRIMARY,
     },
   } satisfies ChartConfig
 
@@ -298,8 +291,8 @@ export function TimelineAreaChart({
         >
           <defs>
             <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+              <stop offset="0%" stopColor={CHART_PRIMARY} stopOpacity={0.3} />
+              <stop offset="100%" stopColor={CHART_PRIMARY} stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -336,7 +329,7 @@ export function TimelineAreaChart({
           <Area
             type="monotone"
             dataKey="value"
-            stroke="hsl(var(--chart-1))"
+            stroke={CHART_PRIMARY}
             strokeWidth={2}
             fill="url(#areaFill)"
           />

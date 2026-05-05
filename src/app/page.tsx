@@ -91,7 +91,6 @@ export default async function Home({
 
   const categories = Array.from(categorySectionMap.values())
     .sort((a, b) => a.sortOrder - b.sortOrder || b.products.length - a.products.length)
-    .slice(0, 7)
     .map(({ label, href, key }) => {
       const managedCategory = storefrontCategories.find((category) => category.slug === key)
 
@@ -247,7 +246,7 @@ export default async function Home({
                   <div className="flex items-start gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {categories.length > 0 ? (
                       <>
-                        {categories.slice(0, 7).map((item) => {
+                        {categories.map((item) => {
                           const Icon = resolveCategoryIcon(item.iconName)
                           return (
                             <Link key={item.href} href={item.href} className="shrink-0 text-center">
