@@ -20,6 +20,7 @@ import { getCustomerProfiles } from '@/lib/customers'
 import { getStoreOrders, type StoreOrder } from '@/lib/orders'
 import { getProductMetrics, getProductOverviewData, getLowStockProducts } from '@/lib/products'
 import { HorizontalBarChart, TimelineBarChart } from '@/components/ui/chart-components'
+import { getOrderStatusLabel, getStatusBadgeClasses } from '@/lib/order-statuses'
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -37,40 +38,6 @@ function formatDate(value: string) {
 
 function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
-}
-
-function getOrderStatusLabel(status: string) {
-  switch (status) {
-    case 'pending':
-      return 'Pendentes'
-    case 'processing':
-      return 'Em separação'
-    case 'shipped':
-      return 'Em entrega'
-    case 'completed':
-      return 'Concluídos'
-    case 'cancelled':
-      return 'Cancelados'
-    default:
-      return status
-  }
-}
-
-function getOrderStatusClasses(status: string) {
-  switch (status) {
-    case 'pending':
-      return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
-    case 'processing':
-      return 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-    case 'shipped':
-      return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
-    case 'completed':
-      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-    case 'cancelled':
-      return 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
-    default:
-      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-  }
 }
 
 function getPaymentLabel(method: string) {
@@ -208,7 +175,7 @@ export default async function DashboardPage() {
   const customersWithAddressRate =
     customersResult.summary.total > 0 ? (customersResult.summary.withAddress / customersResult.summary.total) * 100 : 0
   const salesTimeline = buildSalesTimeline(activeOrders, 7)
-  const orderStatusBreakdown = buildBreakdown(orders.map((order) => getOrderStatusLabel(order.status)))
+  const orderStatusBreakdown = buildBreakdown(orders.map((order) => getOrderStatusLabel(order.status, order.delivery_method)))
   const paymentBreakdown = buildBreakdown(orders.map((order) => getPaymentLabel(order.payment_method)))
   const deliveryBreakdown = buildBreakdown(orders.map((order) => getDeliveryLabel(order.delivery_method)))
   const topSellingProducts = getTopSellingProducts(activeOrders)
@@ -446,8 +413,8 @@ export default async function DashboardPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">{order.customer_name}</p>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${getOrderStatusClasses(order.status)}`}>
-                        {getOrderStatusLabel(order.status)}
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${getStatusBadgeClasses(order.status)}`}>
+                        {getOrderStatusLabel(order.status, order.delivery_method)}
                       </span>
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">

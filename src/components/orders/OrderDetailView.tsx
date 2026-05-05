@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/feedback-provider'
 import { updateOrderStatus } from '@/app/dashboard/pedidos/actions'
+import { getStatusOptions, getStatusSteps, getStatusLabel, getStatusBadgeClasses, isPickup } from '@/lib/order-statuses'
 import {
   ArrowLeft,
   CalendarDays,
@@ -20,32 +21,24 @@ import {
   ExternalLink,
   MapPin,
   MessageCircleMore,
+  PackageCheck,
   Printer,
   ShoppingCart,
   Truck,
   UserRound,
 } from 'lucide-react'
 
-const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pendente' },
-  { value: 'processing', label: 'Em preparação' },
-  { value: 'shipped', label: 'Saiu para entrega' },
-  { value: 'completed', label: 'Entregue' },
-  { value: 'cancelled', label: 'Cancelado' },
-] as const
-
-const STATUS_STEPS = [
-  { value: 'pending', label: 'Confirmar pagamento', icon: CheckCircle2 },
-  { value: 'processing', label: 'Em preparacao', icon: ClipboardList },
-  { value: 'shipped', label: 'Saiu para entrega', icon: Truck },
-  { value: 'completed', label: 'Marcar como entregue', icon: CheckCircle2 },
-] as const
-
-const WHATSAPP_TEMPLATES = [
+const WHATSAPP_TEMPLATES_DELIVERY = [
   { key: 'pending', label: 'WhatsApp: Pedido recebido' },
   { key: 'processing', label: 'WhatsApp: Em preparo' },
   { key: 'shipped', label: 'WhatsApp: Saiu para entrega' },
   { key: 'completed', label: 'WhatsApp: Entregue' },
+] as const
+
+const WHATSAPP_TEMPLATES_PICKUP = [
+  { key: 'pending', label: 'WhatsApp: Pedido recebido' },
+  { key: 'processing', label: 'WhatsApp: Aguardando retirada' },
+  { key: 'completed', label: 'WhatsApp: Produto retirado' },
 ] as const
 
 function formatDate(value: string) {
@@ -57,27 +50,6 @@ function formatDate(value: string) {
 
 function getOrderCode(orderId: string) {
   return orderId.split('-')[0].toUpperCase()
-}
-
-function getStatusLabel(status: string) {
-  return STATUS_OPTIONS.find((item) => item.value === status)?.label || status
-}
-
-function getStatusBadgeClasses(status: string) {
-  switch (status) {
-    case 'pending':
-      return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
-    case 'processing':
-      return 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-    case 'shipped':
-      return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
-    case 'completed':
-      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-    case 'cancelled':
-      return 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
-    default:
-      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-  }
 }
 
 function getDeliveryLabel(order: StoreOrder) {
@@ -117,33 +89,35 @@ function buildWhatsAppMessage(order: StoreOrder, template: string) {
   const totalLabel = formatMoney(order.total_price)
   const productNames = Array.from(new Set(order.store_order_items.map((item) => item.name.trim()).filter(Boolean))).join(', ')
   const productsText = productNames ? ` Produtos do pedido: ${productNames}.` : ''
+  const pickup = isPickup(order.delivery_method)
 
   switch (template) {
     case 'processing':
-      return `Olá, ${customerName}! Seu pedido ${orderCode} está em separação neste momento.${productsText} Já conferimos os ${itemLabel} e vamos seguir com as próximas etapas do envio.`
+      return pickup
+        ? `Olá, ${customerName}! Seu pedido ${orderCode} está aguardando retirada na loja.${productsText} Assim que estiver disponível para retirada, avisamos você por aqui.`
+        : `Olá, ${customerName}! Seu pedido ${orderCode} está em separação neste momento.${productsText} Já conferimos os ${itemLabel} e vamos seguir com as próximas etapas do envio.`
     case 'shipped':
       return `Olá, ${customerName}! Seu pedido ${orderCode} saiu para entrega.${productsText} Qualquer atualização de rota ou finalização, avisamos você por aqui.`
     case 'completed':
-      return `Olá, ${customerName}! Seu pedido ${orderCode} foi concluído e marcado como entregue.${productsText} Obrigado pela compra. Se precisar de suporte no pós-venda, estamos por aqui.`
+      return pickup
+        ? `Olá, ${customerName}! Seu pedido ${orderCode} foi retirado com sucesso.${productsText} Obrigado pela compra. Se precisar de suporte no pós-venda, estamos por aqui.`
+        : `Olá, ${customerName}! Seu pedido ${orderCode} foi concluído e marcado como entregue.${productsText} Obrigado pela compra. Se precisar de suporte no pós-venda, estamos por aqui.`
     case 'pending':
     default:
       return `Olá, ${customerName}! Recebemos seu pedido ${orderCode} com ${itemLabel}, no valor total de ${totalLabel}.${productsText} Já registramos tudo por aqui e vamos continuar com as próximas etapas do envio.`
   }
 }
 
-function getStatusTemplateKey(status: string) {
-  if (status === 'processing') {
-    return 'processing'
+function getStatusTemplateKey(status: string, deliveryMethod?: string | null) {
+  if (isPickup(deliveryMethod)) {
+    if (status === 'processing') return 'processing'
+    if (status === 'completed') return 'completed'
+    return 'pending'
   }
 
-  if (status === 'shipped') {
-    return 'shipped'
-  }
-
-  if (status === 'completed') {
-    return 'completed'
-  }
-
+  if (status === 'processing') return 'processing'
+  if (status === 'shipped') return 'shipped'
+  if (status === 'completed') return 'completed'
   return 'pending'
 }
 
@@ -167,8 +141,12 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
   )
   const shippingCost = Number(order.shipping_cost || 0)
   const discount = Math.max(0, subtotal + shippingCost - Number(order.total_price))
-  const currentWhatsAppTemplateKey = getStatusTemplateKey(status)
-  const currentWhatsAppTemplate = WHATSAPP_TEMPLATES.find((template) => template.key === currentWhatsAppTemplateKey)
+  const pickup = isPickup(order.delivery_method)
+  const statusOptions = useMemo(() => getStatusOptions(order.delivery_method), [order.delivery_method])
+  const statusSteps = useMemo(() => getStatusSteps(order.delivery_method), [order.delivery_method])
+  const whatsappTemplates = pickup ? WHATSAPP_TEMPLATES_PICKUP : WHATSAPP_TEMPLATES_DELIVERY
+  const currentWhatsAppTemplateKey = getStatusTemplateKey(status, order.delivery_method)
+  const currentWhatsAppTemplate = whatsappTemplates.find((template) => template.key === currentWhatsAppTemplateKey)
 
   function handleStatusUpdate(nextStatus: string) {
     startTransition(async () => {
@@ -277,7 +255,7 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', margin: '0 0 8px 0' }}>Pagamento</p>
               <p style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>{getPaymentLabel(order)}</p>
-              <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>{getStatusLabel(status)}</p>
+              <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>{getStatusLabel(status, order.delivery_method)}</p>
             </div>
           </div>
 
@@ -352,7 +330,7 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Pedido #{orderCode}</h1>
             <span className={`rounded-full px-3 py-1 text-sm font-semibold ${getStatusBadgeClasses(status)}`}>
-              {getStatusLabel(status)}
+              {getStatusLabel(status, order.delivery_method)}
             </span>
           </div>
           <p className="text-sm text-slate-500">
@@ -386,10 +364,10 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
         <CardContent className="px-4 py-4">
           <div className="space-y-4">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-              {STATUS_STEPS.map((step, index) => {
+              {statusSteps.map((step, index) => {
                 const Icon = step.icon
-                const currentIndex = STATUS_STEPS.findIndex((item) => item.value === status)
-                const stepIndex = STATUS_STEPS.findIndex((item) => item.value === step.value)
+                const currentIndex = statusSteps.findIndex((item) => item.value === status)
+                const stepIndex = statusSteps.findIndex((item) => item.value === step.value)
                 const isCurrent = status === step.value
                 const isCompleted = currentIndex >= stepIndex
 
@@ -421,7 +399,7 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
                         {isCurrent ? <p className="text-xs text-emerald-700">Etapa atual</p> : null}
                       </div>
                     </button>
-                    {index < STATUS_STEPS.length - 1 ? (
+                    {index < statusSteps.length - 1 ? (
                       <div className="hidden h-px flex-1 bg-slate-200 xl:block" />
                     ) : null}
                   </div>
@@ -434,7 +412,7 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-emerald-800">Mensagem da etapa atual</p>
                   <p className="text-sm text-emerald-700">
-                    Envie ao cliente a mensagem padrão de {getStatusLabel(status).toLowerCase()}.
+                    Envie ao cliente a mensagem padrão de {getStatusLabel(status, order.delivery_method).toLowerCase()}.
                   </p>
                   <div className="rounded-lg border border-emerald-100 bg-white/70 px-3 py-2 text-sm leading-6 text-emerald-900">
                     {buildWhatsAppMessage(order, currentWhatsAppTemplate.key)}
@@ -496,7 +474,7 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
             </div>
             <div className="flex items-center justify-between gap-3">
               <span>Status</span>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClasses(status)}`}>{getStatusLabel(status)}</span>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClasses(status)}`}>{getStatusLabel(status, order.delivery_method)}</span>
             </div>
             <div className="flex items-center justify-between gap-3">
               <span>Criado em</span>
@@ -569,9 +547,9 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
         <div className="space-y-6">
           <InfoCard title="Linha do tempo" icon={<CalendarDays className="h-5 w-5 text-[#3483fa]" />}>
             <div className="space-y-4">
-              {STATUS_STEPS.map((step) => {
-                const activeIndex = STATUS_STEPS.findIndex((item) => item.value === status)
-                const stepIndex = STATUS_STEPS.findIndex((item) => item.value === step.value)
+              {statusSteps.map((step) => {
+                const activeIndex = statusSteps.findIndex((item) => item.value === status)
+                const stepIndex = statusSteps.findIndex((item) => item.value === step.value)
                 const done = activeIndex >= stepIndex
                 return (
                   <div key={step.value} className="flex items-start gap-3">
@@ -609,7 +587,7 @@ export function OrderDetailView({ order, storeName, storeLogoUrl }: { order: Sto
 
           <InfoCard title="Ações rápidas" icon={<MessageCircleMore className="h-5 w-5 text-[#3483fa]" />}>
             <div className="grid gap-2">
-                {WHATSAPP_TEMPLATES.map((template) => (
+                {whatsappTemplates.map((template) => (
                   <Button
                     key={template.key}
                     type="button"

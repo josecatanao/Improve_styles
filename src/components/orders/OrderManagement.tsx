@@ -33,6 +33,7 @@ import {
 import { deleteOrder, updateOrderStatus } from '@/app/dashboard/pedidos/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { getStatusOptions, getStatusLabel, getStatusBadgeClasses, isPickup } from '@/lib/order-statuses'
 
 type MessageTemplateKey = 'pending' | 'processing' | 'shipped' | 'completed'
 type SortOption = 'recent' | 'oldest' | 'highest' | 'lowest'
@@ -40,19 +41,17 @@ type ViewMode = 'list' | 'compact'
 
 const PAGE_SIZE = 4
 
-const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pendente' },
-  { value: 'processing', label: 'Processando' },
-  { value: 'shipped', label: 'Saiu para entrega' },
-  { value: 'completed', label: 'Entregue / concluído' },
-  { value: 'cancelled', label: 'Cancelado' },
-]
-
-const TEMPLATE_BUTTONS: Array<{ key: MessageTemplateKey; label: string }> = [
+const TEMPLATE_BUTTONS_DELIVERY: Array<{ key: MessageTemplateKey; label: string }> = [
   { key: 'pending', label: 'Pedido recebido' },
   { key: 'processing', label: 'Em separação' },
   { key: 'shipped', label: 'Saiu para entrega' },
   { key: 'completed', label: 'Pedido concluído' },
+]
+
+const TEMPLATE_BUTTONS_PICKUP: Array<{ key: MessageTemplateKey | 'shipped'; label: string }> = [
+  { key: 'pending', label: 'Pedido recebido' },
+  { key: 'processing', label: 'Aguardando retirada' },
+  { key: 'completed', label: 'Produto retirado' },
 ]
 
 function formatDate(value: string) {
@@ -64,27 +63,6 @@ function formatDate(value: string) {
 
 function getOrderCode(orderId: string) {
   return orderId.split('-')[0].toUpperCase()
-}
-
-function getStatusLabel(status: string) {
-  return STATUS_OPTIONS.find((item) => item.value === status)?.label || status
-}
-
-function getStatusBadgeClasses(status: string) {
-  switch (status) {
-    case 'pending':
-      return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
-    case 'processing':
-      return 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-    case 'shipped':
-      return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
-    case 'completed':
-      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-    case 'cancelled':
-      return 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
-    default:
-      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-  }
 }
 
 function getPaymentLabel(order: StoreOrder) {
@@ -150,19 +128,16 @@ function matchesPeriodFilter(order: StoreOrder, filter: string, mountedAt: numbe
   return true
 }
 
-function getStatusTemplateKey(status: string): MessageTemplateKey {
-  if (status === 'processing') {
-    return 'processing'
+function getStatusTemplateKey(status: string, deliveryMethod?: string | null): MessageTemplateKey {
+  if (isPickup(deliveryMethod)) {
+    if (status === 'processing') return 'processing'
+    if (status === 'completed') return 'completed'
+    return 'pending'
   }
 
-  if (status === 'shipped') {
-    return 'shipped'
-  }
-
-  if (status === 'completed') {
-    return 'completed'
-  }
-
+  if (status === 'processing') return 'processing'
+  if (status === 'shipped') return 'shipped'
+  if (status === 'completed') return 'completed'
   return 'pending'
 }
 
@@ -187,22 +162,27 @@ function buildWhatsAppMessage(order: StoreOrder, template: MessageTemplateKey) {
   const totalLabel = formatMoney(order.total_price)
   const productNames = Array.from(new Set(order.store_order_items.map((item) => item.name.trim()).filter(Boolean))).join(', ')
   const productsText = productNames ? ` Produtos do pedido: ${productNames}.` : ''
+  const pickup = isPickup(order.delivery_method)
 
   switch (template) {
     case 'processing':
-      return `Olá, ${customerName}! Seu pedido ${orderCode} está em separação neste momento.${productsText} Já conferimos os ${itemLabel} e vamos seguir com as próximas etapas do envio.`
+      return pickup
+        ? `Olá, ${customerName}! Seu pedido ${orderCode} está aguardando retirada na loja.${productsText} Assim que estiver disponível para retirada, avisamos você por aqui.`
+        : `Olá, ${customerName}! Seu pedido ${orderCode} está em separação neste momento.${productsText} Já conferimos os ${itemLabel} e vamos seguir com as próximas etapas do envio.`
     case 'shipped':
       return `Olá, ${customerName}! Seu pedido ${orderCode} saiu para entrega.${productsText} Qualquer atualização de rota ou finalização, avisamos você por aqui.`
     case 'completed':
-      return `Olá, ${customerName}! Seu pedido ${orderCode} foi concluído e marcado como entregue.${productsText} Obrigado pela compra. Se precisar de suporte no pós-venda, estamos por aqui.`
+      return pickup
+        ? `Olá, ${customerName}! Seu pedido ${orderCode} foi retirado com sucesso.${productsText} Obrigado pela compra. Se precisar de suporte no pós-venda, estamos por aqui.`
+        : `Olá, ${customerName}! Seu pedido ${orderCode} foi concluído e marcado como entregue.${productsText} Obrigado pela compra. Se precisar de suporte no pós-venda, estamos por aqui.`
     case 'pending':
     default:
       return `Olá, ${customerName}! Recebemos seu pedido ${orderCode} com ${itemLabel}, no valor total de ${totalLabel}.${productsText} Já registramos tudo por aqui e vamos continuar com as próximas etapas do envio.`
   }
 }
 
-function isTemplateAllowed(status: string, template: MessageTemplateKey) {
-  return getStatusTemplateKey(status) === template
+function isTemplateAllowed(status: string, template: MessageTemplateKey, deliveryMethod?: string | null) {
+  return getStatusTemplateKey(status, deliveryMethod) === template
 }
 
 function OrderStatusSelect({
@@ -245,7 +225,7 @@ function OrderStatusSelect({
         onChange={handleStatusChange}
         className="h-9 w-full appearance-none rounded-lg border border-slate-200 bg-white py-1.5 pl-3 pr-8 text-sm font-medium text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:border-slate-600 dark:focus:ring-slate-800"
       >
-        {STATUS_OPTIONS.map((status) => (
+        {getStatusOptions(order.delivery_method).map((status) => (
           <option key={status.value} value={status.value}>
             {status.label}
           </option>
@@ -279,7 +259,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [currentPage, setCurrentPage] = useState(1)
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>(
-    Object.fromEntries(orders.map((order) => [order.id, buildWhatsAppMessage(order, getStatusTemplateKey(order.status))]))
+    Object.fromEntries(orders.map((order) => [order.id, buildWhatsAppMessage(order, getStatusTemplateKey(order.status, order.delivery_method))]))
   )
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({})
   const [busyDeleteId, setBusyDeleteId] = useState<string | null>(null)
@@ -483,7 +463,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
               }}
               options={[
                 { value: 'all', label: 'Todos' },
-                ...STATUS_OPTIONS,
+                ...getStatusOptions('delivery'),
               ]}
               className="w-[180px] shrink-0"
             />
@@ -610,7 +590,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-[1.05rem] font-semibold tracking-tight text-slate-900 dark:text-slate-50">{getOrderCode(order.id)}</p>
                             <span className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${getStatusBadgeClasses(currentStatus)}`}>
-                              {getStatusLabel(currentStatus)}
+                              {getStatusLabel(currentStatus, order.delivery_method)}
                             </span>
                           </div>
                           <div className="space-y-1">
@@ -777,7 +757,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                           <div className="flex flex-wrap items-center gap-2.5">
                             <p className="text-[1.05rem] font-semibold tracking-tight text-slate-900 dark:text-slate-50">{getOrderCode(order.id)}</p>
                             <span className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${getStatusBadgeClasses(currentStatus)}`}>
-                              {getStatusLabel(currentStatus)}
+                              {getStatusLabel(currentStatus, order.delivery_method)}
                             </span>
                             {mountedAt - new Date(order.created_at).getTime() <= 1000 * 60 * 60 * 24 ? (
                               <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -996,9 +976,9 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                             </div>
 
                             <div className="mt-4 flex flex-wrap gap-2">
-                              {TEMPLATE_BUTTONS.map((template) => {
-                                const isAllowed = isTemplateAllowed(currentStatus, template.key)
-                                const isCurrent = getStatusTemplateKey(currentStatus) === template.key
+                              {(isPickup(order.delivery_method) ? TEMPLATE_BUTTONS_PICKUP : TEMPLATE_BUTTONS_DELIVERY).map((template) => {
+                                const isAllowed = isTemplateAllowed(currentStatus, template.key as MessageTemplateKey, order.delivery_method)
+                                const isCurrent = getStatusTemplateKey(currentStatus, order.delivery_method) === template.key
 
                                 return (
                                   <Button
@@ -1023,7 +1003,7 @@ export function OrderManagement({ orders }: { orders: StoreOrder[] }) {
                             </div>
 
                             <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                              Status atual: <span className="font-semibold text-slate-700 dark:text-slate-200">{getStatusLabel(currentStatus)}</span>. Só a mensagem correspondente a esse status fica habilitada.
+                              Status atual: <span className="font-semibold text-slate-700 dark:text-slate-200">{getStatusLabel(currentStatus, order.delivery_method)}</span>. Só a mensagem correspondente a esse status fica habilitada.
                             </p>
 
                             <div className="mt-4 space-y-2">

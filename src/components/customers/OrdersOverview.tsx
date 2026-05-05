@@ -1,16 +1,16 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { Check, ChevronDown, Clock3, CreditCard, FileText, MapPin, Navigation2, Truck, UserRound, XCircle } from 'lucide-react'
+import { CheckCircle2, ChevronDown, ClipboardList, CreditCard, FileText, MapPin, Navigation2, PackageCheck, Truck, UserRound, XCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatMoney } from '@/lib/storefront'
 import type { AccountOrder } from '@/lib/account'
 import { getContrastingTextColor } from '@/lib/store-settings'
 import { useToast, useConfirm } from '@/components/ui/feedback-provider'
 import { cancelOrderByCustomer } from '@/app/conta/pedidos/actions'
+import { getStatusLabel, getStatusBadgeClasses, getOrderSteps, getStepDescription } from '@/lib/order-statuses'
 
 type FilterValue = 'all' | 'pending' | 'completed'
-type StepState = 'done' | 'current' | 'upcoming' | 'cancelled'
 
 const filters: Array<{ label: string; value: FilterValue }> = [
   { label: 'Todos', value: 'all' },
@@ -25,82 +25,17 @@ function formatDate(value: string) {
   }).format(new Date(value))
 }
 
-function getStatusMeta(status: string) {
-  switch (status) {
-    case 'completed':
-      return { label: 'Concluído', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' }
-    case 'cancelled':
-      return { label: 'Cancelado', className: 'bg-red-50 text-red-700 ring-red-200' }
-    case 'pending':
-      return { label: 'Pendente', className: 'bg-amber-50 text-amber-700 ring-amber-200' }
-    case 'processing':
-      return { label: 'Em preparo', className: 'bg-blue-50 text-blue-700 ring-blue-200' }
-    case 'shipped':
-      return { label: 'Em entrega', className: 'bg-indigo-50 text-indigo-700 ring-indigo-200' }
-    default:
-      return { label: 'Em andamento', className: 'bg-slate-100 text-slate-700 ring-slate-200' }
-  }
+const CUSTOMER_STEP_ICONS: Record<string, typeof CheckCircle2> = {
+  pending: CheckCircle2,
+  processing: ClipboardList,
+  shipped: Truck,
+  completed: PackageCheck,
 }
 
 function getPaymentLabel(order: AccountOrder) {
   if (order.payment_method === 'pix') return 'Pix'
   if (order.payment_method === 'cash') return 'Dinheiro'
   return 'Cartão de crédito'
-}
-
-function getOrderSteps(status: string) {
-  const steps = [
-    { key: 'pending', label: 'Recebido', icon: Check },
-    { key: 'processing', label: 'Em preparo', icon: Clock3 },
-    { key: 'shipped', label: 'Em entrega', icon: Truck },
-    { key: 'completed', label: 'Concluído', icon: Check },
-  ]
-
-  const currentIndex =
-    status === 'pending'
-      ? 0
-      : status === 'processing'
-        ? 1
-        : status === 'shipped'
-          ? 2
-          : status === 'completed'
-            ? 3
-            : status === 'cancelled'
-              ? -1
-              : 0
-
-  return steps.map((step, index) => {
-    const state: StepState =
-      status === 'cancelled'
-        ? 'cancelled'
-        : index < currentIndex
-          ? 'done'
-          : index === currentIndex
-            ? 'current'
-            : 'upcoming'
-    return { ...step, state }
-  })
-}
-
-function getStepDescription(stepKey: string, state: StepState, createdAt: string) {
-  if (state === 'done' && stepKey === 'pending') {
-    return formatDate(createdAt)
-  }
-
-  if (state === 'current') {
-    if (stepKey === 'pending') return formatDate(createdAt)
-    if (stepKey === 'processing') return 'Atualizado no pedido'
-    if (stepKey === 'shipped') return 'A caminho do destino'
-    if (stepKey === 'completed') return 'Pedido finalizado'
-  }
-
-  if (state === 'upcoming') {
-    if (stepKey === 'processing') return 'Aguardando separação'
-    if (stepKey === 'shipped') return 'A caminho do destino'
-    if (stepKey === 'completed') return 'Aguardando confirmação'
-  }
-
-  return 'Etapa concluída'
 }
 
 export function OrdersOverview({
@@ -161,7 +96,11 @@ export function OrdersOverview({
 
   const filteredOrders = useMemo(() => {
     if (filter === 'pending') {
-      return orders.filter((order) => ['pending', 'processing', 'shipped'].includes(order.status))
+      return orders.filter((order) => {
+        if (order.status === 'completed' || order.status === 'cancelled') return false
+        if (order.delivery_method === 'pickup' && order.status === 'shipped') return false
+        return true
+      })
     }
     if (filter === 'completed') {
       return orders.filter((order) => order.status === 'completed')
@@ -206,8 +145,9 @@ export function OrdersOverview({
       {filteredOrders.length > 0 ? (
         <div className="mt-8 grid gap-6">
           {filteredOrders.map((order) => {
-            const status = getStatusMeta(order.status)
-            const steps = getOrderSteps(order.status)
+            const statusLabel = getStatusLabel(order.status, order.delivery_method)
+            const statusClasses = getStatusBadgeClasses(order.status)
+            const steps = getOrderSteps(order.status, order.delivery_method)
             const subtotal = order.store_order_items.reduce((sum, item) => sum + item.price * item.quantity, 0)
             const isExpanded = expandedOrderId === order.id
 
@@ -221,8 +161,8 @@ export function OrdersOverview({
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
                         <h3 className="text-[1.05rem] font-semibold text-slate-950">Pedido #{order.id.slice(0, 8).toUpperCase()}</h3>
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${status.className}`}>
-                          {status.label}
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${statusClasses}`}>
+                          {statusLabel}
                         </span>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500">
@@ -262,20 +202,23 @@ export function OrdersOverview({
                       Este pedido foi cancelado e saiu do fluxo normal de acompanhamento.
                     </div>
                   ) : (
-                    <div className="grid gap-4 sm:grid-cols-4 sm:gap-0">
-                      <div className="relative hidden sm:block sm:col-span-4">
+                    <div className={`grid gap-4 ${steps.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} sm:gap-0`}>
+                      <div className={`relative hidden sm:block ${steps.length === 3 ? 'sm:col-span-3' : 'sm:col-span-4'}`}>
                         <span className="absolute left-5 right-5 top-5 z-0 h-px bg-slate-200" />
                       </div>
                       {steps.map((step, index) => {
-                        const Icon = step.icon
+                        const Icon = CUSTOMER_STEP_ICONS[step.key] || CheckCircle2
                         const isDone = step.state === 'done'
                         const isCurrent = step.state === 'current'
-                        const circleClass = isCurrent
-                          ? 'bg-blue-600 text-white ring-blue-100'
-                          : isDone
-                            ? 'bg-emerald-50 text-emerald-600 ring-emerald-100'
-                            : 'bg-slate-50 text-slate-400 ring-slate-100'
-                        const lineClass = isDone ? 'bg-emerald-400' : isCurrent ? 'bg-blue-500' : 'bg-slate-200'
+                        const isCancelled = step.state === 'cancelled'
+                        const circleClass = isCancelled
+                          ? 'bg-slate-50 text-slate-300 ring-slate-100'
+                          : isCurrent
+                            ? 'bg-blue-600 text-white ring-blue-100'
+                            : isDone
+                              ? 'bg-emerald-50 text-emerald-600 ring-emerald-100'
+                              : 'bg-slate-50 text-slate-400 ring-slate-100'
+                        const lineClass = isCancelled ? 'bg-slate-200' : isDone ? 'bg-emerald-400' : isCurrent ? 'bg-blue-500' : 'bg-slate-200'
 
                         return (
                           <div key={step.key} className="relative sm:-mt-0 sm:px-3">
@@ -290,11 +233,11 @@ export function OrdersOverview({
                                 <Icon className="h-4 w-4" />
                               </div>
                               <div className="space-y-1">
-                                <p className={`text-sm font-semibold ${isCurrent ? 'text-blue-600' : 'text-slate-900'}`}>
+                                <p className={`text-sm font-semibold ${isCancelled ? 'text-slate-400' : isCurrent ? 'text-blue-600' : 'text-slate-900'}`}>
                                   {index + 1}. {step.label}
                                 </p>
-                                <p className={`text-sm ${isDone ? 'text-emerald-500' : isCurrent ? 'text-slate-500' : 'text-slate-400'}`}>
-                                  {getStepDescription(step.key, step.state, order.created_at)}
+                                <p className={`text-sm ${isCancelled ? 'text-slate-300' : isDone ? 'text-emerald-500' : isCurrent ? 'text-slate-500' : 'text-slate-400'}`}>
+                                  {getStepDescription(step.key, step.state, order.created_at, order.delivery_method)}
                                 </p>
                               </div>
                             </div>
@@ -331,7 +274,12 @@ export function OrdersOverview({
                         <p className="text-[1.05rem] font-semibold text-slate-900">Entrega</p>
                         <div className="mt-2 space-y-1.5 text-sm text-slate-600">
                           {order.delivery_method === 'pickup' ? (
-                            <p className="font-medium text-slate-900">Retirada na loja</p>
+                            <>
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
+                                <MapPin className="h-3 w-3" />
+                                Retirada na loja
+                              </span>
+                            </>
                           ) : (
                             <>
                               <p className="text-slate-500">{order.delivery_address || 'Endereço não informado'}</p>

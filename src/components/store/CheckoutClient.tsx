@@ -205,6 +205,7 @@ export function CheckoutClient({
   const [clientHydrated, setClientHydrated] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const cleanupEnabled = useRef(false)
+  const shouldPreserveCheckoutRef = useRef(false)
 
   useEffect(() => {
     setClientHydrated(true)
@@ -242,11 +243,12 @@ export function CheckoutClient({
 
   useEffect(() => {
     return () => {
-      if (cleanupEnabled.current) {
+      if (cleanupEnabled.current && isBuyNow && !shouldPreserveCheckoutRef.current) {
         clearDirectCheckout()
       }
+      shouldPreserveCheckoutRef.current = false
     }
-  }, [])
+  }, [isBuyNow])
 
   const persistCustomerData = useCallback(() => {
     persistCheckout({
@@ -645,13 +647,17 @@ export function CheckoutClient({
           <p className="mt-1 text-xs text-slate-400">
             Para calcular o frete e concluir a entrega, cadastre um endereço.
           </p>
-          <Link
-            href="/conta/enderecos?returnTo=%2Fcheckout"
+          <button
+            type="button"
+            onClick={() => {
+              shouldPreserveCheckoutRef.current = true
+              router.push('/conta/enderecos?returnTo=%2Fcheckout')
+            }}
             className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--store-button-bg)] px-5 text-sm font-semibold text-[var(--store-button-fg)] transition-colors hover:opacity-90"
           >
             <Plus className="h-4 w-4" />
             Cadastrar endereço
-          </Link>
+          </button>
           {touched.shippingZip && fieldErrors.delivery_address ? (
             <p className="mt-3 text-xs font-medium text-red-500">{fieldErrors.delivery_address}</p>
           ) : null}
